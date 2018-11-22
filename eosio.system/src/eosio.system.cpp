@@ -6,7 +6,7 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
-
+#include <map>
 
 namespace eosiosystem {
 
@@ -18,6 +18,7 @@ namespace eosiosystem {
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
+    _guarantee(_self, _self.value),
     _rammarket(_self, _self.value)
    {
 
@@ -112,6 +113,70 @@ namespace eosiosystem {
       eosio_assert( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
       set_blockchain_parameters( params );
    }
+
+   // *bos begin*
+   void system_contract::namelist(std::string list, std::string action, const std::vector<name> &names)
+   {
+      const int MAX_LIST_LENGTH = 30;
+      const int MAX_ACTION_LENGTH = 10;
+      enum  class list_type:int64_t
+      {
+         actor_blacklist_type = 1,
+         contract_blacklist_type,
+         resource_greylist_type,
+         list_type_count
+      };
+      enum class list_action_type:int64_t
+      {
+         insert_type = 1,
+         remove_type,
+         list_action_type_count
+      };
+
+      std::map<std::string, list_type> list_type_string_to_enum = {
+              {"actor_blacklist", list_type::actor_blacklist_type},
+              {"contract_blacklist", list_type::contract_blacklist_type},
+              {"resource_greylist", list_type::resource_greylist_type}};
+
+      std::map<std::string, list_action_type> list_action_type_string_to_enum = {
+          {"insert", list_action_type::insert_type},
+          {"remove", list_action_type::remove_type}};
+
+      std::map<std::string, list_type>::iterator itlt = list_type_string_to_enum.find(list);
+      std::map<std::string, list_action_type>::iterator itlat = list_action_type_string_to_enum.find(action);
+
+      require_auth(_self);
+      eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
+      eosio_assert(list.length() < MAX_LIST_LENGTH, "list string is greater than max length 30");
+      eosio_assert(action.length() < MAX_ACTION_LENGTH, " action string is greater than max length 10");
+      eosio_assert(itlt != list_type_string_to_enum.end(), " unknown list type string  support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
+      eosio_assert(itlat != list_action_type_string_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
+
+      auto packed_names = pack(names);
+
+      set_name_list_packed(static_cast<int64_t>(itlt->second), static_cast<int64_t>(itlat->second), packed_names.data(), packed_names.size());
+   }
+
+   void system_contract::setminguar(uint32_t ram, uint32_t cpu, uint32_t net)
+   {
+      require_auth(_self);
+      eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
+      eosio_assert(ram <= 100 && cpu <= 100 && net <= 100, "the value of ram, cpu and net should not more then 100");
+
+      eosio_min_guarantee _mg = _guarantee.exists() ? _guarantee.get() : eosio_min_guarantee{};
+      eosio_assert(ram >= _mg.ram, "can not reduce ram guarantee ");
+      eosio_assert(ram <= _mg.ram + 10, "minimun ram guarantee can not increace more then 10kb every time");
+      eosio_assert(cpu <= _mg.cpu + 10, "minimun cpu guarantee can not increace more then 10 token weight every time");
+      eosio_assert(net <= _mg.net + 10, "minimun net guarantee can not increace more then 10 token weight every time");
+
+      _mg.ram = ram;
+      _mg.cpu = cpu;
+      _mg.net = net;
+
+      _guarantee.set(_mg, _self);
+      set_resouces_minimum_guarantee(ram, cpu, net);
+   }
+   // *bos end*
 
    void system_contract::setpriv( name account, uint8_t ispriv ) {
       require_auth( _self );
@@ -308,7 +373,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(namelist)(setminguar)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

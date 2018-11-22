@@ -6,6 +6,7 @@ set(EOSIO_VERSION_SOFT_MAX "1.4")
 
 find_package(eosio)
 
+
 ### Check the version of eosio
 set(VERSION_MATCH_ERROR_MSG "")
 EOSIO_CHECK_VERSION(VERSION_OUTPUT "${EOSIO_VERSION}"

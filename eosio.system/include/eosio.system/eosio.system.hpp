@@ -60,7 +60,7 @@ namespace eosiosystem {
       time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
-      uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid
+      uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid                                   
       int64_t              total_activated_stake = 0;
       time_point           thresh_activated_stake_time;
       uint16_t             last_producer_schedule_size = 0;
@@ -161,6 +161,16 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
    };
 
+   // *bos*
+   struct [[eosio::table("minguar"), eosio::contract("eosio.system")]] eosio_min_guarantee{
+      eosio_min_guarantee(){}
+
+      uint32_t ram = 0;  ///  minimum ram guarantee in kb for every account.
+      uint32_t cpu = 0;  ///  minimum cpu guarantee in bos for every account.
+      uint32_t net = 0;  ///  minimum net guarantee in bos for every account.
+
+      EOSLIB_SERIALIZE( eosio_min_guarantee, (ram)(cpu)(net) )
+   };
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
 
@@ -172,6 +182,7 @@ namespace eosiosystem {
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
+   typedef eosio::singleton< "minguar"_n, eosio_min_guarantee > min_guarantee_singleton;      // *bos*
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -184,6 +195,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
+         min_guarantee_singleton  _guarantee;     // *bos*
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
@@ -251,7 +263,7 @@ namespace eosiosystem {
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
-
+    
          /**
           * Increases receiver's ram quota based upon current price and quantity of
           * tokens provided. An inline transfer from receiver to system contract of
@@ -298,6 +310,13 @@ namespace eosiosystem {
          [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
 
+         // *bos*
+         [[eosio::action]]
+         void namelist(std::string list, std::string action, const std::vector<name>& names );
+
+         // *bos*
+         [[eosio::action]]
+         void setminguar(uint32_t ram, uint32_t cpu, uint32_t net);
          // functions defined in producer_pay.cpp
          [[eosio::action]]
          void claimrewards( const name owner );
