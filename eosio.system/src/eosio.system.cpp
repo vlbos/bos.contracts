@@ -174,7 +174,7 @@ namespace eosiosystem {
       _mg.net = net;
 
       _guarantee.set(_mg, _self);
-      set_resouces_minimum_guarantee(ram, cpu, net);
+      set_guaranteed_minimum_resources(ram, cpu, net);
    }
    // *bos end*
 
