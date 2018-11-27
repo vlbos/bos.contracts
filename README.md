@@ -15,8 +15,8 @@ The following unprivileged contract(s) are also part of the system.
    * [eosio.token](https://github.com/boscore/bos.contracts/tree/master/eosio.token)
 
 Dependencies:
-* [bos v6.0.x](https://github.com/boscore/bos/releases/tag/v6.0.1)
-* [bos.cdt v6.0.x](https://github.com/boscore/bos.cdt/releases/tag/v6.0.1)
+* [bos v1.0.x](https://github.com/boscore/bos/releases/tag/v1.0.1)
+* [bos.cdt v1.0.x](https://github.com/boscore/bos.cdt/releases/tag/v1.0.1)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
