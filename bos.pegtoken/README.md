@@ -38,6 +38,7 @@ actions
     6. service_fee      服务费，本处只是文字描述，合约中并没有相关业务逻辑。
     7. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
                         所有用户使用同一个账号充值，使用memo中的编号区分不同用户，此处记录统一的充值地址。
+    8. state            状态描述、暂停/活跃
  
  [[eosio::action]]
  void setmaxsupply( asset maximum_supply );

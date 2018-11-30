@@ -12,30 +12,24 @@
 
 #include <string>
 
-namespace eosiosystem {
-   class system_contract;
-}
-
 namespace eosio {
-
+   typedef capi_checksum256   transaction_id_type;
    using std::string;
 
    class [[eosio::contract("bos.pegtoken")]] pegtoken : public contract {
       public:
-         using contract::contract;
-
-         [[eosio::action]]
-         void init( symbol sym_base, string repeatable);
 
          [[eosio::action]]
          void create( name    issuer,
+                      name    auditor,
                       asset   maximum_supply,
+                      asset   large_asset,
                       string  organization,
                       string  website,
                       string  miner_fee,
                       string  service_fee,
                       string  unified_recharge_address,
-                      string  state);
+                      bool    active );
 
          [[eosio::action]]
          void setmaxsupply( asset maximum_supply );
@@ -54,6 +48,14 @@ namespace eosio {
          void issue( name to, asset quantity, string memo );
 
          [[eosio::action]]
+         void approve( symbol_code  sym_code ,
+                       uint64_t     issue_id );
+
+         [[eosio::action]]
+         void unapprove( symbol_code  sym_code ,
+                         uint64_t     issue_id );
+
+         [[eosio::action]]
          void retire( asset quantity, string memo );
 
          [[eosio::action]]
@@ -61,6 +63,12 @@ namespace eosio {
                         name    to,
                         asset   quantity,
                         string  memo );
+
+         [[eosio::action]]
+         void lockall( symbol_code sym_code );
+
+         [[eosio::action]]
+         void unlockall( symbol_code sym_code );
 
          [[eosio::action]]
          void withdraw( name    from,
@@ -100,39 +108,49 @@ namespace eosio {
          }
 
       private:
-         struct [[eosio::table("global")]] global_ts {
-            symbol sym_base;
-            bool   repeatable;   // recharge addresses can be used repeatably between different organizations.
+
+         struct [[eosio::table]] symbol_ts {
+            symbol  sym;
+
+            uint64_t primary_key()const { return sym.code().raw(); }
          };
 
-         struct [[eosio::table]] symbol_code_ts {
-            symbol_code  sym_code;
+         struct [[eosio::table]] applicant_ts {
+            name  applicant;
 
-            uint64_t primary_key()const { return sym_code.raw(); }
+            uint64_t primary_key()const { return applicant.value; }
          };
 
          struct [[eosio::table]] recharge_address_ts {
             name           owner;
             string         address;
-            time_point_sec create_time;
-            time_point_sec last_update;
+            time_point_sec assign_time;
+            uint64_t       apply_num;
 
             uint64_t primary_key()const { return owner.value; }
             uint64_t by_address()const { return hash64( address ); }
+            uint64_t by_apply_num()const { return apply_num; }
+         };
+
+         struct [[eosio::table]] issue_ts {
+            uint64_t issue_id;
+            name     to;
+            asset    quantity;
+            string   memo
+
+            uint64_t primary_key()const { return issue_id; }
          };
 
          struct [[eosio::table]] withdraw_ts {
-            uint64_t       id;
-            name           from;
-            string         to;
-            asset          quantity;
-            time_point_sec create_time;
-            time_point_sec feedback_time;
-            string         feedback_msg;
-            uint8_t        state;
+            uint64_t             seq_num;
+            transaction_id_type  trx_id;
+            string               feedback_trx_id;
+            uint8_t              feedback_state;
+            string               feedback_msg;
+            time_point_sec       feedback_time;
 
-            uint64_t primary_key()const { return id; }
-            uint64_t by_time()const { return static_cast<uint64_t>(create_time.sec_since_epoch()); }
+            uint64_t  primary_key()const { return seq_num; }
+            uint256_t by_trxid()const { return static_cast<uint256_t>(trx_id); }
          };
 
          struct [[eosio::table]] account {
@@ -144,34 +162,35 @@ namespace eosio {
          struct [[eosio::table]] currency_stats {
             asset   supply;
             asset   max_supply;
+            asset   large_asset;
             name    issuer;
+            name    auditor;
             string  organization;
             string  website;
             string  miner_fee;
             string  service_fee;
             string  unified_recharge_address;
-            string  state;
+            bool    active;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
          typedef eosio::singleton< "global"_n, global_ts > global_singleton;
-         typedef eosio::multi_index< "symcodes"_n, symbol_code_ts > symcodes;
+         typedef eosio::multi_index< "applicants"_n, applicant_ts > applicants;
+         typedef eosio::multi_index< "symbols"_n, symbol_ts > symbols;
          typedef eosio::multi_index< "rchrgaddr"_n, recharge_address_ts ,
-            indexed_by<"address"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_address>  >
+            indexed_by<"address"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_address> >,
+            indexed_by<"applynum"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_apply_num> >
          > addresses;
          typedef eosio::multi_index< "withdraws"_n, withdraw_ts,
-            indexed_by<"time"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_time>  >
+            indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint256_t, &withdraw_ts::by_trxid>  >
          > withdraws;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
-
          static uint64_t hash64( string str );
-         const global_ts get_global();
-         void verify_maximum_supply(asset maximum_supply);
    };
 
 } /// namespace eosio

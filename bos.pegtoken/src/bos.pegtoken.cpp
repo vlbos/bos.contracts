@@ -98,7 +98,7 @@ namespace eosio {
          s.state         = state;
       });
 
-      symcodes codestable( _self, _self.value );
+      symbols codestable( _self, _self.value );
       codestable.emplace( _self, [&]( auto& c ) {
          c.sym_code = maximum_supply.symbol.code();
       });
@@ -171,7 +171,7 @@ namespace eosio {
          auto existing = idx.find( hash64(address) );
          eosio_assert( existing == idx.end(), ("this address " + address + " has been assigned").c_str() );
       } else {
-         symcodes codestable( _self, _self.value );
+         symbols codestable( _self, _self.value );
          for( auto itr = codestable.cbegin(); itr != codestable.cend(); ++itr){
             addresses t( _self, itr->sym_code.raw() );
             auto idx = t.get_index<"address"_n>();
