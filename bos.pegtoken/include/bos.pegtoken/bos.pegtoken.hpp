@@ -24,6 +24,7 @@ namespace eosio {
                       name    auditor,
                       asset   maximum_supply,
                       asset   large_asset,
+                      name    address_style,
                       string  organization,
                       string  website,
                       string  miner_fee,
@@ -165,6 +166,7 @@ namespace eosio {
             asset   large_asset;
             name    issuer;
             name    auditor;
+            name    address_style;
             string  organization;
             string  website;
             string  miner_fee;
