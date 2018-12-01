@@ -260,8 +260,9 @@ namespace eosio {
       eosio_assert( existing2 == addrtable.end(), "to account has applied for address already" );
 
       addrtable.emplace( _self, [&]( auto& a ) {
-         a.owner = to;
-         a.apply_num = st.apply_addr_seq_num + 1;
+         a.owner        = to;
+         a.assign_time  = time_point_sec();
+         a.apply_num    = st.apply_addr_seq_num + 1;
       });
 
       statstable.modify( st, same_payer, [&]( auto& s ) { s.apply_addr_seq_num += 1; });

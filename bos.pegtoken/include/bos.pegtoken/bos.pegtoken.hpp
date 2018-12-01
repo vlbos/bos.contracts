@@ -147,6 +147,7 @@ namespace eosio {
 
             uint64_t primary_key()const { return owner.value; }
             uint64_t by_address()const { return hash64( address ); }
+            uint64_t by_time()const { return static_cast<uint64_t>( assign_time.utc_seconds ); }
             uint64_t by_apply_num()const { return apply_num; }
          };
 
@@ -205,6 +206,7 @@ namespace eosio {
          typedef eosio::multi_index< "issues"_n, issue_ts > issues;
          typedef eosio::multi_index< "rchrgaddr"_n, recharge_address_ts ,
             indexed_by<"address"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_address> >,
+            indexed_by<"time"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_time> >,
             indexed_by<"applynum"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_apply_num> >
          > addresses;
          typedef eosio::multi_index< "withdraws"_n, withdraw_ts,
