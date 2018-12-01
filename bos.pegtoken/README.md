@@ -5,6 +5,16 @@ This contract allows users to create, issue, and manage peg tokens from other bl
 eosio based blockchains.
 
 
+功能
+-------------
+1. 表中记录用户提现交易id，和原链交易id
+2. 用户提出分配地址，才会给他分配，需要提供分配地址的账户，这些账户有权限给用户添加标志。
+3. 提供命令，实现锁定合约，锁定后任何用户不能再执行交易
+4. 锁定合约的情况下，支持使用sudo权限改变任意用户的token余额。
+5. 大额转入需要二次认证才能给用户发行
+
+
+
 actions
 -----------
 ```

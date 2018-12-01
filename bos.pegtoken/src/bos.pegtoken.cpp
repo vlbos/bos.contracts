@@ -12,6 +12,21 @@ namespace eosio {
       return ct;
    }
 
+   capi_checksum256 get_trx_id(){
+      capi_checksum256 trx_id;
+      std::vector<char> trx_bytes;
+      size_t trx_size = transaction_size();
+      trx_bytes.resize(trx_size);
+      read_transaction(trx_bytes.data(), trx_size);
+      sha256( trx_bytes.data(), trx_size, &trx_id );
+      return trx_id;
+   }
+
+   string checksum256_to_string( capi_checksum256 src ){
+      // TODO
+      return string();
+   }
+
    uint64_t pegtoken::hash64( string s ){
       capi_checksum256  hash256;
       uint64_t res = 0;
@@ -20,114 +35,168 @@ namespace eosio {
       return res;
    }
 
-   void pegtoken::init( symbol sym_base, string repeatable){
-      require_auth( _self );
+   void pegtoken::verify_address( name style, string addr){
+      if ( style == "bitcoin"_n ){
 
-      eosio_assert( sym_base.is_valid(), "invalid symbol name" );
-      eosio_assert( repeatable == "repeatable" || repeatable == "non-repeatable",
-                    "repeatable must be repeatable or non-repeatable");
+      } else if ( style == 'ethereum' ){
 
-      global_singleton _global(_self, _self.value);
-      eosio_assert( ! _global.exists(), "the contract has been initialized");
+      } else if ( style == 'eosio' ){
 
-      global_ts _gstate{};
-      _gstate.sym_base = sym_base;
-      _gstate.repeatable = (repeatable == "repeatable")? true: false;
-      _global.set( _gstate, _self );
-   }
-
-   const pegtoken::global_ts pegtoken::get_global(){
-      global_singleton _global(_self, _self.value);
-      eosio_assert( _global.exists(), "the contract needs initialization");
-      return _global.get();
+      } else if ( style == 'other' ){
+      } else {
+         eosio_assert(false, "address style must be one of bitcoin, ethereum, eosio or other" );
+      }
    }
 
    void pegtoken::verify_maximum_supply(asset maximum_supply){
-      const auto& _gstate = get_global();
-      auto sym_code = maximum_supply.symbol.code();
-      eosio_assert( sym_code.is_valid(), "invalid symbol name" );
+      auto sym = maximum_supply.symbol;
+      eosio_assert( sym.is_valid(), "invalid symbol name" );
       eosio_assert( maximum_supply.is_valid(), "invalid supply");
       eosio_assert( maximum_supply.amount > 0, "max-supply must be positive");
-      eosio_assert( maximum_supply.symbol.precision() == _gstate.sym_base.precision(),
-                    ("symbol precision must be " + std::to_string(_gstate.sym_base.precision())).c_str() );
-      string symbol_code_str = maximum_supply.symbol.code().to_string();
-      string sym_base_code_str = _gstate.sym_base.code().to_string();
-      eosio_assert( symbol_code_str.length() > sym_base_code_str.length(),
-                    ("symbol code length must be greater then " + std::to_string(sym_base_code_str.length()) +
-                     " and start with " + sym_base_code_str).c_str() );
-      eosio_assert( symbol_code_str.compare( 0, sym_base_code_str.length(), sym_base_code_str) == 0,
-                    ("symbol code must start with " + sym_base_code_str).c_str() );
 
+      stats statstable( _self, sym.code().raw() );
+      auto existing = statstable.find( sym.code().raw() );
+      if( existing != statstable.end() ){
+         const auto& st = *existing;
+         eosio_assert( maximum_supply.symbol == st.max_supply.symbol, "maximum_supply symbol mismatch with existing token symbol" );
+         eosio_assert( maximum_supply.amount >= st.supply.amount, "maximum_supply amount should not less then total supplied amount" );
+
+      }
    }
 
    void pegtoken::create( name    issuer,
-                        asset   maximum_supply,
-                        string  organization,
-                        string  website,
-                        string  miner_fee,
-                        string  service_fee,
-                        string  unified_recharge_address,
-                        string  state )
+                          name    auditor,
+                          asset   maximum_supply,
+                          asset   large_asset,
+                          name    address_style,
+                          string  organization,
+                          string  website,
+                          string  miner_fee,
+                          string  service_fee,
+                          string  unified_recharge_address,
+                          bool    active )
    {
       require_auth( _self );
-      verify_maximum_supply( maximum_supply );
+
+      eosio_assert( is_account( issuer ), "issuer account does not exist");
+      eosio_assert( is_account( auditor ), "auditor account does not exist");
+
+      auto sym = maximum_supply.symbol;
+      eosio_assert( sym.is_valid(), "invalid symbol name" );
+      eosio_assert( maximum_supply.is_valid(), "invalid supply");
+      eosio_assert( maximum_supply.amount > 0, "max-supply must be positive");
+
+      eosio_assert( large_asset.symbol == maximum_supply.symbol, "large_asset's symbol mismatch with maximum_supply's symbol" );
+      eosio_assert( large_asset.is_valid(), "invalid large_asset");
+      eosio_assert( large_asset.amount > 0, "large_asset must be positive");
+      eosio_assert( large_asset.amount < maximum_supply.ammount, "large_asset should less then maximum_supply");
+
+      eosio_assert( address_style == "bitcoin"_n || address_style == "ethereum"_n ||
+                    address_style == "eosio"_n || address_style == "other"_n,
+                    "address_style must be one of bitcoin, ethereum, eosio or other" );
 
       eosio_assert( organization.size() <= 256, "organization has more than 256 bytes" );
       eosio_assert( website.size() <= 256, "website has more than 256 bytes" );
       eosio_assert( miner_fee.size() <= 256, "miner_fee has more than 256 bytes" );
       eosio_assert( service_fee.size() <= 256, "service_fee has more than 256 bytes" );
       eosio_assert( unified_recharge_address.size() <= 256, "unified_recharge_address has more than 256 bytes" );
-      eosio_assert( state.size() <= 256, "state has more than 256 bytes" );
-      // TODO assert organization and website not empty
-      // TODO validate unified_recharge_address and state
 
-      auto sym_code = maximum_supply.symbol.code();
-      stats statstable( _self, sym_code.raw() );
-      auto existing = statstable.find( sym_code.raw() );
+      if ( unified_recharge_address != "" ){
+         verify_address( address_style, unified_recharge_address );
+      }
+
+      stats statstable( _self, sym.code().raw() );
+      auto existing = statstable.find( sym.code().raw() );
       eosio_assert( existing == statstable.end(), "token with symbol already exists" );
 
       statstable.emplace( _self, [&]( auto& s ) {
          s.supply.symbol = maximum_supply.symbol;
          s.max_supply    = maximum_supply;
+         s.large_asset   = large_asset;
          s.issuer        = issuer;
+         s.auditor       = auditor;
+         s.address_style = address_style;
          s.organization  = organization;
          s.website       = website;
          s.miner_fee     = miner_fee;
          s.service_fee   = service_fee;
          s.unified_recharge_address   = unified_recharge_address;
-         s.state         = state;
-      });
-
-      symbols codestable( _self, _self.value );
-      codestable.emplace( _self, [&]( auto& c ) {
-         c.sym_code = maximum_supply.symbol.code();
+         s.active        = active;
+         s.issue_seq_num = 0;
+         s.apply_addr_seq_num = 0;
       });
    }
 
    void pegtoken::setmaxsupply( asset maximum_supply )
    {
       require_auth( _self );
-      verify_maximum_supply( maximum_supply );
 
-      auto sym_code = maximum_supply.symbol.code();
-      stats statstable( _self, sym_code.raw() );
-      auto existing = statstable.find( sym_code.raw() );
-      eosio_assert( existing != statstable.end(), "token with symbol not exists" );
+      auto sym = maximum_supply.symbol;
+      eosio_assert( sym.is_valid(), "invalid symbol name" );
+      eosio_assert( maximum_supply.is_valid(), "invalid supply");
+      eosio_assert( maximum_supply.amount > 0, "max-supply must be positive");
+
+      stats statstable( _self, sym.code().raw() );
+      auto existing = statstable.find( sym.code().raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
       const auto& st = *existing;
 
-      eosio_assert( maximum_supply.amount >= st.supply.amount, "max_supply amount must not less then supply amount" );
+      eosio_assert( maximum_supply.symbol == st.supply.symbol, "maximum_supply symbol mismatch with existing token symbol" );
+      eosio_assert( maximum_supply.amount >= st.supply.amount, "maximum_supply amount should not less then total supplied amount" );
       eosio_assert( maximum_supply.amount != st.max_supply.amount, "the amount equal to current max_supply amount" );
+
       statstable.modify( st, same_payer, [&]( auto& s ) { s.max_supply = maximum_supply; });
    }
 
-   void pegtoken::update( symbol_code sym_code, string parameter, string value ){
-      eosio_assert( parameter.size() <= 64, "parameter has more than 64 bytes" );
-      eosio_assert( value.size() <= 256, "value has more than 256 bytes" );
+   void pegtoken::setlargeast( asset large_asset )
+   {
+      auto sym = large_asset.symbol;
+      eosio_assert( sym.is_valid(), "invalid symbol name" );
+      eosio_assert( large_asset.is_valid(), "invalid supply");
+      eosio_assert( large_asset.amount > 0, "max-supply must be positive");
 
+      stats statstable( _self, sym.code().raw() );
+      auto existing = statstable.find( sym.code().raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
+      const auto& st = *existing;
+
+      require_auth( st.auditor );
+
+      statstable.modify( st, same_payer, [&]( auto& s ) { s.large_asset = large_asset; });
+   }
+
+   void pegtoken::lockall( symbol_code sym_code ){
+      auto existing = statstable.find( sym_code.raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
+      const auto& st = *existing;
+
+      eosio_assert( has_auth( st.issuer ) || has_auth( st.auditor ) , "this action can excute only by issuer or auditor" );
+      eosio_assert( st.active == true , "this token has been locked already" );
+
+      statstable.modify( st, same_payer, [&]( auto& s ) { s.active = false; });
+   }
+
+   void pegtoken::unlockall( symbol_code sym_code ){
+      auto existing = statstable.find( sym_code.raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
+      const auto& st = *existing;
+
+      require_auth( st.auditor );
+      eosio_assert( st.active == false , "this token unlocked, nothing to do" );
+
+      statstable.modify( st, same_payer, [&]( auto& s ) { s.active = true; });
+   }
+
+   void pegtoken::update( symbol_code sym_code, string parameter, string value ){
       stats statstable( _self, sym_code.raw() );
       auto existing = statstable.find( sym_code.raw() );
-      eosio_assert( existing != statstable.end(), "token with symbol not exists" );
+      eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
       const auto& st = *existing;
+
+      eosio_assert( parameter.size() > 0, "parameter can not empty" );
+      eosio_assert( parameter.size() <= 64, "parameter has more than 64 bytes" );
+      eosio_assert( value.size() >0, "value can not empty" );
+      eosio_assert( value.size() <= 256, "value has more than 256 bytes" );
 
       require_auth( st.issuer );
 
@@ -140,19 +209,63 @@ namespace eosio {
       } else if( parameter == "service_fee" ){
          statstable.modify( st, same_payer, [&]( auto& s ) { s.service_fee = value; });
       } else if( parameter == "unified_recharge_address" ){
-         // TODO verify unified_recharge_address
+         verify_address( st.address_style, value );
          statstable.modify( st, same_payer, [&]( auto& s ) { s.unified_recharge_address = value; });
-      } else if( parameter == "state" ){
-         // TODO verify state
-         statstable.modify( st, same_payer, [&]( auto& s ) { s.state = value; });
-      } else {
-         eosio_assert(false, "unknown parameter" );
+      }  else {
+         eosio_assert(false, "this action does not support this parameter" );
       }
+   }
+
+   void pegtoken::applicant( symbol_code sym_code, name action, name applicant ){
+      stats statstable( _self, sym_code.raw() );
+      auto existing = statstable.find( sym_code.raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
+      const auto& st = *existing;
+
+      eosio_assert( has_auth( st.issuer ) || has_auth( st.auditor ) , "this action can excute only by issuer or auditor" );
+
+      applicants table( _self, sym_code.raw() );
+      auto it = table.find( applicant );
+      
+      if ( action == "add"_n ){
+         eosio_assert( it == table.end(), "applicant already exist, nothing to do" );
+         table.emplace( _self, [&]( auto& r ) {
+            r.applicant = applicant;
+         });
+      } else if ( action == "remove" ){
+         eosio_assert( it != table.end(), "applicant dose not exist, nothing to do" );
+         table.erase( it );
+      } else {
+         eosio_assert(false, "action must be add or remove" );
+      }
+   }
+
+   void pegtoken::applyaddr( name applicant, name to, symbol_code sym_code ){
+      stats statstable( _self, sym_code.raw() );
+      auto existing = statstable.find( sym_code.raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
+      const auto& st = *existing;
+      
+      applicants table( _self, sym_code.raw() );
+      auto it = table.find( applicant );
+      eosio_assert( it != table.end(), "applicant dose not exist" );
+
+      require_auth( applicant );
+
+      addresses addrtable( _self, sym_code.raw() );
+      auto existing2 = addrtable.find( to.value );
+      eosio_assert( existing2 == addrtable.end(), "to account has applied for address already" );
+
+      addrtable.emplace( _self, [&]( auto& a ) {
+         a.owner = to;
+         a.apply_num = st.apply_addr_seq_num + 1;
+      });
+
+      statstable.modify( st, same_payer, [&]( auto& s ) { s.apply_addr_seq_num += 1; });
    }
 
    void pegtoken::assignaddr( symbol_code sym_code, name to, string address ){
       eosio_assert( address.size() <= 64, "address too long" );
-      // TODO verify address
       eosio_assert( is_account( to ), "to account does not exist");
 
       stats statstable( _self, sym_code.raw() );
@@ -160,45 +273,32 @@ namespace eosio {
       eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
       const auto& st = *existing;
 
+      verify_address( st.address_style, address);
+      
       require_auth( st.issuer );
+      
+      addresses addrtable( _self, sym_code.raw() );
+      auto idx = addrtable.get_index<"address"_n>();
+      auto existing2 = idx.find( hash64(address) );
+      eosio_assert( existing2 == idx.end(), ("this address " + address + " has been assigned to " + existing2.owner.to_string().c_str() );
 
-      const auto& _gstate = get_global();
-
-      // check if this address already exist in relevant address table.
-      if( _gstate.repeatable ){
-         addresses t( _self, sym_code.raw() );
-         auto idx = t.get_index<"address"_n>();
-         auto existing = idx.find( hash64(address) );
-         eosio_assert( existing == idx.end(), ("this address " + address + " has been assigned").c_str() );
-      } else {
-         symbols codestable( _self, _self.value );
-         for( auto itr = codestable.cbegin(); itr != codestable.cend(); ++itr){
-            addresses t( _self, itr->sym_code.raw() );
-            auto idx = t.get_index<"address"_n>();
-            auto existing = idx.find( hash64(address) );
-            eosio_assert( existing == idx.end(), ("this address " + address + " has been assigned").c_str() );
-         }
-      }
-
-      addresses addtable( _self, sym_code.raw() );
-      auto existing2 = addtable.find( to.value );
-      if( existing2 == addtable.end() ){
-         addtable.emplace( _self, [&]( auto& a ) {
+      auto it = addrtable.find( to.value );
+      if( it == addrtable.end() ){
+         addrtable.emplace( _self, [&]( auto& a ) {
             a.owner = to;
             a.address = address;
-            a.create_time = current_time_point();
-            a.last_update = a.create_time;
+            a.assign_time = current_time_point();
          });
       } else {
-         addtable.modify( existing2, same_payer, [&]( auto& a ) {
+         addrtable.modify( it, same_payer, [&]( auto& a ) {
             a.owner = to;
             a.address = address;
-            a.last_update = current_time_point();
+            a.assign_time = current_time_point();
          });
       }
    }
 
-   void pegtoken::issue( name to, asset quantity, string memo )
+   void pegtoken::issue( uint64_t seq_num, name to, asset quantity, string memo )
    {
        auto sym = quantity.symbol;
        eosio_assert( sym.is_valid(), "invalid symbol name" );
@@ -210,23 +310,70 @@ namespace eosio {
        const auto& st = *existing;
 
        require_auth( st.issuer );
+
        eosio_assert( quantity.is_valid(), "invalid quantity" );
        eosio_assert( quantity.amount > 0, "must issue positive quantity" );
 
        eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
        eosio_assert( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
-       statstable.modify( st, same_payer, [&]( auto& s ) {
-          s.supply += quantity;
-       });
+       eosio_assert( seq_num == st.issue_seq_num + 1 );
+      statstable.modify( st, same_payer, [&]( auto& s ) { s.issue_seq_num += 1; });
 
-       add_balance( st.issuer, quantity, st.issuer );
-
-       if( to != st.issuer ) {
-         SEND_INLINE_ACTION( *this, transfer, { {st.issuer, "active"_n} },
-                             { st.issuer, to, quantity, memo }
-         );
+       if( quantity.amount >= st.large_asset.amount ){
+          issues issue_table( _self, sym.code().raw() );
+          issue_table.emplace( _self, [&]( auto& r ) {
+             r.seq_num  = seq_num;
+             r.to       = to;
+             r.quantity = quantity;
+             r.memo     = memo;
+          });
+       } else {
+          statstable.modify( st, same_payer, [&]( auto& s ) { s.supply += quantity; });
+          add_balance( st.issuer, quantity, st.issuer );
+          if( to != st.issuer ) {
+             SEND_INLINE_ACTION( *this, transfer, { {st.issuer, "active"_n} },
+                                 { st.issuer, to, quantity, memo }
+             );
+          }
        }
+   }
+
+   void pegtoken::issue_handle( symbol_code sym_code, uint64_t issue_seq_num, bool pass){
+      stats statstable( _self, sym_code.raw() );
+      auto existing = statstable.find( sym_code.raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
+      const auto& st = *existing;
+
+      require_auth( st.auditor );
+
+      issues issue_table( _self, sym_code.raw() );
+      auto it = issue_table.find( issue_seq_num );
+      eosio_assert( it != issue_table.end(), "issue with seq number does not exist" );
+      const auto& issue = *it;
+
+      if ( pass ){
+         statstable.modify( st, same_payer, [&]( auto& s ) { s.supply += issue.quantity; });
+         if( issue.to != st.issuer ) {
+            add_balance( st.auditor, issue.quantity, st.auditor );
+            SEND_INLINE_ACTION( *this, transfer, { {st.auditor, "active"_n} },
+                                { st.auditor, issue.to, issue.quantity, issue.memo }
+            );
+         } else {
+            add_balance( st.issuer, issue.quantity, st.auditor );
+         }
+         issue_table.erase( it );
+      } else {
+         issue_table.erase( it );
+      }
+   }
+
+   void pegtoken::approve( symbol_code sym_code, uint64_t issue_seq_num ){
+      issue_handle( sym_code, issue_seq_num, true );
+   }
+
+   void pegtoken::unapprove( symbol_code sym_code, uint64_t issue_seq_num ){
+      issue_handle( sym_code, issue_seq_num, false );
    }
 
    void pegtoken::retire( asset quantity, string memo )
@@ -279,9 +426,8 @@ namespace eosio {
        add_balance( to, quantity, payer );
    }
 
-   void pegtoken::withdraw( name from, string to, asset quantity, string memo ){
+   void pegtoken::withdraw( name from, string to_address, asset quantity, string memo ){
       require_auth( from );
-      // TODO verify address: to
 
       auto sym = quantity.symbol;
       eosio_assert( sym.is_valid(), "invalid symbol name" );
@@ -291,6 +437,8 @@ namespace eosio {
       auto existing = statstable.find( sym.code().raw() );
       eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
       const auto& st = *existing;
+
+      verify_address( st.address_style, to_address);
 
       eosio_assert( quantity.is_valid(), "invalid quantity" );
       eosio_assert( quantity.amount > 0, "must issue positive quantity" );
@@ -303,19 +451,17 @@ namespace eosio {
       SEND_INLINE_ACTION( *this, transfer, { { from, "active"_n} }, { from, st.issuer, quantity, "withdraw address:" + to + " memo: " + memo } );
 
       withdraws withdraw_table( _self, quantity.symbol.code().raw() );
+
+      auto trx_id = get_trx_id();
       withdraw_table.emplace( _self, [&]( auto& w ){
-         w.id = withdraw_table.available_primary_key();
-         w.from = from;
-         w.to = to;
-         w.quantity = quantity;
-         w.create_time = current_time_point();
-         w.feedback_time = time_point_sec();
-         w.state = 0;
+         w.id     = withdraw_table.available_primary_key();
+         w.trx_id = trx_id;
+         w.state  = 0;
       });
    }
 
-   void pegtoken::feedback( symbol_code sym_code, uint64_t id, uint8_t state, string memo ){
-      // TODO verify state
+   void pegtoken::feedback( symbol_code sym_code, uint64_t id, namet state, string trx_id, string memo ){
+      eosio_assert( state == "accepted"_n || state == "success"_n, "state can only be accepted or success" );
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
       stats statstable( _self, sym_code.raw() );
@@ -331,9 +477,10 @@ namespace eosio {
       const auto& wt = *existing2;
 
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.state = state;
-         w.feedback_time = current_time_point();
-         w.feedback_msg = memo;
+         w.state           = state;
+         w.feedback_trx_id = trx_id;
+         w.feedback_msg    = memo;
+         w.feedback_time   = current_time_point();
       });
 
       // TODO clear older history which older then three days.
@@ -360,10 +507,12 @@ namespace eosio {
 
       SEND_INLINE_ACTION( *this, transfer, { { st.issuer , "active"_n} }, { st.issuer, wt.from, wt.quantity, memo } );
 
+      auto trx_id = get_trx_id();
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.state = 5;
-         w.feedback_time = current_time_point();
+         w.state = "rollbacked";
+         w.feedback_trx_id = checksum256_to_string( trx_id );
          w.feedback_msg = memo;
+         w.feedback_time = current_time_point();
       });
    }
 
@@ -424,4 +573,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::pegtoken, (init)(create)(setmaxsupply)(update)(assignaddr)(withdraw)(feedback)(rollback)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::pegtoken, (create)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)
+(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)
+(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )

@@ -36,9 +36,28 @@ namespace eosio {
          void setmaxsupply( asset maximum_supply );
 
          [[eosio::action]]
+         void setlargeast( asset large_asset );
+
+         [[eosio::action]]
+         void lockall( symbol_code sym_code );
+
+         [[eosio::action]]
+         void unlockall( symbol_code sym_code );
+
+         [[eosio::action]]
          void update( symbol_code sym_code,
                       string  parameter,
                       string  value );
+
+         [[eosio::action]]
+         void applicant( symbol_code   sym_code,
+                         name          action,
+                         name          applicant );
+
+         [[eosio::action]]
+         void applyaddr( name          applicant,
+                         name          to,
+                         symbol_code   sym_code )
 
          [[eosio::action]]
          void assignaddr( symbol_code  sym_code,
@@ -46,15 +65,15 @@ namespace eosio {
                           string       address );
 
          [[eosio::action]]
-         void issue( name to, asset quantity, string memo );
+         void issue( uint64_t seq_num, name to, asset quantity, string memo );
 
          [[eosio::action]]
          void approve( symbol_code  sym_code ,
-                       uint64_t     issue_id );
+                       uint64_t     issue_seq_num );
 
          [[eosio::action]]
          void unapprove( symbol_code  sym_code ,
-                         uint64_t     issue_id );
+                         uint64_t     issue_seq_num );
 
          [[eosio::action]]
          void retire( asset quantity, string memo );
@@ -65,22 +84,19 @@ namespace eosio {
                         asset   quantity,
                         string  memo );
 
-         [[eosio::action]]
-         void lockall( symbol_code sym_code );
 
-         [[eosio::action]]
-         void unlockall( symbol_code sym_code );
 
          [[eosio::action]]
          void withdraw( name    from,
-                        string  to,
+                        string  to_address,
                         asset   quantity,
                         string  memo );
 
          [[eosio::action]]
          void feedback( symbol_code  sym_code,
                         uint64_t     id,
-                        uint8_t      state,
+                        name         state,
+                        string       trx_id,
                         string       memo );
 
          [[eosio::action]]
@@ -134,23 +150,23 @@ namespace eosio {
          };
 
          struct [[eosio::table]] issue_ts {
-            uint64_t issue_id;
+            uint64_t seq_num;
             name     to;
             asset    quantity;
             string   memo
 
-            uint64_t primary_key()const { return issue_id; }
+            uint64_t primary_key()const { return seq_num; }
          };
 
          struct [[eosio::table]] withdraw_ts {
-            uint64_t             seq_num;
+            uint64_t             id;
             transaction_id_type  trx_id;
+            name                 state;
             string               feedback_trx_id;
-            uint8_t              feedback_state;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
-            uint64_t  primary_key()const { return seq_num; }
+            uint64_t  primary_key()const { return id; }
             uint256_t by_trxid()const { return static_cast<uint256_t>(trx_id); }
          };
 
@@ -161,25 +177,28 @@ namespace eosio {
          };
 
          struct [[eosio::table]] currency_stats {
-            asset   supply;
-            asset   max_supply;
-            asset   large_asset;
-            name    issuer;
-            name    auditor;
-            name    address_style;
-            string  organization;
-            string  website;
-            string  miner_fee;
-            string  service_fee;
-            string  unified_recharge_address;
-            bool    active;
+            asset    supply;
+            asset    max_supply;
+            asset    large_asset;
+            name     issuer;
+            name     auditor;
+            name     address_style;
+            string   organization;
+            string   website;
+            string   miner_fee;
+            string   service_fee;
+            string   unified_recharge_address;
+            bool     active;
+
+            uint64_t issue_seq_num;
+            uint64_t apply_addr_seq_num;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
-         typedef eosio::singleton< "global"_n, global_ts > global_singleton;
          typedef eosio::multi_index< "applicants"_n, applicant_ts > applicants;
          typedef eosio::multi_index< "symbols"_n, symbol_ts > symbols;
+         typedef eosio::multi_index< "issues"_n, issue_ts > issues;
          typedef eosio::multi_index< "rchrgaddr"_n, recharge_address_ts ,
             indexed_by<"address"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_address> >,
             indexed_by<"applynum"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_apply_num> >
@@ -192,7 +211,12 @@ namespace eosio {
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
+
+         void verify_maximum_supply(asset maximum_supply);
+         void verify_address( name style, string addr);
+         void issue_handle( symbol_code sym_code, uint64_t issue_seq_num, bool pass);
          static uint64_t hash64( string str );
+
    };
 
 } /// namespace eosio
