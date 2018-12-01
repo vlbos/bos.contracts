@@ -18,6 +18,7 @@ namespace eosio {
 
    class [[eosio::contract("bos.pegtoken")]] pegtoken : public contract {
       public:
+         using contract::contract;
 
          [[eosio::action]]
          void create( name    issuer,
@@ -57,7 +58,7 @@ namespace eosio {
          [[eosio::action]]
          void applyaddr( name          applicant,
                          name          to,
-                         symbol_code   sym_code )
+                         symbol_code   sym_code );
 
          [[eosio::action]]
          void assignaddr( symbol_code  sym_code,
@@ -153,7 +154,7 @@ namespace eosio {
             uint64_t seq_num;
             name     to;
             asset    quantity;
-            string   memo
+            string   memo;
 
             uint64_t primary_key()const { return seq_num; }
          };
@@ -161,13 +162,16 @@ namespace eosio {
          struct [[eosio::table]] withdraw_ts {
             uint64_t             id;
             transaction_id_type  trx_id;
+            name                 from;
+            string               to;
+            asset                quantity;
             name                 state;
             string               feedback_trx_id;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
-            uint256_t by_trxid()const { return static_cast<uint256_t>(trx_id); }
+            uint64_t by_trxid()const { return static_cast<uint64_t>(/*trx_id*/0); }  // TODO 256
          };
 
          struct [[eosio::table]] account {
@@ -204,7 +208,7 @@ namespace eosio {
             indexed_by<"applynum"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_apply_num> >
          > addresses;
          typedef eosio::multi_index< "withdraws"_n, withdraw_ts,
-            indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint256_t, &withdraw_ts::by_trxid>  >
+            indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_trxid>  >
          > withdraws;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;

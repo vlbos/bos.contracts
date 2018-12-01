@@ -4,6 +4,7 @@
  */
 
 #include <bos.pegtoken/bos.pegtoken.hpp>
+#include <eosiolib/transaction.hpp>
 
 namespace eosio {
 
@@ -38,11 +39,11 @@ namespace eosio {
    void pegtoken::verify_address( name style, string addr){
       if ( style == "bitcoin"_n ){
 
-      } else if ( style == 'ethereum' ){
+      } else if ( style == "ethereum"_n ){
 
-      } else if ( style == 'eosio' ){
+      } else if ( style == "eosio"_n ){
 
-      } else if ( style == 'other' ){
+      } else if ( style == "other"_n ){
       } else {
          eosio_assert(false, "address style must be one of bitcoin, ethereum, eosio or other" );
       }
@@ -89,7 +90,7 @@ namespace eosio {
       eosio_assert( large_asset.symbol == maximum_supply.symbol, "large_asset's symbol mismatch with maximum_supply's symbol" );
       eosio_assert( large_asset.is_valid(), "invalid large_asset");
       eosio_assert( large_asset.amount > 0, "large_asset must be positive");
-      eosio_assert( large_asset.amount < maximum_supply.ammount, "large_asset should less then maximum_supply");
+      eosio_assert( large_asset.amount < maximum_supply.amount, "large_asset should less then maximum_supply");
 
       eosio_assert( address_style == "bitcoin"_n || address_style == "ethereum"_n ||
                     address_style == "eosio"_n || address_style == "other"_n,
@@ -166,6 +167,7 @@ namespace eosio {
    }
 
    void pegtoken::lockall( symbol_code sym_code ){
+      stats statstable( _self, sym_code.raw() );
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
       const auto& st = *existing;
@@ -177,6 +179,7 @@ namespace eosio {
    }
 
    void pegtoken::unlockall( symbol_code sym_code ){
+      stats statstable( _self, sym_code.raw() );
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol dose not exists" );
       const auto& st = *existing;
@@ -225,14 +228,14 @@ namespace eosio {
       eosio_assert( has_auth( st.issuer ) || has_auth( st.auditor ) , "this action can excute only by issuer or auditor" );
 
       applicants table( _self, sym_code.raw() );
-      auto it = table.find( applicant );
+      auto it = table.find( applicant.value );
       
       if ( action == "add"_n ){
          eosio_assert( it == table.end(), "applicant already exist, nothing to do" );
          table.emplace( _self, [&]( auto& r ) {
             r.applicant = applicant;
          });
-      } else if ( action == "remove" ){
+      } else if ( action == "remove"_n ){
          eosio_assert( it != table.end(), "applicant dose not exist, nothing to do" );
          table.erase( it );
       } else {
@@ -247,7 +250,7 @@ namespace eosio {
       const auto& st = *existing;
       
       applicants table( _self, sym_code.raw() );
-      auto it = table.find( applicant );
+      auto it = table.find( applicant.value );
       eosio_assert( it != table.end(), "applicant dose not exist" );
 
       require_auth( applicant );
@@ -280,7 +283,7 @@ namespace eosio {
       addresses addrtable( _self, sym_code.raw() );
       auto idx = addrtable.get_index<"address"_n>();
       auto existing2 = idx.find( hash64(address) );
-      eosio_assert( existing2 == idx.end(), ("this address " + address + " has been assigned to " + existing2.owner.to_string().c_str() );
+      eosio_assert( existing2 == idx.end(), ("this address " + address + " has been assigned to " + existing2->owner.to_string()).c_str() );
 
       auto it = addrtable.find( to.value );
       if( it == addrtable.end() ){
@@ -317,7 +320,7 @@ namespace eosio {
        eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
        eosio_assert( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
-       eosio_assert( seq_num == st.issue_seq_num + 1 );
+       eosio_assert( seq_num == st.issue_seq_num + 1, "error issue sequence number" );
       statstable.modify( st, same_payer, [&]( auto& s ) { s.issue_seq_num += 1; });
 
        if( quantity.amount >= st.large_asset.amount ){
@@ -448,7 +451,7 @@ namespace eosio {
       const auto& owner = acnts.get( quantity.symbol.code().raw(), "no balance object found" );
       eosio_assert( owner.balance.amount >= quantity.amount, "overdrawn balance" );
 
-      SEND_INLINE_ACTION( *this, transfer, { { from, "active"_n} }, { from, st.issuer, quantity, "withdraw address:" + to + " memo: " + memo } );
+      SEND_INLINE_ACTION( *this, transfer, { { from, "active"_n} }, { from, st.issuer, quantity, "withdraw address:" + to_address + " memo: " + memo } );
 
       withdraws withdraw_table( _self, quantity.symbol.code().raw() );
 
@@ -456,11 +459,14 @@ namespace eosio {
       withdraw_table.emplace( _self, [&]( auto& w ){
          w.id     = withdraw_table.available_primary_key();
          w.trx_id = trx_id;
-         w.state  = 0;
+         w.from   = from;
+         w.to     = to_address;
+         w.quantity = quantity;
+         w.state  = "created"_n;
       });
    }
 
-   void pegtoken::feedback( symbol_code sym_code, uint64_t id, namet state, string trx_id, string memo ){
+   void pegtoken::feedback( symbol_code sym_code, uint64_t id, name state, string trx_id, string memo ){
       eosio_assert( state == "accepted"_n || state == "success"_n, "state can only be accepted or success" );
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
@@ -509,7 +515,7 @@ namespace eosio {
 
       auto trx_id = get_trx_id();
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.state = "rollbacked";
+         w.state = "rollbacked"_n;
          w.feedback_trx_id = checksum256_to_string( trx_id );
          w.feedback_msg = memo;
          w.feedback_time = current_time_point();
@@ -573,6 +579,4 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::pegtoken, (create)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)
-(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)
-(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::pegtoken, (create)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
