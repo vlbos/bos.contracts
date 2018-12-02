@@ -455,12 +455,12 @@ namespace eosio {
          w.from   = from;
          w.to     = to_address;
          w.quantity = quantity;
-         w.state  = "created"_n;
+         w.feedback_state  = 0;
       });
    }
 
-   void pegtoken::feedback( symbol_code sym_code, uint64_t id, name state, string trx_id, string memo ){
-      eosio_assert( state == "accepted"_n || state == "success"_n, "state can only be accepted or success" );
+   void pegtoken::feedback( symbol_code sym_code, uint64_t id, uint64_t state, string trx_id, string memo ){
+      eosio_assert( state == 1 || state == 2, "state can only be 1 or 2" );
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
       stats statstable( _self, sym_code.raw() );
@@ -476,7 +476,7 @@ namespace eosio {
       const auto& wt = *existing2;
 
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.state           = state;
+         w.feedback_state  = state;
          w.feedback_trx_id = trx_id;
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
@@ -508,10 +508,10 @@ namespace eosio {
 
       auto trx_id = get_trx_id();
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.state = "rollbacked"_n;
+         w.feedback_state  = 5;
          w.feedback_trx_id = checksum256_to_string( trx_id );
-         w.feedback_msg = memo;
-         w.feedback_time = current_time_point();
+         w.feedback_msg    = memo;
+         w.feedback_time   = current_time_point();
       });
    }
 

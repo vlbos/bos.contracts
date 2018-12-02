@@ -96,7 +96,7 @@ namespace eosio {
          [[eosio::action]]
          void feedback( symbol_code  sym_code,
                         uint64_t     id,
-                        name         state,
+                        uint64_t     state,
                         string       trx_id,
                         string       memo );
 
@@ -165,13 +165,14 @@ namespace eosio {
             name                 from;
             string               to;
             asset                quantity;
-            name                 state;
+            uint64_t             feedback_state;
             string               feedback_trx_id;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
             uint64_t by_trxid()const { return static_cast<uint64_t>(/*trx_id*/0); }  // TODO 256
+            uint64_t by_state()const { return feedback_state; }
          };
 
          struct [[eosio::table]] account {
@@ -207,7 +208,8 @@ namespace eosio {
             indexed_by<"state"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_state> >
          > addresses;
          typedef eosio::multi_index< "withdraws"_n, withdraw_ts,
-            indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_trxid>  >
+               indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_trxid>  >,
+               indexed_by<"state"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_state>  >
          > withdraws;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
