@@ -124,7 +124,6 @@ namespace eosio {
          s.unified_recharge_address   = unified_recharge_address;
          s.active        = active;
          s.issue_seq_num = 0;
-         s.apply_addr_seq_num = 0;
       });
    }
 
@@ -244,11 +243,6 @@ namespace eosio {
    }
 
    void pegtoken::applyaddr( name applicant, name to, symbol_code sym_code ){
-      stats statstable( _self, sym_code.raw() );
-      auto existing = statstable.find( sym_code.raw() );
-      eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
-      const auto& st = *existing;
-      
       applicants table( _self, sym_code.raw() );
       auto it = table.find( applicant.value );
       eosio_assert( it != table.end(), "applicant dose not exist" );
@@ -261,11 +255,8 @@ namespace eosio {
 
       addrtable.emplace( _self, [&]( auto& a ) {
          a.owner        = to;
-         a.assign_time  = time_point_sec();
-         a.apply_num    = st.apply_addr_seq_num + 1;
+         a.state        = 1;
       });
-
-      statstable.modify( st, same_payer, [&]( auto& s ) { s.apply_addr_seq_num += 1; });
    }
 
    void pegtoken::assignaddr( symbol_code sym_code, name to, string address ){
@@ -295,9 +286,10 @@ namespace eosio {
          });
       } else {
          addrtable.modify( it, same_payer, [&]( auto& a ) {
-            a.owner = to;
-            a.address = address;
-            a.assign_time = current_time_point();
+            a.owner        = to;
+            a.address      = address;
+            a.assign_time  = current_time_point();
+            a.state        = 2;
          });
       }
    }
