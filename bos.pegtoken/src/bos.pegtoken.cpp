@@ -38,11 +38,11 @@ namespace eosio {
 
    void pegtoken::verify_address( name style, string addr){
       if ( style == "bitcoin"_n ){
-
+         // TODO
       } else if ( style == "ethereum"_n ){
-
+         // TODO
       } else if ( style == "eosio"_n ){
-
+         // TODO
       } else if ( style == "other"_n ){
       } else {
          eosio_assert(false, "address style must be one of bitcoin, ethereum, eosio or other" );
@@ -459,7 +459,7 @@ namespace eosio {
       });
    }
 
-   void pegtoken::feedback( symbol_code sym_code, uint64_t id, uint64_t state, string trx_id, string memo ){
+   void pegtoken::feedback( symbol_code sym_code, transaction_id_type trx_id, uint64_t state, string remote_trx_id, string memo ){
       eosio_assert( state == 1 || state == 2, "state can only be 1 or 2" );
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
@@ -471,13 +471,14 @@ namespace eosio {
       require_auth( st.issuer );
 
       withdraws withdraw_table( _self, sym_code.raw() );
-      auto existing2 = withdraw_table.find( id );
-      eosio_assert( existing2 != withdraw_table.end(), "this id does not exist" );
+      auto idx = withdraw_table.get_index<"trxid"_n>();
+      auto existing2 = idx.find( fixed_bytes<32>(trx_id.hash) );
+      eosio_assert( existing2 != idx.end(), "this trx id does not exist" );
       const auto& wt = *existing2;
 
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
          w.feedback_state  = state;
-         w.feedback_trx_id = trx_id;
+         w.feedback_trx_id = remote_trx_id;
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
       });
@@ -485,7 +486,7 @@ namespace eosio {
       // TODO clear older history which older then three days.
    }
 
-   void pegtoken::rollback( symbol_code sym_code, uint64_t id, string memo ){
+   void pegtoken::rollback( symbol_code sym_code, transaction_id_type trx_id, string memo ){
       eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
       stats statstable( _self, sym_code.raw() );
@@ -496,8 +497,9 @@ namespace eosio {
       require_auth( st.issuer );
 
       withdraws withdraw_table( _self, sym_code.raw() );
-      auto existing2 = withdraw_table.find( id );
-      eosio_assert( existing2 != withdraw_table.end(), "this id does not exist" );
+      auto idx = withdraw_table.get_index<"trxid"_n>();
+      auto existing2 = idx.find( fixed_bytes<32>(trx_id.hash) );
+      eosio_assert( existing2 != idx.end(), "this trx id does not exist" );
       const auto& wt = *existing2;
 
       accounts acnts( _self, st.issuer.value );
@@ -506,10 +508,10 @@ namespace eosio {
 
       SEND_INLINE_ACTION( *this, transfer, { { st.issuer , "active"_n} }, { st.issuer, wt.from, wt.quantity, memo } );
 
-      auto trx_id = get_trx_id();
+      auto this_trx_id = get_trx_id();
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
          w.feedback_state  = 5;
-         w.feedback_trx_id = checksum256_to_string( trx_id );
+         w.feedback_trx_id = checksum256_to_string( this_trx_id );
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
       });

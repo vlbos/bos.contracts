@@ -94,16 +94,16 @@ namespace eosio {
                         string  memo );
 
          [[eosio::action]]
-         void feedback( symbol_code  sym_code,
-                        uint64_t     id,
-                        uint64_t     state,
-                        string       trx_id,
-                        string       memo );
+         void feedback( symbol_code          sym_code,
+                        transaction_id_type  trx_id,
+                        uint64_t             state,
+                        string               remote_trx_id,
+                        string               memo );
 
          [[eosio::action]]
-         void rollback( symbol_code  sym_code,
-                        uint64_t     id,
-                        string       memo );
+         void rollback( symbol_code          sym_code,
+                        transaction_id_type  trx_id,
+                        string               memo );
 
          [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
@@ -171,7 +171,7 @@ namespace eosio {
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
-            uint64_t by_trxid()const { return static_cast<uint64_t>(/*trx_id*/0); }  // TODO 256
+            fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
             uint64_t by_state()const { return feedback_state; }
          };
 
@@ -208,7 +208,7 @@ namespace eosio {
             indexed_by<"state"_n, const_mem_fun<recharge_address_ts, uint64_t, &recharge_address_ts::by_state> >
          > addresses;
          typedef eosio::multi_index< "withdraws"_n, withdraw_ts,
-               indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_trxid>  >,
+               indexed_by<"trxid"_n, const_mem_fun<withdraw_ts, fixed_bytes<32>, &withdraw_ts::by_trxid>  >,
                indexed_by<"state"_n, const_mem_fun<withdraw_ts, uint64_t, &withdraw_ts::by_state>  >
          > withdraws;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
