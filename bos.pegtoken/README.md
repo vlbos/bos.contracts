@@ -5,6 +5,14 @@ This contract allows users to create, issue, and manage peg tokens from other bl
 eosio based blockchains.
 
 
+TODO
+-------------
+1. 完成函数 checksum256_to_string
+2. 添加以太坊地址判断
+3. 定制策略，删除 withdraw_table 表中的陈旧数据
+4. 给本合约添加测试用例
+5. 完善并将README.md翻译为英文
+
 功能
 -------------
 1. 表中记录用户提现交易id，和原链交易id
