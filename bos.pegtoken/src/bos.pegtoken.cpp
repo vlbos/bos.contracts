@@ -24,7 +24,7 @@ namespace eosio {
    }
 
    string checksum256_to_string( capi_checksum256 src ){
-      // TODO
+      // TODO 将checksum256转换成字符串
       return string();
    }
 
@@ -38,12 +38,18 @@ namespace eosio {
 
    void pegtoken::verify_address( name style, string addr){
       if ( style == "bitcoin"_n ){
-         // TODO
+         // https://en.bitcoin.it/wiki/Address
+         eosio_assert( addr[0] == '1' || addr[0] == '3', "invalid btcoin address, should begin with 1 or 3" );
+         eosio_assert( addr.size() >= 26 && addr.size() <= 35, "invalid btcoin address, length should be [26-35]" );
+         auto npos = std::string::npos;
+         eosio_assert( addr.find('O') == npos && addr.find('I') == npos && addr.find('l') == npos &&
+                       addr.find('0') == npos, "invalid btcoin address, can't contain O,I,l,0" );
       } else if ( style == "ethereum"_n ){
-         // TODO
+         // TODO 找到以太坊地址规范，并实现基础的地址有效性判断
       } else if ( style == "eosio"_n ){
-         // TODO
+         auto _n = name(addr);
       } else if ( style == "other"_n ){
+         // no check
       } else {
          eosio_assert(false, "address style must be one of bitcoin, ethereum, eosio or other" );
       }
@@ -305,6 +311,8 @@ namespace eosio {
        eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
        const auto& st = *existing;
 
+       eosio_assert( st.active, "underwriter is not active" );
+
        require_auth( st.issuer );
 
        eosio_assert( quantity.is_valid(), "invalid quantity" );
@@ -314,7 +322,7 @@ namespace eosio {
        eosio_assert( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
        eosio_assert( seq_num == st.issue_seq_num + 1, "error issue sequence number" );
-      statstable.modify( st, same_payer, [&]( auto& s ) { s.issue_seq_num += 1; });
+       statstable.modify( st, same_payer, [&]( auto& s ) { s.issue_seq_num += 1; });
 
        if( quantity.amount >= st.large_asset.amount ){
           issues issue_table( _self, sym.code().raw() );
@@ -340,6 +348,8 @@ namespace eosio {
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
       const auto& st = *existing;
+
+      eosio_assert( st.active, "underwriter is not active" );
 
       require_auth( st.auditor );
 
@@ -383,6 +393,8 @@ namespace eosio {
        eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
        const auto& st = *existing;
 
+       eosio_assert( st.active, "underwriter is not active" );
+
        require_auth( st.issuer );
        eosio_assert( quantity.is_valid(), "invalid quantity" );
        eosio_assert( quantity.amount > 0, "must retire positive quantity" );
@@ -397,9 +409,9 @@ namespace eosio {
    }
 
    void pegtoken::transfer( name    from,
-                          name    to,
-                          asset   quantity,
-                          string  memo )
+                            name    to,
+                            asset   quantity,
+                            string  memo )
    {
        eosio_assert( from != to, "cannot transfer to self" );
        require_auth( from );
@@ -407,6 +419,8 @@ namespace eosio {
        auto sym = quantity.symbol.code();
        stats statstable( _self, sym.raw() );
        const auto& st = statstable.get( sym.raw() );
+
+       eosio_assert( st.active, "underwriter is not active" );
 
        require_recipient( from );
        require_recipient( to );
@@ -433,6 +447,8 @@ namespace eosio {
       auto existing = statstable.find( sym.code().raw() );
       eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
       const auto& st = *existing;
+
+      eosio_assert( st.active, "underwriter is not active" );
 
       verify_address( st.address_style, to_address);
 
@@ -493,6 +509,8 @@ namespace eosio {
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol not exists" );
       const auto& st = *existing;
+
+      eosio_assert( st.active, "underwriter is not active" );
 
       require_auth( st.issuer );
 

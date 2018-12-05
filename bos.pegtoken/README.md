@@ -10,90 +10,152 @@ eosio based blockchains.
 1. 表中记录用户提现交易id，和原链交易id
 2. 用户提出分配地址，才会给他分配，需要提供分配地址的账户，这些账户有权限给用户添加标志。
 3. 提供命令，实现锁定合约，锁定后任何用户不能再执行交易
-4. 锁定合约的情况下，支持使用sudo权限改变任意用户的token余额。
-5. 大额转入需要二次认证才能给用户发行
-
+4. 大额转入需要二次认证才能给用户发行
 
 
 actions
 -----------
 ```
- [[eosio::action]]
- void init( symbol sym_base, string repeatable);
- 调用权限: _self
- 功能: 1. 设置基础符号，例如BTC、ETH等，各个承兑商设置的锚定币符号必须以基础符号开头；
-      2. 设置不同承兑商的充值地址是否可以重复，BTC和ETH的充值地址是不可以重复的，而EOS的充值地址是在一个账号的基础上的一个memo编号，
-         这些编号是可以重复的。
- 参数: 
-    1. sym_base 基础符号
-    2. repeatable 不同承兑商为用户分配的充值地址是否可以重复。
- 
- [[eosio::action]]
  void create( name    issuer,
+              name    auditor,
               asset   maximum_supply,
+              asset   large_asset,
+              name    address_style,
               string  organization,
               string  website,
               string  miner_fee,
               string  service_fee,
               string  unified_recharge_address,
-              string  state);
+              bool    active );
  调用权限: _self
  功能: 1. 创建承兑商
  参数: 
     1. issuer           锚定币发行账号
-    2. maximum_supply   最大发行量，注意符号需要以sym_base开头
-    3. organization     组织名字（支持中文）
-    4. website          组织官网
-    5. miner_fee        矿工费，本处只是文字描述，合约中并没有相关业务逻辑。
-    6. service_fee      服务费，本处只是文字描述，合约中并没有相关业务逻辑。
-    7. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
+    2. auditor          承兑商审计账户，（当发行额度大于等于large_asset值时，需要审计账户确认，才可以完成发行动作）
+    3. maximum_supply   最大发行量，此处要特备注意小数点后0的个数，此个数为token的精度，一旦设定无法修改
+                        例如为比特币设定8位精度，符号为BTC，发行量为1千万，此处应该填写 "10000000.00000000 BTC"
+    4. large_asset      大额资产阈值，大于或等于此值的资产算为大额资产
+    5. address_style    被映射代币原链的地址类型，此值必须为bitcoin、ethereum、eosio、other四个中的一种
+                        比特币使用bitcoin，以太币和以太坊上的其他代币使用ethereum，eos和eos上的其他代币使用eosio
+                        其他代币使用other，当使用other时，不进行地址有效性检验。
+    6. organization     组织名字（支持中文）
+    7. website          组织官网
+    8. miner_fee        矿工费，本处只是文字描述，合约中并没有相关业务逻辑。
+    9. service_fee      服务费，本处只是文字描述，合约中并没有相关业务逻辑。
+    10. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
                         所有用户使用同一个账号充值，使用memo中的编号区分不同用户，此处记录统一的充值地址。
-    8. state            状态描述、暂停/活跃
+    11. active          承兑商处于活跃/非活跃状态
  
- [[eosio::action]]
+
  void setmaxsupply( asset maximum_supply );
  调用权限: _self
  功能: 1. 设置某个承兑商可以发行的最大资产总量。
- 参数: maximum_supply 最大发行量
+ 参数: maximum_supply 最大发行量，例如 "10000000.00000000 BTC"
  
  
- [[eosio::action]]
+ void setlargeast( asset large_asset );
+ 调用权限: _self
+ 功能: 1. 设置大额资产阈值。
+ 参数: large_asset 大额资产阈值 ，例如 "10.00000000 BTC"
+ 
+ 
+ void lockall( symbol_code sym_code );
+ 调用权限: _self
+ 功能: 1. 冻结合约，合约冻结后不能再执行issue、transfer、approve、unapprove、retire、withdraw、rollback。
+ 参数: sym_code 代币符号名，例如 "BTC"
+ 
+ 
+ void unlockall( symbol_code sym_code );
+ 调用权限: _self
+ 功能: 1. 解冻合约
+ 参数: sym_code 代币符号名，例如 "BTC"
+ 
+ 
  void update( symbol_code sym_code,
               string  parameter,
               string  value );
  调用权限: issuer
  功能: 1. 设置某个承兑商相关信息。
  参数: 
-    1. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
-    2. parameter    参数名
-    3. value        参数值
+    1. sym_code     承兑商发行的锚定币符号 例如 "BTC"
+    2. parameter    参数名，例如 "organization"
+    3. value        参数值，例如 "某某承兑商"
  
  
- [[eosio::action]]
+ void applicant( symbol_code   sym_code,
+                 name          action,
+                 name          applicant );
+ 调用权限: issuer
+ 功能: 1. 设置充值地址申请人
+ 参数: 
+    1. sym_code     承兑商发行的锚定币符号 例如 "BTC"
+    2. action       "add" 或 "remove"
+    3. applicant    申请人账户
+    
+    
+ void applyaddr( name          applicant,
+                 name          to,
+                 symbol_code   sym_code );
+ 调用权限: applicant
+ 功能: 1. 为用户申请地址
+ 参数: 
+    1. applicant    申请人
+    2. to           用户账户
+    3. sym_code     承兑商发行的锚定币符号 例如 "BTC"
+ 
+ 
  void assignaddr( symbol_code  sym_code,
                   name         to,
                   string       address );
  调用权限: issuer
  功能: 1. 承兑商为用户分配充值地址。
  参数: 
-    1. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
+    1. sym_code     承兑商发行的锚定币符号 例如 "BTC"
     2. to           bos用户名
     3. address      锚定币充值地址                 
-                  
 
- [[eosio::action]]
+
  void issue( name to, asset quantity, string memo );
-   
- [[eosio::action]]
- void retire( asset quantity, string memo );
+ 调用权限: issuer
+ 功能: 1. 承兑商给用户发行资产，需要注意的是，承兑商必须调用此接口为用户充值，而不应该调用transfer
+         因为transfer中不会检查大额资产阈值，并且为了承兑商内部核账方便，也应该使用issue而不是transfer
+ 参数: 
+    1. to           账户名
+    2. quantity     资产，例如 "1.00000000 BTC"
+    3. memo         附加信息   
+    
 
- [[eosio::action]]
+ void approve( symbol_code  sym_code ,
+               uint64_t     issue_seq_num );
+ 调用权限: auditor
+ 功能: 1. 审计员认证发行
+ 参数: 
+    1. sym_code         承兑商发行的锚定币符号 例如 "BTC"
+    2. issue_seq_num    发行编号
+
+
+ void unapprove( symbol_code  sym_code ,
+                 uint64_t     issue_seq_num );
+ 调用权限: auditor
+ 功能: 1. 审计员否认发行
+ 参数: 
+    1. sym_code         承兑商发行的锚定币符号 例如 "BTC"
+    2. issue_seq_num    发行编号  
+
+
+ void retire( asset quantity, string memo );
+ 调用权限: issuer
+ 功能: 1. 回收发行的代币，降低总发行量
+ 参数: 
+    1. quantity     回收资产额度，例如 "1.00000000 BTC"
+    2. memo         附加信息
+
  void transfer( name    from,
                 name    to,
                 asset   quantity,
                 string  memo );
 
- [[eosio::action]]
+
  void withdraw( name    from,
                 string  to,
                 asset   quantity,
@@ -106,7 +168,7 @@ actions
     3. quantity     锚定币数量   
     4. memo         附加信息
     
- [[eosio::action]]
+
  void feedback( symbol_code  sym_code,
                 uint64_t     id,
                 uint8_t      state,
@@ -120,7 +182,6 @@ actions
     4. memo         附加信息
 
 
- [[eosio::action]]
  void rollback( symbol_code  sym_code,
                 uint64_t     id,
                 string       memo );
@@ -131,71 +192,12 @@ actions
     2. id           用户提币记录的id
     3. memo         附加信息
 
- [[eosio::action]]
+
  void open( name owner, const symbol& symbol, name ram_payer );
 
- [[eosio::action]]
+
  void close( name owner, const symbol& symbol );
-```
 
-tables
-----------
-
-```
- struct [[eosio::table("global")]] global_ts {
-    symbol sym_base;
-    bool   repeatable;   // recharge addresses can be used repeatably between different organizations.
- };
-
- struct [[eosio::table]] symbol_code_ts {
-    symbol_code  sym_code;
-
-    uint64_t primary_key()const { return sym_code.raw(); }
- };
-
- struct [[eosio::table]] recharge_address_ts {
-    name           owner;
-    string         address;
-    time_point_sec create_time;
-    time_point_sec last_update;
-
-    uint64_t primary_key()const { return owner.value; }
-    uint64_t by_address()const { return hash64( address ); }
- };
-
- struct [[eosio::table]] withdraw_ts {
-    uint64_t       id;
-    name           from;
-    string         to;
-    asset          quantity;
-    time_point_sec create_time;
-    time_point_sec feedback_time;
-    string         feedback_msg;
-    uint8_t        state;
-
-    uint64_t primary_key()const { return id; }
-    uint64_t by_time()const { return static_cast<uint64_t>(create_time.sec_since_epoch()); }
- };
-
- struct [[eosio::table]] account {
-    asset    balance;
-
-    uint64_t primary_key()const { return balance.symbol.code().raw(); }
- };
-
- struct [[eosio::table]] currency_stats {
-    asset   supply;
-    asset   max_supply;
-    name    issuer;
-    string  organization;
-    string  website;
-    string  miner_fee;
-    string  service_fee;
-    string  unified_recharge_address;
-    string  state;
-
-    uint64_t primary_key()const { return supply.symbol.code().raw(); }
- };
 
 ```
 
