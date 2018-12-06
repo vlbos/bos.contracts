@@ -225,6 +225,8 @@ namespace eosio {
    }
 
    void pegtoken::applicant( symbol_code sym_code, name action, name applicant ){
+      eosio_assert( is_account( applicant ), "applicant account does not exist");
+
       stats statstable( _self, sym_code.raw() );
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
