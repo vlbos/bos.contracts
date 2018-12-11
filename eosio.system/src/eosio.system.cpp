@@ -157,23 +157,30 @@ namespace eosiosystem {
       set_name_list_packed(static_cast<int64_t>(itlt->second), static_cast<int64_t>(itlat->second), packed_names.data(), packed_names.size());
    }
 
-   void system_contract::setminguar(uint32_t ram, uint32_t cpu, uint32_t net)
+   void system_contract::setguaminres(uint32_t ram, uint32_t cpu, uint32_t net)
    {
       require_auth(_self);
+
+      const static uint32_t MAX_BYTE = 100*1024;
+      const static uint32_t MAX_MICROSEC = 100*1000;
+
+      const static uint32_t STEP_BYTE = 10*1024;
+      const static uint32_t STEP_MICROSEC = 10*1000;
       eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
-      eosio_assert(ram <= 100 && cpu <= 100 && net <= 100, "the value of ram, cpu and net should not more then 100");
+      eosio_assert(ram <= MAX_BYTE  && net <= MAX_BYTE, "the value of ram, cpu and net should not more then 100 kb");
+      eosio_assert(cpu <= MAX_MICROSEC , "the value of  cpu  should not more then 100 ms");
 
-      eosio_min_guarantee _mg = _guarantee.exists() ? _guarantee.get() : eosio_min_guarantee{};
-      eosio_assert(ram >= _mg.ram, "can not reduce ram guarantee ");
-      eosio_assert(ram <= _mg.ram + 10, "minimun ram guarantee can not increace more then 10kb every time");
-      eosio_assert(cpu <= _mg.cpu + 10, "minimun cpu guarantee can not increace more then 10 token weight every time");
-      eosio_assert(net <= _mg.net + 10, "minimun net guarantee can not increace more then 10 token weight every time");
+      eosio_guaranteed_min_res _gmr = _guarantee.exists() ? _guarantee.get() : eosio_guaranteed_min_res{};
+      eosio_assert(ram >= _gmr.ram, "can not reduce ram guarantee ");
+      eosio_assert(ram <= _gmr.ram + STEP_BYTE, "minimum ram guarantee can not increace more then 10kb every time");
+      eosio_assert(cpu <= _gmr.cpu + STEP_MICROSEC, "minimum cpu guarantee can not increace more then 10ms token weight every time");
+      eosio_assert(net <= _gmr.net + STEP_BYTE, "minimum net guarantee can not increace more then 10kb token weight every time");
 
-      _mg.ram = ram;
-      _mg.cpu = cpu;
-      _mg.net = net;
+      _gmr.ram = ram;
+      _gmr.cpu = cpu;
+      _gmr.net = net;
 
-      _guarantee.set(_mg, _self);
+      _guarantee.set(_gmr, _self);
       set_guaranteed_minimum_resources(ram, cpu, net);
    }
    // *bos end*
@@ -373,7 +380,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(namelist)(setminguar)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(namelist)(setguaminres)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

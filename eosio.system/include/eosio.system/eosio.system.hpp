@@ -162,14 +162,14 @@ namespace eosiosystem {
    };
 
    // *bos*
-   struct [[eosio::table("minguar"), eosio::contract("eosio.system")]] eosio_min_guarantee{
-      eosio_min_guarantee(){}
+   struct [[eosio::table("guaranminres"), eosio::contract("eosio.system")]] eosio_guaranteed_min_res{
+      eosio_guaranteed_min_res(){}
 
-      uint32_t ram = 0;  ///  minimum ram guarantee in kb for every account.
-      uint32_t cpu = 0;  ///  minimum cpu guarantee in bos for every account.
-      uint32_t net = 0;  ///  minimum net guarantee in bos for every account.
+      uint32_t ram = 0;  ///  guaranteed minimum ram  in kb for every account.
+      uint32_t cpu = 0;  ///  guaranteed minimum cpu  in bos for every account.
+      uint32_t net = 0;  ///  guaranteed minimum net  in bos for every account.
 
-      EOSLIB_SERIALIZE( eosio_min_guarantee, (ram)(cpu)(net) )
+      EOSLIB_SERIALIZE( eosio_guaranteed_min_res, (ram)(cpu)(net) )
    };
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
@@ -182,7 +182,7 @@ namespace eosiosystem {
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
-   typedef eosio::singleton< "minguar"_n, eosio_min_guarantee > min_guarantee_singleton;      // *bos*
+   typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;      // *bos*
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -195,7 +195,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
-         min_guarantee_singleton  _guarantee;     // *bos*
+         guaranteed_min_res_singleton  _guarantee;     // *bos*
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
@@ -316,7 +316,8 @@ namespace eosiosystem {
 
          // *bos*
          [[eosio::action]]
-         void setminguar(uint32_t ram, uint32_t cpu, uint32_t net);
+         void setguaminres(uint32_t ram, uint32_t cpu, uint32_t net);
+         
          // functions defined in producer_pay.cpp
          [[eosio::action]]
          void claimrewards( const name owner );
