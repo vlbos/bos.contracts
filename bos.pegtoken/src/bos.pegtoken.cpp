@@ -5,6 +5,7 @@
 
 #include <bos.pegtoken/bos.pegtoken.hpp>
 #include <eosiolib/transaction.hpp>
+#include "decoder.hpp"
 
 namespace eosio {
 
@@ -24,8 +25,7 @@ namespace eosio {
    }
 
    string checksum256_to_string( capi_checksum256 src ){
-      // TODO 将checksum256转换成字符串
-      return string();
+      return decode_hex( src.hash, 32 );
    }
 
    uint64_t pegtoken::hash64( string s ){
@@ -45,7 +45,7 @@ namespace eosio {
          eosio_assert( addr.find('O') == npos && addr.find('I') == npos && addr.find('l') == npos &&
                        addr.find('0') == npos, "invalid btcoin address, can't contain O,I,l,0" );
       } else if ( style == "ethereum"_n ){
-         // TODO 找到以太坊地址规范，并实现基础的地址有效性判断
+         eosio_assert(valid_ethereum_addr(addr), "invalid ethereum addr");
       } else if ( style == "eosio"_n ){
          auto _n = name(addr);
       } else if ( style == "other"_n ){
@@ -501,7 +501,11 @@ namespace eosio {
          w.feedback_time   = current_time_point();
       });
 
-      // TODO clear older history which older then three days.
+
+      // FIXME: need more elegant deletion strategy
+      if(state == 2 || state == 5) {
+            withdraw_table.erase( *idx.find( fixed_bytes<32>(trx_id.hash) ) );
+      }
    }
 
    void pegtoken::rollback( symbol_code sym_code, transaction_id_type trx_id, string memo ){
@@ -529,12 +533,15 @@ namespace eosio {
       SEND_INLINE_ACTION( *this, transfer, { { st.issuer , "active"_n} }, { st.issuer, wt.from, wt.quantity, memo } );
 
       auto this_trx_id = get_trx_id();
-      withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.feedback_state  = 5;
-         w.feedback_trx_id = checksum256_to_string( this_trx_id );
-         w.feedback_msg    = memo;
-         w.feedback_time   = current_time_point();
-      });
+
+      // FIXME: need more elegant deletion strategy
+      withdraw_table.erase(wt);
+      // withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
+      //    w.feedback_state  = 5;
+      //    w.feedback_trx_id = checksum256_to_string( this_trx_id );
+      //    w.feedback_msg    = memo;
+      //    w.feedback_time   = current_time_point();
+      // });
    }
 
    void pegtoken::sub_balance( name owner, asset value ) {
