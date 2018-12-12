@@ -221,7 +221,7 @@ namespace eosiosystem {
       const int64_t max_claimable = 90'000'000'0000ll;
       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
 
-      eosio_assert( max_claimable - claimable <= stake, "bosbosbosbos can only claim their tokens over 10 years" );
+      eosio_assert( max_claimable - claimable <= stake, "bos can only claim their tokens over 10 years" );
    }
 
    void system_contract::changebw( name from, name receiver,
@@ -397,7 +397,8 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == "bosbosbosbos"_n ) {
+         
+         if( from == "bos"_n ) {
             validate_bos_vesting( from_voter->staked );
          }
 
