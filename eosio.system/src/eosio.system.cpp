@@ -324,6 +324,10 @@ namespace eosiosystem {
             } else {
                eosio_assert( creator == suffix, "only suffix may create this account" );
             }
+
+            const static auto BOS_PREFIX = "bos.";
+            std::string::size_type p = newact.to_string().find(BOS_PREFIX);
+            eosio_assert(p == std::string::npos || 0 != p, " 'bos.' prefix  be reserved by system");
          }
       }
 
