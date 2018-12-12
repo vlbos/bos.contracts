@@ -315,6 +315,10 @@ namespace eosiosystem {
          if( has_dot ) { // or is less than 12 characters
             auto suffix = newact.suffix();
             if( suffix == newact ) {
+               if("bos"_n==suffix)
+               {
+                     require_auth(_self);
+               }
                name_bid_table bids(_self, _self.value);
                auto current = bids.find( newact.value );
                eosio_assert( current != bids.end(), "no active bid for name" );
@@ -327,7 +331,11 @@ namespace eosiosystem {
 
             const static auto BOS_PREFIX = "bos.";
             std::string::size_type p = newact.to_string().find(BOS_PREFIX);
-            eosio_assert(p == std::string::npos || 0 != p, " 'bos.' prefix  be reserved by system");
+            if(p != std::string::npos && 0 == p)
+            {
+            require_auth(_self);
+            }
+           
          }
       }
 

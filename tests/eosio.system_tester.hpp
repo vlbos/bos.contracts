@@ -54,7 +54,7 @@ public:
       FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
       create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
       issue(config::system_account_name, asset(10000000000000, core_symbol) );
-      BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "bos", core_symbol ) );
+      BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
    }
 
    void deploy_contract( bool call_init = true ) {
@@ -84,7 +84,7 @@ public:
       create_account_with_resources( N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false );
       create_account_with_resources( N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
 
-      BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("bos")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
    }
 
    enum class setup_level {
@@ -463,7 +463,7 @@ public:
       abi_serializer msig_abi_ser;
       {
          create_account_with_resources( N(eosio.msig), config::system_account_name );
-         BOOST_REQUIRE_EQUAL( success(), buyram( "bos", "eosio.msig", core_sym::from_string("5000.0000") ) );
+         BOOST_REQUIRE_EQUAL( success(), buyram( "eosio", "eosio.msig", core_sym::from_string("5000.0000") ) );
          produce_block();
 
          auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
@@ -486,7 +486,7 @@ public:
 
    vector<name> active_and_vote_producers() {
       //stake more than 15% of total EOS supply to activate chain
-      transfer( "bos", "alice1111111", core_sym::from_string("650000000.0000"), "bos" );
+      transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );
       BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("300000000.0000"), core_sym::from_string("300000000.0000") ) );
 
       // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
