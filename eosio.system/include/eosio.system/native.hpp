@@ -98,7 +98,7 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void newaccount( name             creator,
-                          name             name,
+                          name             newact,
                           ignore<authority> owner,
                           ignore<authority> active);
 
