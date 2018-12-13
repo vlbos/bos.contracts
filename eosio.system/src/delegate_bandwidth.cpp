@@ -397,6 +397,7 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
+         
          if( from == "bos"_n ) {
             validate_bos_vesting( from_voter->staked );
          }
