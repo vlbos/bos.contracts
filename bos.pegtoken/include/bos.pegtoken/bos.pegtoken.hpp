@@ -32,10 +32,10 @@ namespace eosio {
                       string  service_fee,
                       string  unified_recharge_address,
                       bool    active,
-                      asset   max_withdraw );
+                      asset   min_withdraw );
          
          [[eosio::action]]
-         void setwithdraw( asset max_withdraw );
+         void setwithdraw( asset min_withdraw );
 
          [[eosio::action]]
          void setmaxsupply( asset maximum_supply );
@@ -203,7 +203,7 @@ namespace eosio {
 
             uint64_t issue_seq_num;
 
-            asset    max_withdraw;
+            asset    min_withdraw;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };

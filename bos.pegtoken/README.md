@@ -35,7 +35,7 @@ actions
               string  service_fee,
               string  unified_recharge_address,
               bool    active,
-              asset   max_withdraw );
+              asset   min_withdraw );
  调用权限: _self
  功能: 1. 创建承兑商
  参数: 
@@ -54,13 +54,13 @@ actions
     10. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
                         所有用户使用同一个账号充值，使用memo中的编号区分不同用户，此处记录统一的充值地址。
     11. active          承兑商处于活跃/非活跃状态
-    12. max_withdraw    最大withdraw限额
+    12. min_withdraw    最小withdraw限额
  
 
-void setwithdraw( asset max_withdraw );
+void setwithdraw( asset min_withdraw );
 调用权限: auditor
 功能: 1. 设置某个承兑商每次withdraw可兑换的最大量
-参数: max_withdraw  withdraw时可兑换的最大量
+参数: min_withdraw  withdraw时可兑换的最大量
 
 
  void setmaxsupply( asset maximum_supply );

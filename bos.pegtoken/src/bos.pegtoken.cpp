@@ -82,11 +82,11 @@ namespace eosio {
                           string  service_fee,
                           string  unified_recharge_address,
                           bool    active,
-                          asset   max_withdraw )
+                          asset   min_withdraw )
    {
       require_auth( _self );
 
-      eosio_assert( maximum_supply.symbol == max_withdraw.symbol && max_withdraw.amount >0, "invalid maximum withdraw." );
+      eosio_assert( maximum_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
       
       eosio_assert( is_account( issuer ), "issuer account does not exist");
       eosio_assert( is_account( auditor ), "auditor account does not exist");
@@ -134,22 +134,22 @@ namespace eosio {
          s.active        = active;
          s.issue_seq_num = 0;
 
-         s.max_withdraw  = max_withdraw;
+         s.min_withdraw  = min_withdraw;
       });
    }
 
 
-   void pegtoken::setwithdraw( asset max_withdraw )
+   void pegtoken::setwithdraw( asset min_withdraw )
    {
-      stats statstable( _self, max_withdraw.symbol.code().raw() );
-      auto existing = statstable.find( max_withdraw.symbol.code().raw() );
+      stats statstable( _self, min_withdraw.symbol.code().raw() );
+      auto existing = statstable.find( min_withdraw.symbol.code().raw() );
       eosio_assert( existing != statstable.end(), "token with symbol not exists" );
 
       require_auth( existing->auditor );
-      eosio_assert( existing->max_supply.symbol == max_withdraw.symbol && max_withdraw.amount >0, "invalid maximum withdraw." );
+      eosio_assert( existing->max_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
 
       statstable.modify( existing, _self,[&](auto &p) {
-         p.max_withdraw = max_withdraw;
+         p.min_withdraw = min_withdraw;
       });
    }
 
@@ -472,7 +472,7 @@ namespace eosio {
 
       eosio_assert( st.active, "underwriter is not active" );
 
-      eosio_assert( quantity <= st.max_withdraw, "quantity overflow." );
+      eosio_assert( quantity >= st.min_withdraw, "quantity overflow." );
 
       verify_address( st.address_style, to_address);
 
