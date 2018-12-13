@@ -214,12 +214,14 @@ namespace eosiosystem {
       }
    }
 
-   void validate_b1_vesting( int64_t stake ) {
-      const int64_t base_time = 1527811200; /// 2018-06-01
-      const int64_t max_claimable = 100'000'000'0000ll;
+   void validate_bos_vesting( int64_t stake ) {
+      // const int64_t base_time = 1527811200; /// 2018-06-01 08:00
+      // const int64_t max_claimable = 100'000'000'0000ll;
+      const int64_t base_time = 1544587932000; /// 2018-12-12 12:12:12
+      const int64_t max_claimable = 90'000'000'0000ll;
       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
 
-      eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
+      eosio_assert( max_claimable - claimable <= stake, "bos can only claim their tokens over 10 years" );
    }
 
    void system_contract::changebw( name from, name receiver,
@@ -395,8 +397,9 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == "b1"_n ) {
-            validate_b1_vesting( from_voter->staked );
+         
+         if( from == "bos"_n ) {
+            validate_bos_vesting( from_voter->staked );
          }
 
          if( from_voter->producers.size() || from_voter->proxy ) {
@@ -431,7 +434,7 @@ namespace eosiosystem {
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
 
-
+ 
    void system_contract::refund( const name owner ) {
       require_auth( owner );
 

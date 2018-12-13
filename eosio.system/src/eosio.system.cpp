@@ -6,7 +6,7 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
-
+#include <map>
 
 namespace eosiosystem {
 
@@ -18,6 +18,7 @@ namespace eosiosystem {
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
+    _guarantee(_self, _self.value),
     _rammarket(_self, _self.value)
    {
 
@@ -112,6 +113,77 @@ namespace eosiosystem {
       eosio_assert( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
       set_blockchain_parameters( params );
    }
+
+   // *bos begin*
+   void system_contract::namelist(std::string list, std::string action, const std::vector<name> &names)
+   {
+      const int MAX_LIST_LENGTH = 30;
+      const int MAX_ACTION_LENGTH = 10;
+      enum  class list_type:int64_t
+      {
+         actor_blacklist_type = 1,
+         contract_blacklist_type,
+         resource_greylist_type,
+         list_type_count
+      };
+      enum class list_action_type:int64_t
+      {
+         insert_type = 1,
+         remove_type,
+         list_action_type_count
+      };
+
+      std::map<std::string, list_type> list_type_string_to_enum = {
+              {"actor_blacklist", list_type::actor_blacklist_type},
+              {"contract_blacklist", list_type::contract_blacklist_type},
+              {"resource_greylist", list_type::resource_greylist_type}};
+
+      std::map<std::string, list_action_type> list_action_type_string_to_enum = {
+          {"insert", list_action_type::insert_type},
+          {"remove", list_action_type::remove_type}};
+
+      std::map<std::string, list_type>::iterator itlt = list_type_string_to_enum.find(list);
+      std::map<std::string, list_action_type>::iterator itlat = list_action_type_string_to_enum.find(action);
+
+      require_auth(_self);
+      eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
+      eosio_assert(list.length() < MAX_LIST_LENGTH, "list string is greater than max length 30");
+      eosio_assert(action.length() < MAX_ACTION_LENGTH, " action string is greater than max length 10");
+      eosio_assert(itlt != list_type_string_to_enum.end(), " unknown list type string  support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
+      eosio_assert(itlat != list_action_type_string_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
+
+      auto packed_names = pack(names);
+
+      set_name_list_packed(static_cast<int64_t>(itlt->second), static_cast<int64_t>(itlat->second), packed_names.data(), packed_names.size());
+   }
+
+   void system_contract::setguaminres(uint32_t ram, uint32_t cpu, uint32_t net)
+   {
+      require_auth(_self);
+
+      const static uint32_t MAX_BYTE = 100*1024;
+      const static uint32_t MAX_MICROSEC = 100*1000;
+
+      const static uint32_t STEP_BYTE = 10*1024;
+      const static uint32_t STEP_MICROSEC = 10*1000;
+      eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
+      eosio_assert(ram <= MAX_BYTE  && net <= MAX_BYTE, "the value of ram, cpu and net should not more then 100 kb");
+      eosio_assert(cpu <= MAX_MICROSEC , "the value of  cpu  should not more then 100 ms");
+
+      eosio_guaranteed_min_res _gmr = _guarantee.exists() ? _guarantee.get() : eosio_guaranteed_min_res{};
+      eosio_assert(ram >= _gmr.ram, "can not reduce ram guarantee ");
+      eosio_assert(ram <= _gmr.ram + STEP_BYTE, "minimum ram guarantee can not increace more then 10kb every time");
+      eosio_assert(cpu <= _gmr.cpu + STEP_MICROSEC, "minimum cpu guarantee can not increace more then 10ms token weight every time");
+      eosio_assert(net <= _gmr.net + STEP_BYTE, "minimum net guarantee can not increace more then 10kb token weight every time");
+
+      _gmr.ram = ram;
+      _gmr.cpu = cpu;
+      _gmr.net = net;
+
+      _guarantee.set(_gmr, _self);
+      set_guaranteed_minimum_resources(ram, cpu, net);
+   }
+   // *bos end*
 
    void system_contract::setpriv( name account, uint8_t ispriv ) {
       require_auth( _self );
@@ -243,6 +315,10 @@ namespace eosiosystem {
          if( has_dot ) { // or is less than 12 characters
             auto suffix = newact.suffix();
             if( suffix == newact ) {
+               if("bos"_n==suffix)
+               {
+                     require_auth(_self);
+               }
                name_bid_table bids(_self, _self.value);
                auto current = bids.find( newact.value );
                eosio_assert( current != bids.end(), "no active bid for name" );
@@ -252,6 +328,14 @@ namespace eosiosystem {
             } else {
                eosio_assert( creator == suffix, "only suffix may create this account" );
             }
+
+            const static auto BOS_PREFIX = "bos.";
+            std::string::size_type p = newact.to_string().find(BOS_PREFIX);
+            if(p != std::string::npos && 0 == p)
+            {
+            require_auth(_self);
+            }
+           
          }
       }
 
@@ -308,7 +392,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(namelist)(setguaminres)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp
