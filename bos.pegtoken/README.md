@@ -257,6 +257,7 @@ tables
     name                 from;
     string               to;
     asset                quantity;
+    time_point_sec       create_time;
     uint64_t             state;  // 1 表示开始处理， 2 表示处理完成。如果此值大于等于10，表示未处理，是其初始值和此条记录的主键id相同。
     string               feedback_trx_id;
     string               feedback_msg;
