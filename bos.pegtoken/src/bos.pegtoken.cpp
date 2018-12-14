@@ -75,14 +75,14 @@ namespace eosio {
                           name    auditor,
                           asset   maximum_supply,
                           asset   large_asset,
+                          asset   min_withdraw,
                           name    address_style,
                           string  organization,
                           string  website,
                           string  miner_fee,
                           string  service_fee,
                           string  unified_recharge_address,
-                          bool    active,
-                          asset   min_withdraw )
+                          bool    active )
    {
       require_auth( _self );
 
@@ -144,12 +144,13 @@ namespace eosio {
       stats statstable( _self, min_withdraw.symbol.code().raw() );
       auto existing = statstable.find( min_withdraw.symbol.code().raw() );
       eosio_assert( existing != statstable.end(), "token with symbol not exists" );
+      const auto& st = *existing;
 
-      require_auth( existing->auditor );
-      eosio_assert( existing->max_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
+      require_auth( st.auditor );
+      eosio_assert( st.max_supply.symbol == min_withdraw.symbol && min_withdraw.amount > 0, "invalid min_withdraw" );
 
-      statstable.modify( existing, _self,[&](auto &p) {
-         p.min_withdraw = min_withdraw;
+      statstable.modify( st, same_payer, [&]( auto & s ) {
+         s.min_withdraw = min_withdraw;
       });
    }
 
@@ -283,7 +284,7 @@ namespace eosio {
 
       addrtable.emplace( _self, [&]( auto& a ) {
          a.owner        = to;
-         a.state        = 1;
+         a.state        = to.value;
       });
    }
 
@@ -317,7 +318,7 @@ namespace eosio {
             a.owner        = to;
             a.address      = address;
             a.assign_time  = current_time_point();
-            a.state        = 2;
+            a.state        = 0;
          });
       }
    }
@@ -472,7 +473,7 @@ namespace eosio {
 
       eosio_assert( st.active, "underwriter is not active" );
 
-      eosio_assert( quantity >= st.min_withdraw, "quantity overflow." );
+      eosio_assert( quantity >= st.min_withdraw, "quantity less then min_withdraw" );
 
       verify_address( st.address_style, to_address);
 
@@ -489,13 +490,14 @@ namespace eosio {
       withdraws withdraw_table( _self, quantity.symbol.code().raw() );
 
       auto trx_id = get_trx_id();
+      auto id = withdraw_table.available_primary_key();
       withdraw_table.emplace( _self, [&]( auto& w ){
-         w.id     = withdraw_table.available_primary_key();
+         w.id     = id == 0 ? 10 : id;
          w.trx_id = trx_id;
          w.from   = from;
          w.to     = to_address;
          w.quantity = quantity;
-         w.feedback_state  = 0;
+         w.feedback_state  = w.id;
       });
    }
 
@@ -525,7 +527,7 @@ namespace eosio {
 
 
       // FIXME: need more elegant deletion strategy
-      if(state == 2 || state == 5) {
+      if( state == 2 ) {
             withdraw_table.erase( *idx.find( fixed_bytes<32>(trx_id.hash) ) );
       }
    }
@@ -557,7 +559,7 @@ namespace eosio {
       auto this_trx_id = get_trx_id();
 
       // FIXME: need more elegant deletion strategy
-      withdraw_table.erase(wt);
+      withdraw_table.erase( wt );
       // withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
       //    w.feedback_state  = 5;
       //    w.feedback_trx_id = checksum256_to_string( this_trx_id );

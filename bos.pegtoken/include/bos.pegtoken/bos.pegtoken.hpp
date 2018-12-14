@@ -25,14 +25,14 @@ namespace eosio {
                       name    auditor,
                       asset   maximum_supply,
                       asset   large_asset,
+                      asset   min_withdraw,
                       name    address_style,
                       string  organization,
                       string  website,
                       string  miner_fee,
                       string  service_fee,
                       string  unified_recharge_address,
-                      bool    active,
-                      asset   min_withdraw );
+                      bool    active );
          
          [[eosio::action]]
          void setwithdraw( asset min_withdraw );
@@ -191,6 +191,7 @@ namespace eosio {
             asset    supply;
             asset    max_supply;
             asset    large_asset;
+            asset    min_withdraw;
             name     issuer;
             name     auditor;
             name     address_style;
@@ -200,10 +201,7 @@ namespace eosio {
             string   service_fee;
             string   unified_recharge_address;
             bool     active;
-
             uint64_t issue_seq_num;
-
-            asset    min_withdraw;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
