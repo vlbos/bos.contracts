@@ -497,7 +497,8 @@ namespace eosio {
          w.from   = from;
          w.to     = to_address;
          w.quantity = quantity;
-         w.feedback_state  = w.id;
+         w.create_time = current_time_point();
+         w.state  = w.id;
       });
    }
 
@@ -519,7 +520,7 @@ namespace eosio {
       const auto& wt = *existing2;
 
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.feedback_state  = state;
+         w.state  = state;
          w.feedback_trx_id = remote_trx_id;
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
@@ -561,7 +562,7 @@ namespace eosio {
       // FIXME: need more elegant deletion strategy
       withdraw_table.erase( wt );
       // withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-      //    w.feedback_state  = 5;
+      //    w.state  = 5;
       //    w.feedback_trx_id = checksum256_to_string( this_trx_id );
       //    w.feedback_msg    = memo;
       //    w.feedback_time   = current_time_point();

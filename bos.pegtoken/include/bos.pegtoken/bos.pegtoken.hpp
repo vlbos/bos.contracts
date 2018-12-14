@@ -169,16 +169,15 @@ namespace eosio {
             name                 from;
             string               to;
             asset                quantity;
-            uint64_t             feedback_state;
+            time_point_sec       create_time;
+            uint64_t             state;
             string               feedback_trx_id;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
             fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
-            uint64_t by_state()const { return feedback_state; }
-
-            withdraw_ts(): feedback_time(current_time()){}
+            uint64_t by_state()const { return state; }
          };
 
          struct [[eosio::table]] account {

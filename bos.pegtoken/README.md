@@ -257,14 +257,14 @@ tables
     name                 from;
     string               to;
     asset                quantity;
-    uint64_t             feedback_state;
+    uint64_t             state;  // 1 表示开始处理， 2 表示处理完成。如果此值大于等于10，表示未处理，是其初始值和此条记录的主键id相同。
     string               feedback_trx_id;
     string               feedback_msg;
     time_point_sec       feedback_time;
 
     uint64_t  primary_key()const { return id; }
     fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
-    uint64_t by_state()const { return feedback_state; }
+    uint64_t by_state()const { return state; }
 
     withdraw_ts(): feedback_time(current_time()){}
  };
