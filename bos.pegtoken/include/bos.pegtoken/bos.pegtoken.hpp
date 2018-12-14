@@ -31,7 +31,11 @@ namespace eosio {
                       string  miner_fee,
                       string  service_fee,
                       string  unified_recharge_address,
-                      bool    active );
+                      bool    active,
+                      asset   min_withdraw );
+         
+         [[eosio::action]]
+         void setwithdraw( asset min_withdraw );
 
          [[eosio::action]]
          void setmaxsupply( asset maximum_supply );
@@ -173,6 +177,8 @@ namespace eosio {
             uint64_t  primary_key()const { return id; }
             fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
             uint64_t by_state()const { return feedback_state; }
+
+            withdraw_ts(): feedback_time(current_time()){}
          };
 
          struct [[eosio::table]] account {
@@ -196,6 +202,8 @@ namespace eosio {
             bool     active;
 
             uint64_t issue_seq_num;
+
+            asset    min_withdraw;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };

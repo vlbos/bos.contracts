@@ -81,10 +81,13 @@ namespace eosio {
                           string  miner_fee,
                           string  service_fee,
                           string  unified_recharge_address,
-                          bool    active )
+                          bool    active,
+                          asset   min_withdraw )
    {
       require_auth( _self );
 
+      eosio_assert( maximum_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
+      
       eosio_assert( is_account( issuer ), "issuer account does not exist");
       eosio_assert( is_account( auditor ), "auditor account does not exist");
 
@@ -130,6 +133,23 @@ namespace eosio {
          s.unified_recharge_address   = unified_recharge_address;
          s.active        = active;
          s.issue_seq_num = 0;
+
+         s.min_withdraw  = min_withdraw;
+      });
+   }
+
+
+   void pegtoken::setwithdraw( asset min_withdraw )
+   {
+      stats statstable( _self, min_withdraw.symbol.code().raw() );
+      auto existing = statstable.find( min_withdraw.symbol.code().raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol not exists" );
+
+      require_auth( existing->auditor );
+      eosio_assert( existing->max_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
+
+      statstable.modify( existing, _self,[&](auto &p) {
+         p.min_withdraw = min_withdraw;
       });
    }
 
@@ -452,6 +472,8 @@ namespace eosio {
 
       eosio_assert( st.active, "underwriter is not active" );
 
+      eosio_assert( quantity >= st.min_withdraw, "quantity overflow." );
+
       verify_address( st.address_style, to_address);
 
       eosio_assert( quantity.is_valid(), "invalid quantity" );
@@ -601,4 +623,4 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::pegtoken, (create)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::pegtoken, (create)(setwithdraw)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
