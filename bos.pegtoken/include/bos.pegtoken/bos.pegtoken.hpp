@@ -178,6 +178,8 @@ namespace eosio {
             uint64_t  primary_key()const { return id; }
             fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
             uint64_t by_state()const { return state; }
+            withdraw_ts():create_time(time_point_sec()),feedback_time(time_point_sec()){};
+
          };
 
          struct [[eosio::table]] account {
