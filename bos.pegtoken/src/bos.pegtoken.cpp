@@ -498,6 +498,7 @@ namespace eosio {
          w.to     = to_address;
          w.quantity = quantity;
          w.create_time = current_time_point();
+         w.feedback_time = time_point_sec();
          w.state  = w.id;
       });
    }
