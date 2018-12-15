@@ -59,8 +59,8 @@ actions
 
 void setwithdraw( asset min_withdraw );
 调用权限: auditor
-功能: 1. 设置某个承兑商每次withdraw可兑换的最大量
-参数: min_withdraw  withdraw时可兑换的最大量
+功能: 1. 设置某个承兑商每次withdraw可兑换的最小量
+参数: min_withdraw  withdraw时可兑换的最小量
 
 
  void setmaxsupply( asset maximum_supply );
@@ -190,7 +190,7 @@ void setwithdraw( asset min_withdraw );
                 uint8_t      state,
                 string       memo );
  调用权限: issuer
- 功能: 1. 承兑商反馈用户提币信息，是否成功等。
+ 功能: 1. 承兑商反馈用户提币信息，是否成功等。并设置延时删除(不捕获onerror)
  参数: 
     1. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
     2. id           用户提币记录的id
@@ -202,11 +202,19 @@ void setwithdraw( asset min_withdraw );
                 uint64_t     id,
                 string       memo );
  调用权限: issuer
- 功能: 1. 当用户的提币失败后（例如提币地址错误等），承兑商回滚用户提币交易。
+ 功能: 1. 当用户的提币失败后（例如提币地址错误等），承兑商回滚用户提币交易。并设置延时删除(不捕获onerror)
  参数: 
     1. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
     2. id           用户提币记录的id
     3. memo         附加信息
+
+void rmwithdraw( uint64_t           id,
+                 symbol_code        sym_code);
+调用权限: issuer
+功能: 1. 手动删除记录
+参数:
+   1. id           用户提币记录的id
+   2. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
 
 
  void open( name owner, const symbol& symbol, name ram_payer );
