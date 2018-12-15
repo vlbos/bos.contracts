@@ -5,6 +5,8 @@
 
 #include <bos.pegtoken/bos.pegtoken.hpp>
 #include <eosiolib/transaction.hpp>
+#include <eosiolib/action.hpp>
+#include "decoder.hpp"
 
 namespace eosio {
 
@@ -24,8 +26,7 @@ namespace eosio {
    }
 
    string checksum256_to_string( capi_checksum256 src ){
-      // TODO 将checksum256转换成字符串
-      return string();
+      return decode_hex( src.hash, 32 );
    }
 
    uint64_t pegtoken::hash64( string s ){
@@ -45,7 +46,7 @@ namespace eosio {
          eosio_assert( addr.find('O') == npos && addr.find('I') == npos && addr.find('l') == npos &&
                        addr.find('0') == npos, "invalid btcoin address, can't contain O,I,l,0" );
       } else if ( style == "ethereum"_n ){
-         // TODO 找到以太坊地址规范，并实现基础的地址有效性判断
+         eosio_assert(valid_ethereum_addr(addr), "invalid ethereum addr");
       } else if ( style == "eosio"_n ){
          auto _n = name(addr);
       } else if ( style == "other"_n ){
@@ -75,6 +76,7 @@ namespace eosio {
                           name    auditor,
                           asset   maximum_supply,
                           asset   large_asset,
+                          asset   min_withdraw,
                           name    address_style,
                           string  organization,
                           string  website,
@@ -85,6 +87,8 @@ namespace eosio {
    {
       require_auth( _self );
 
+      eosio_assert( maximum_supply.symbol == min_withdraw.symbol && min_withdraw.amount >0, "invalid maximum withdraw." );
+      
       eosio_assert( is_account( issuer ), "issuer account does not exist");
       eosio_assert( is_account( auditor ), "auditor account does not exist");
 
@@ -130,6 +134,24 @@ namespace eosio {
          s.unified_recharge_address   = unified_recharge_address;
          s.active        = active;
          s.issue_seq_num = 0;
+
+         s.min_withdraw  = min_withdraw;
+      });
+   }
+
+
+   void pegtoken::setwithdraw( asset min_withdraw )
+   {
+      stats statstable( _self, min_withdraw.symbol.code().raw() );
+      auto existing = statstable.find( min_withdraw.symbol.code().raw() );
+      eosio_assert( existing != statstable.end(), "token with symbol not exists" );
+      const auto& st = *existing;
+
+      require_auth( st.auditor );
+      eosio_assert( st.max_supply.symbol == min_withdraw.symbol && min_withdraw.amount > 0, "invalid min_withdraw" );
+
+      statstable.modify( st, same_payer, [&]( auto & s ) {
+         s.min_withdraw = min_withdraw;
       });
    }
 
@@ -225,6 +247,8 @@ namespace eosio {
    }
 
    void pegtoken::applicant( symbol_code sym_code, name action, name applicant ){
+      eosio_assert( is_account( applicant ), "applicant account does not exist");
+
       stats statstable( _self, sym_code.raw() );
       auto existing = statstable.find( sym_code.raw() );
       eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
@@ -261,7 +285,7 @@ namespace eosio {
 
       addrtable.emplace( _self, [&]( auto& a ) {
          a.owner        = to;
-         a.state        = 1;
+         a.state        = to.value;
       });
    }
 
@@ -295,7 +319,7 @@ namespace eosio {
             a.owner        = to;
             a.address      = address;
             a.assign_time  = current_time_point();
-            a.state        = 2;
+            a.state        = 0;
          });
       }
    }
@@ -450,6 +474,8 @@ namespace eosio {
 
       eosio_assert( st.active, "underwriter is not active" );
 
+      eosio_assert( quantity >= st.min_withdraw, "quantity less then min_withdraw" );
+
       verify_address( st.address_style, to_address);
 
       eosio_assert( quantity.is_valid(), "invalid quantity" );
@@ -465,13 +491,16 @@ namespace eosio {
       withdraws withdraw_table( _self, quantity.symbol.code().raw() );
 
       auto trx_id = get_trx_id();
+      auto id = withdraw_table.available_primary_key();
       withdraw_table.emplace( _self, [&]( auto& w ){
-         w.id     = withdraw_table.available_primary_key();
+         w.id     = id == 0 ? 10 : id;
          w.trx_id = trx_id;
          w.from   = from;
          w.to     = to_address;
          w.quantity = quantity;
-         w.feedback_state  = 0;
+         w.create_time = current_time_point();
+         w.feedback_time = time_point_sec();
+         w.state  = w.id;
       });
    }
 
@@ -493,13 +522,23 @@ namespace eosio {
       const auto& wt = *existing2;
 
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.feedback_state  = state;
+         w.state  = state;
          w.feedback_trx_id = remote_trx_id;
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
       });
 
-      // TODO clear older history which older then three days.
+
+      // FIXME: need more elegant deletion strategy
+      if(state == 2 || state == 5) {
+         uint128_t sender_id = wt.id;
+         cancel_deferred( sender_id );
+         transaction tsn;
+         tsn.actions.push_back({ { st.issuer, "active"_n }, _self, "rmwithdraw"_n, 
+            std::make_tuple( wt.id, sym_code ) });
+         tsn.delay_sec = DELAY_SEC;
+         tsn.send( sender_id, _self, true );
+      }
    }
 
    void pegtoken::rollback( symbol_code sym_code, transaction_id_type trx_id, string memo ){
@@ -527,12 +566,32 @@ namespace eosio {
       SEND_INLINE_ACTION( *this, transfer, { { st.issuer , "active"_n} }, { st.issuer, wt.from, wt.quantity, memo } );
 
       auto this_trx_id = get_trx_id();
+
+      // FIXME: need more elegant deletion strategy
+      uint128_t sender_id = wt.id;
+      cancel_deferred( sender_id );
+      transaction tsn;
+      tsn.actions.push_back({ { st.issuer, "active"_n }, _self, "rmwithdraw"_n, 
+         std::make_tuple( wt.id, sym_code ) });
+      tsn.delay_sec = DELAY_SEC;
+      tsn.send( sender_id, _self, true );
+
       withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-         w.feedback_state  = 5;
+         w.state  = 5;
          w.feedback_trx_id = checksum256_to_string( this_trx_id );
          w.feedback_msg    = memo;
          w.feedback_time   = current_time_point();
       });
+   }
+
+   void pegtoken::rmwithdraw( uint64_t id, symbol_code sym_code )
+   {
+      stats stats_table( _self, sym_code.raw() );
+      const auto& st = stats_table.get( sym_code.raw(), "symbol does not exist" );
+      require_auth( st.issuer );
+
+      withdraws withdraw_table( _self, sym_code.raw() );
+      withdraw_table.erase( withdraw_table.find( id ) );
    }
 
    void pegtoken::sub_balance( name owner, asset value ) {
@@ -592,4 +651,4 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::pegtoken, (create)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::pegtoken, (create)(setwithdraw)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(rmwithdraw)(open)(close)(retire) )

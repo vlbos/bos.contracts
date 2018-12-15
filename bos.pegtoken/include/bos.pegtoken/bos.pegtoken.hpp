@@ -12,6 +12,8 @@
 
 #include <string>
 
+constexpr uint64_t DELAY_SEC = 7 *24 * 60 *60;
+
 namespace eosio {
    typedef capi_checksum256   transaction_id_type;
    using std::string;
@@ -25,6 +27,7 @@ namespace eosio {
                       name    auditor,
                       asset   maximum_supply,
                       asset   large_asset,
+                      asset   min_withdraw,
                       name    address_style,
                       string  organization,
                       string  website,
@@ -32,6 +35,9 @@ namespace eosio {
                       string  service_fee,
                       string  unified_recharge_address,
                       bool    active );
+         
+         [[eosio::action]]
+         void setwithdraw( asset min_withdraw );
 
          [[eosio::action]]
          void setmaxsupply( asset maximum_supply );
@@ -99,11 +105,15 @@ namespace eosio {
                         uint64_t             state,
                         string               remote_trx_id,
                         string               memo );
-
+         
          [[eosio::action]]
          void rollback( symbol_code          sym_code,
                         transaction_id_type  trx_id,
                         string               memo );
+
+         [[eosio::action]]
+         void rmwithdraw( uint64_t           id,
+                          symbol_code        sym_code);
 
          [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
@@ -165,14 +175,15 @@ namespace eosio {
             name                 from;
             string               to;
             asset                quantity;
-            uint64_t             feedback_state;
+            time_point_sec       create_time;
+            uint64_t             state;
             string               feedback_trx_id;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
             fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
-            uint64_t by_state()const { return feedback_state; }
+            uint64_t by_state()const { return state; }
          };
 
          struct [[eosio::table]] account {
@@ -185,6 +196,7 @@ namespace eosio {
             asset    supply;
             asset    max_supply;
             asset    large_asset;
+            asset    min_withdraw;
             name     issuer;
             name     auditor;
             name     address_style;
@@ -194,7 +206,6 @@ namespace eosio {
             string   service_fee;
             string   unified_recharge_address;
             bool     active;
-
             uint64_t issue_seq_num;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }

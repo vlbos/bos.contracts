@@ -6,6 +6,9 @@
 *.lo
 *.o
 *.obj
+*.abi
+*.wast
+*.wasm
 
 # Precompiled Headers
 *.gch
@@ -36,3 +39,5 @@ build/*
 
 .idea
 cmake-build-debug
+
+.vscode
