@@ -5,6 +5,7 @@
 
 #include <bos.pegtoken/bos.pegtoken.hpp>
 #include <eosiolib/transaction.hpp>
+#include <eosiolib/action.hpp>
 #include "decoder.hpp"
 
 namespace eosio {
@@ -529,8 +530,14 @@ namespace eosio {
 
 
       // FIXME: need more elegant deletion strategy
-      if( state == 2 ) {
-            withdraw_table.erase( *idx.find( fixed_bytes<32>(trx_id.hash) ) );
+      if(state == 2 || state == 5) {
+         uint128_t sender_id = wt.id;
+         cancel_deferred( sender_id );
+         transaction tsn;
+         tsn.actions.push_back({ { st.issuer, "active"_n }, _self, "rmwithdraw"_n, 
+            std::make_tuple( wt.id, sym_code ) });
+         tsn.delay_sec = DELAY_SEC;
+         tsn.send( sender_id, _self, true );
       }
    }
 
@@ -561,13 +568,30 @@ namespace eosio {
       auto this_trx_id = get_trx_id();
 
       // FIXME: need more elegant deletion strategy
-      withdraw_table.erase( wt );
-      // withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
-      //    w.state  = 5;
-      //    w.feedback_trx_id = checksum256_to_string( this_trx_id );
-      //    w.feedback_msg    = memo;
-      //    w.feedback_time   = current_time_point();
-      // });
+      uint128_t sender_id = wt.id;
+      cancel_deferred( sender_id );
+      transaction tsn;
+      tsn.actions.push_back({ { st.issuer, "active"_n }, _self, "rmwithdraw"_n, 
+         std::make_tuple( wt.id, sym_code ) });
+      tsn.delay_sec = DELAY_SEC;
+      tsn.send( sender_id, _self, true );
+
+      withdraw_table.modify( wt, same_payer, [&]( auto& w ) {
+         w.state  = 5;
+         w.feedback_trx_id = checksum256_to_string( this_trx_id );
+         w.feedback_msg    = memo;
+         w.feedback_time   = current_time_point();
+      });
+   }
+
+   void pegtoken::rmwithdraw( uint64_t id, symbol_code sym_code )
+   {
+      stats stats_table( _self, sym_code.raw() );
+      const auto& st = stats_table.get( sym_code.raw(), "symbol does not exist" );
+      require_auth( st.issuer );
+
+      withdraws withdraw_table( _self, sym_code.raw() );
+      withdraw_table.erase( withdraw_table.find( id ) );
    }
 
    void pegtoken::sub_balance( name owner, asset value ) {
@@ -627,4 +651,4 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::pegtoken, (create)(setwithdraw)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::pegtoken, (create)(setwithdraw)(setmaxsupply)(setlargeast)(lockall)(unlockall)(update)(applicant)(applyaddr)(assignaddr)(issue)(approve)(unapprove)(transfer)(withdraw)(feedback)(rollback)(rmwithdraw)(open)(close)(retire) )

@@ -12,6 +12,8 @@
 
 #include <string>
 
+constexpr uint64_t DELAY_SEC = 7 *24 * 60 *60;
+
 namespace eosio {
    typedef capi_checksum256   transaction_id_type;
    using std::string;
@@ -103,11 +105,15 @@ namespace eosio {
                         uint64_t             state,
                         string               remote_trx_id,
                         string               memo );
-
+         
          [[eosio::action]]
          void rollback( symbol_code          sym_code,
                         transaction_id_type  trx_id,
                         string               memo );
+
+         [[eosio::action]]
+         void rmwithdraw( uint64_t           id,
+                          symbol_code        sym_code);
 
          [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
