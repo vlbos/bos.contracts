@@ -28,14 +28,14 @@ actions
               name    auditor,
               asset   maximum_supply,
               asset   large_asset,
+              asset   min_withdraw,
               name    address_style,
               string  organization,
               string  website,
               string  miner_fee,
               string  service_fee,
               string  unified_recharge_address,
-              bool    active,
-              asset   min_withdraw );
+              bool    active );
  调用权限: _self
  功能: 1. 创建承兑商
  参数: 
@@ -44,23 +44,23 @@ actions
     3. maximum_supply   最大发行量，此处要特备注意小数点后0的个数，此个数为token的精度，一旦设定无法修改
                         例如为比特币设定8位精度，符号为BTC，发行量为1千万，此处应该填写 "10000000.00000000 BTC"
     4. large_asset      大额资产阈值，大于或等于此值的资产算为大额资产
-    5. address_style    被映射代币原链的地址类型，此值必须为bitcoin、ethereum、eosio、other四个中的一种
+    5. min_withdraw     最小withdraw限额
+    6. address_style    被映射代币原链的地址类型，此值必须为bitcoin、ethereum、eosio、other四个中的一种
                         比特币使用bitcoin，以太币和以太坊上的其他代币使用ethereum，eos和eos上的其他代币使用eosio
                         其他代币使用other，当使用other时，不进行地址有效性检验。
-    6. organization     组织名字（支持中文）
-    7. website          组织官网
-    8. miner_fee        矿工费，本处只是文字描述，合约中并没有相关业务逻辑。
-    9. service_fee      服务费，本处只是文字描述，合约中并没有相关业务逻辑。
-    10. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
+    7. organization     组织名字（支持中文）
+    8. website          组织官网
+    9. miner_fee        矿工费，本处只是文字描述，合约中并没有相关业务逻辑。
+    10. service_fee      服务费，本处只是文字描述，合约中并没有相关业务逻辑。
+    11. unified_recharge_address  统一充值地址，用于类似EOS的交易所充值方式，
                         所有用户使用同一个账号充值，使用memo中的编号区分不同用户，此处记录统一的充值地址。
-    11. active          承兑商处于活跃/非活跃状态
-    12. min_withdraw    最小withdraw限额
- 
+    12. active          承兑商处于活跃/非活跃状态
 
-void setwithdraw( asset min_withdraw );
-调用权限: auditor
-功能: 1. 设置某个承兑商每次withdraw可兑换的最小量
-参数: min_withdraw  withdraw时可兑换的最小量
+ 
+ void setwithdraw( asset min_withdraw );
+ 调用权限: auditor
+ 功能: 1. 设置用户每次withdraw最低额度
+ 参数: min_withdraw  withdraw最低额度
 
 
  void setmaxsupply( asset maximum_supply );
@@ -194,7 +194,7 @@ void setwithdraw( asset min_withdraw );
  参数: 
     1. sym_code     承兑商发行的锚定币符号 例如 "BTCA"
     2. id           用户提币记录的id
-    3. state        状态，// TODO 规定状态值
+    3. state        状态， // 1 表示开始处理， 2 表示处理完成。如果此值大于等于10，表示未处理，是其初始值和此条记录的主键id相同。
     4. memo         附加信息
 
 
@@ -224,6 +224,86 @@ void rmwithdraw( uint64_t           id,
 
 
 ```
+tables
+-----------
+``` 
+ struct [[eosio::table]] symbol_ts {
+    symbol  sym;
 
+    uint64_t primary_key()const { return sym.code().raw(); }
+ };
+
+ struct [[eosio::table]] applicant_ts {
+    name  applicant;
+
+    uint64_t primary_key()const { return applicant.value; }
+ };
+
+ struct [[eosio::table]] recharge_address_ts {
+    name           owner;
+    string         address;
+    time_point_sec assign_time;
+    uint64_t       state;   状态， // 提供地址后设置为0。如果此值为非零，是其初始值，此值和此条记录的主键（owner.value）相同。
+
+    uint64_t primary_key()const { return owner.value; }
+    uint64_t by_address()const { return hash64( address ); }
+    uint64_t by_state()const { return state; }
+ };
+
+ struct [[eosio::table]] issue_ts {
+    uint64_t seq_num;
+    name     to;
+    asset    quantity;
+    string   memo;
+
+    uint64_t primary_key()const { return seq_num; }
+ };
+
+ struct [[eosio::table]] withdraw_ts {
+    uint64_t             id;
+    transaction_id_type  trx_id;
+    name                 from;
+    string               to;
+    asset                quantity;
+    time_point_sec       create_time;
+    uint64_t             state;  // 1 表示开始处理， 2 表示处理完成。如果此值大于等于10，表示未处理，是其初始值和此条记录的主键id相同。
+    string               feedback_trx_id;
+    string               feedback_msg;
+    time_point_sec       feedback_time;
+
+    uint64_t  primary_key()const { return id; }
+    fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
+    uint64_t by_state()const { return state; }
+
+    withdraw_ts(): feedback_time(current_time()){}
+ };
+
+ struct [[eosio::table]] account {
+    asset    balance;
+
+    uint64_t primary_key()const { return balance.symbol.code().raw(); }
+ };
+
+ struct [[eosio::table]] currency_stats {
+    asset    supply;
+    asset    max_supply;
+    asset    large_asset;
+    asset    min_withdraw;
+    name     issuer;
+    name     auditor;
+    name     address_style;
+    string   organization;
+    string   website;
+    string   miner_fee;
+    string   service_fee;
+    string   unified_recharge_address;
+    bool     active;
+    uint64_t issue_seq_num;
+
+    uint64_t primary_key()const { return supply.symbol.code().raw(); }
+ };
+ 
+
+```
 
 

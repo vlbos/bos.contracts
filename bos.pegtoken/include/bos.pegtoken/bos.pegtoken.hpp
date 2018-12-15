@@ -27,14 +27,14 @@ namespace eosio {
                       name    auditor,
                       asset   maximum_supply,
                       asset   large_asset,
+                      asset   min_withdraw,
                       name    address_style,
                       string  organization,
                       string  website,
                       string  miner_fee,
                       string  service_fee,
                       string  unified_recharge_address,
-                      bool    active,
-                      asset   min_withdraw );
+                      bool    active );
          
          [[eosio::action]]
          void setwithdraw( asset min_withdraw );
@@ -175,16 +175,17 @@ namespace eosio {
             name                 from;
             string               to;
             asset                quantity;
-            uint64_t             feedback_state;
+            time_point_sec       create_time;
+            uint64_t             state;
             string               feedback_trx_id;
             string               feedback_msg;
             time_point_sec       feedback_time;
 
             uint64_t  primary_key()const { return id; }
             fixed_bytes<32> by_trxid()const { return fixed_bytes<32>(trx_id.hash); }
-            uint64_t by_state()const { return feedback_state; }
+            uint64_t by_state()const { return state; }
+            withdraw_ts():create_time(time_point_sec()),feedback_time(time_point_sec()){};
 
-            withdraw_ts(): feedback_time(current_time()){}
          };
 
          struct [[eosio::table]] account {
@@ -197,6 +198,7 @@ namespace eosio {
             asset    supply;
             asset    max_supply;
             asset    large_asset;
+            asset    min_withdraw;
             name     issuer;
             name     auditor;
             name     address_style;
@@ -206,10 +208,7 @@ namespace eosio {
             string   service_fee;
             string   unified_recharge_address;
             bool     active;
-
             uint64_t issue_seq_num;
-
-            asset    min_withdraw;
 
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
