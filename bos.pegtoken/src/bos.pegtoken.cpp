@@ -273,6 +273,8 @@ namespace eosio {
    }
 
    void pegtoken::applyaddr( name applicant, name to, symbol_code sym_code ){
+      eosio_assert( is_account( to ), "to account does not exist");
+      
       applicants table( _self, sym_code.raw() );
       auto it = table.find( applicant.value );
       eosio_assert( it != table.end(), "applicant dose not exist" );
