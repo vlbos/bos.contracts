@@ -386,7 +386,7 @@ namespace eosio {
       eosio_assert( quantity.amount >= acpt.min_once_transfer.amount, "quantity less then min_once_transfer");
       eosio_assert( quantity.amount <= acpt.max_once_transfer.amount, "quantity greater then max_once_transfer");
 
-      // accumulate and check
+      // accumulate max_tfs_per_minute and check
       auto current_time_sec = now();
       uint32_t limit = acpt.max_tfs_per_minute > 0 ? acpt.max_tfs_per_minute : default_max_trx_per_minute_per_token;
       if ( current_time_sec > acpt.mutables.minute_trx_start + 60 ){
@@ -401,7 +401,7 @@ namespace eosio {
       }
       eosio_assert( acpt.mutables.minute_trxs <= limit,"max transactions per minute exceed" );
 
-
+      // accumulate max_daily_transfer and check
       if ( acpt.max_daily_transfer.amount != 0 ) {
          if ( current_time_sec > acpt.mutables.daily_tf_start + 3600 * 24 ){
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
@@ -413,9 +413,10 @@ namespace eosio {
                r.mutables.daily_tf_sum += quantity;
             });
          }
-         eosio_assert( acpt.mutables.daily_tf_sum <= acpt.max_daily_transfer,"max daily per minute exceed" );
+         eosio_assert( acpt.mutables.daily_tf_sum <= acpt.max_daily_transfer,"max daily transfer exceed" );
       }
 
+      // accumulate max_original_trxs_per_block and check
       if ( get_block_time_slot() == _gmutable.current_block_time_slot ) {
          _gmutable.current_block_trxs += 1;
          eosio_assert( _gmutable.current_block_trxs <= _gstate.max_original_trxs_per_block, "max_original_trxs_per_block exceed" );
@@ -430,31 +431,36 @@ namespace eosio {
          r.total_transfer_times += 1;
       });
 
-
       origtrxs_emplace( transfer_action_info{ original_contract, from, quantity } );
    }
 
    /**
     * memo string format specification:
+    * when to == _self, memo string must start with "local" or "ibc", any other prefix or empty memo string will assert failed
+    * when start with "local", means this is a local chain transaction
     * when start with "ibc", means this is a inter-blockchain communicatiion transaction
     * then memo string should meet the "ibc memo format of transfer action" described above
-    * when not start with "ibc", it will be processed as normal transfer
+    *
+    * when to != _self, memo string will not be parsed
     */
    void token::transfer( name    from,
                          name    to,
                          asset   quantity,
                          string  memo )
    {
-      if ( memo.find("ibc") == 0 ){
-         eosio_assert( to == _self, "to account must equal to _self in ibc transaction");
-         auto info = get_memo_info( memo );
-         eosio_assert( info.receiver != name(), "receiver not provide");
-         withdraw( from, info.receiver, quantity, info.notes );
-         return;
-      }
-
       eosio_assert( from != to, "cannot transfer to self" );
       require_auth( from );
+
+      if (  to == _self ) {
+         if ( memo.find("ibc") == 0 ){
+            auto info = get_memo_info( memo );
+            eosio_assert( info.receiver != name(), "receiver not provide");
+            withdraw( from, info.receiver, quantity, info.notes );
+            return;
+         }
+         eosio_assert( memo.find("local") == 0 , "when transfer to this contract, memo must start with \"ibc\" or \"local\"");
+      }
+
       eosio_assert( is_account( to ), "to account does not exist");
       auto sym = quantity.symbol.code();
       const auto& st = _stats.get( sym.raw() );
@@ -730,8 +736,16 @@ namespace eosio {
       // todo 为了防止不可回滚攻击，当一个交易时间超过当前时间多长后，发送defered trx将交易trx 删除，但是在memo中写明详细信息。目的是保持origtrxs表不被恶意占用。
    }
 
+
+   void token::chkrollback(){
+
+   }
+
    // this action maybe needed when repairing the ibc system manually
-   void token::rollback( const std::vector<transaction_id_type> trxs ) {
+   void token::fcrollback( const std::vector<transaction_id_type> trxs ) {
+
+      require_auth( _self );
+
       for ( const auto& trx_id : trxs ){
          auto idx = _origtrxs.get_index<"trxid"_n>();
          auto record = idx.get( fixed_bytes<32>(trx_id.hash) );
@@ -765,6 +779,10 @@ namespace eosio {
             return;
          }
       }
+   }
+
+   void token::fcrmorigtrx( transaction_id_type trx_id ){
+
    }
 
    // this action maybe needed when repairing the ibc system manually
@@ -1092,7 +1110,7 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (test)(setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(cash)(cashconfirm)(rollback)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(transfer)(open)(close) )
+            EOSIO_DISPATCH_HELPER( eosio::token, (test)(setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(cash)(cashconfirm)(fcrollback)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(transfer)(open)(close) )
          }
          return;
       }

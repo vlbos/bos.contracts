@@ -1,8 +1,9 @@
-
+/**
+ *  @file
+ *  @copyright defined in eos/LICENSE.txt
+ */
 
 namespace eosio{
-
-
 
    void trim(string &s) {
       if( !s.empty() ) {
@@ -31,6 +32,3 @@ namespace eosio{
    }
 
 }
-
-
-
