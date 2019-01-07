@@ -1,7 +1,7 @@
 ibc.token
 -----------
 
-This eosio contract allows users to create, issue, and manage tokens on
-eosio based blockchains.
+Combine with ibc.chain and ibc plugin system, this contract allows users to do inter-blockchain assets transfer.
+
 
 
