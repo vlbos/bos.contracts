@@ -11,7 +11,7 @@
 #include <ibc.chain/merkle.hpp>
 
 namespace eosio {
-
+   const static uint32_t section_max_length = 1000;
    const static uint32_t chaindb_max_records = 2000;
    const static uint32_t prodsches_max_records = 10;
    const static uint32_t sections_max_records = 20;
@@ -116,6 +116,14 @@ namespace eosio {
       void pushsection( const std::vector<char>&    headers,
                         const incremental_merkle&   blockroot_merkle,
                         const name&                 relay );
+
+      // called by ibc plugin
+      [[eosio::action]]
+      void rminvalidls( const name& relay );
+
+      // called by ibc plugin repeatedly
+      [[eosio::action]]
+      void rmfirstsctn( const name& relay );   // amount == 0 means remove all old sections
 
       [[eosio::action]]
       void relay( string action, name relay );

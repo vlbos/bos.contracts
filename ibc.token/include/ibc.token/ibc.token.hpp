@@ -147,7 +147,7 @@ namespace eosio {
                         transaction_id_type                    cash_trx_id,   // redundant, facilitate indexing and checking
                         transaction_id_type                    orig_trx_id ); // redundant, facilitate indexing and checking
 
-      // called by ibc plugin repeatedly every 5 seconds
+      // called by ibc plugin repeatedly
       [[eosio::action]]
       void chkrollback( uint32_t amount, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
 
