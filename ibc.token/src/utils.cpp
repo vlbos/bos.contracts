@@ -31,4 +31,17 @@ namespace eosio{
       return  ( current_time() / 1000 - 946684800000 ) / 500;
    }
 
+   string to_hex( const uint8_t* d, uint32_t s )
+   {
+      std::string r;
+      const char* to_hex="0123456789abcdef";
+      for( uint32_t i = 0; i < s; ++i )
+         (r += to_hex[(d[i]>>4)]) += to_hex[(d[i] &0x0f)];
+      return r;
+   }
+
+   string capi_checksum256_to_string( capi_checksum256 value ){
+      return to_hex( value.hash, 32 );
+   }
+
 }
