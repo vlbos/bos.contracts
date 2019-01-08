@@ -17,6 +17,7 @@ The following unprivileged contract(s) are also part of the system.
 Dependencies:
 * [bos v1.0.x](https://github.com/boscore/bos/releases/tag/v1.0.2)
 * [bos.cdt v1.0.x](https://github.com/boscore/bos.cdt/releases/tag/v1.0.1)
+* [cmake version 3.12+](https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line/355574)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
