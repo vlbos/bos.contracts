@@ -237,6 +237,8 @@ namespace eosio {
                            const incremental_merkle&  blockroot_merkle ){
       eosio_assert( !header.new_producers, "section root header can not contain new_producers" );
 
+      remove_first_section_or_not();
+
       auto header_block_num = header.block_num();
 
       const auto& last_section = *(_sections.rbegin());
@@ -307,6 +309,11 @@ namespace eosio {
          while ( _chaindb.rbegin()->block_num != header_block_num - 1 ){
             _chaindb.erase( *(_chaindb.rbegin()) );
          }
+
+         _sections.modify( last_section, same_payer, [&]( auto& r ) {
+            r.clear_from( header_block_num );
+         });
+
          print_f("-- block deleted: from % back to % --", last_section_last, header_block_num);
       }
 
@@ -338,7 +345,7 @@ namespace eosio {
             r.schedule_hash   = get_checksum256( *header.new_producers );
          });
 
-         if ( _prodsches.rbegin()->id - _prodsches.begin()->id > 10 ){
+         if ( _prodsches.rbegin()->id - _prodsches.begin()->id >= prodsches_max_records ){
             _prodsches.erase( _prodsches.begin() );
          }
 
@@ -399,8 +406,10 @@ namespace eosio {
 
       _sections.modify( last_section, same_payer, [&]( auto& s ) {
          s.last = header_block_num;
-         s.add( header.producer, header_block_num, active_schedule );
+         s.add( header.producer, header.timestamp.slot, header_block_num, active_schedule );
       });
+
+      trim_last_section_or_not();
 
       print_f("-- block added: % --", header_block_num);
    }
@@ -453,63 +462,111 @@ namespace eosio {
       }
    }
 
+   void chain::trim_last_section_or_not() {
+      auto lwcls = *(_sections.rbegin());
+      if ( lwcls.last - lwcls.first > section_max_length ){
+         auto it = _chaindb.find( lwcls.first );
+         if ( it != _chaindb.end() ){
+            _chaindb.erase( it );
+         }
 
+         _sections.modify( lwcls, same_payer, [&]( auto& r ) {
+            r.first += 1;
+         });
+      }
+   }
+
+   void chain::remove_first_section_or_not(){
+      uint32_t count = 0;
+      for( auto it = _sections.begin(); it != _sections.end(); ++it) {
+         ++count;
+      }
+      if ( count > sections_max_records ){
+         remove_section( _sections.begin()->first );
+      }
+   }
 
 // ---- class: section_type ----
 
+   name get_scheduled_producer( uint32_t tslot, const producer_schedule& active_schedule) {
+      auto index = tslot % (active_schedule.producers.size() * producer_repetitions);
+      index /= producer_repetitions;
+      return active_schedule.producers[index].producer_name;
+   }
+
+
 #define BIGNUM  2000
 #define MAXSPAN 4
-   void section_type::add( name pro, uint32_t num, const producer_schedule& sch ) {
+   void section_type::add( name prod, uint32_t num, uint32_t tslot, const producer_schedule& sch ) {
+
+      // one node per chain test model
+      if ( sch.producers.size() == 1 && sch.producers.front().producer_name == "eosio"_n ){  // for one node test
+         return;
+      }
+
+      // complete two blockchain networks model
+      eosio_assert( sch.producers.size() > 15, "producers.size() must greater then 15" ); // should be equal to 21 infact
+
+      // if no record
       if ( producers.empty() ){
          eosio_assert( block_nums.empty(), "internal error, producers not consistent with block_nums" );
-         eosio_assert( pro != name() && num != 0, "internal error, invalid parameters" );
-         producers.push_back( pro );
+         eosio_assert( prod != name() && num != 0, "internal error, invalid parameters" );
+         producers.push_back( prod );
          block_nums.push_back( num );
          return;
       }
 
-      if( pro == producers.back() ){
+      eosio_assert( sch.producers.size() != 0, "producer_schedule can not be empty when section has data already");
+
+      auto bp = get_scheduled_producer( tslot, sch );
+      eosio_assert( bp == prod, "scheduled producer validate failed");
+
+      // ensure increasing one by one
+      eosio_assert( num == last + 1, "section_type::add, num is not correct");
+
+      // can not produce more then 12 blocks
+      eosio_assert( num <= block_nums.back() + 12 , "one producer can not produce more then 12 blocks continuously");
+
+      // same producer, do nothing
+      if( prod == producers.back() ){
          return;
-      } else {
-         eosio_assert( sch.producers.size() > 15, "less then 15 producers" );
-         int index_last = BIGNUM;
-         int index_this = BIGNUM;
-         int i = 0;
-         for ( const auto& pk : sch.producers ){
-            if ( pk.producer_name == producers.back() ){
-               index_last = i;
-            }
-            if ( pk.producer_name == pro ){
-               index_this = i;
-            }
-            ++i;
-         }
-         if ( index_this > index_last ){
-            eosio_assert( index_this - index_last <= MAXSPAN, "exceed max span" );
-         } else {
-            eosio_assert( index_last - index_this >= sch.producers.size() - MAXSPAN, "exceed max span" );
-         }
       }
 
+      // producer can not repeat within last 15 producers
+      int size = producers.size();
+      int count = size > 15 ? 15 : size;
+      for ( int i = 0; i < count ; ++i){
+         eosio_assert( prod != producers[ size - 1 - i ] , "producer can not repeat within last 15 producers" );
+      }
+
+      // Check if the distance from producers.back() to prod is greater then MAXSPAN
+      int index_last = BIGNUM;
+      int index_this = BIGNUM;
+      int i = 0;
+      for ( const auto& pk : sch.producers ){
+         if ( pk.producer_name == producers.back() ){
+            index_last = i;
+         }
+         if ( pk.producer_name == prod ){
+            index_this = i;
+         }
+         ++i;
+      }
+      if ( index_this > index_last ){
+         eosio_assert( index_this - index_last <= MAXSPAN, "exceed max span" );
+      } else {
+         eosio_assert( index_last - index_this >= sch.producers.size() - MAXSPAN, "exceed max span" );
+      }
+
+      // add
+      producers.push_back( prod );
+      block_nums.push_back( num );
+
+      // trim
       if( producers.size() > 21 ){
          producers.erase( producers.begin() );
          block_nums.erase( block_nums.begin() );
       }
-
-      eosio_assert( num <= block_nums.back() + 12 , "one producer can not produce more then 12 blocks continuously" );
-
-// 如果长度超过1000 从section头删除
-
-      int size = producers.size();
-      int i = size >= 15 ? 15 : size;
-      i -= 1;
-      while ( i >= 0 ){
-         eosio_assert( pro != producers[i] , "producer can not repeat within last 15 producers" );
-         --i;
-      }
-
-      producers.push_back( pro );
-      block_nums.push_back( num );
    }
 
    void section_type::clear_from( uint32_t num ){
@@ -524,4 +581,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(relay)(blockmerkle) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle) )
+
+

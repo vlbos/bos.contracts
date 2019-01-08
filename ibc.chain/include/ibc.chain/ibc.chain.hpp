@@ -12,9 +12,9 @@
 
 namespace eosio {
    const static uint32_t section_max_length = 1000;
-   const static uint32_t chaindb_max_records = 2000;
    const static uint32_t prodsches_max_records = 10;
-   const static uint32_t sections_max_records = 20;
+   const static uint32_t sections_max_records = 5;
+   const static uint32_t producer_repetitions = 12; // don't change this parameter
 
    struct [[eosio::table("chaindb"), eosio::contract("ibc.chain")]] block_header_state {
       uint64_t                   block_num;
@@ -53,7 +53,7 @@ namespace eosio {
       std::vector<uint32_t>   block_nums;
 
       uint64_t primary_key()const { return first; }
-      void add( name producer, uint32_t num, const producer_schedule& sch = producer_schedule() );
+      void add( name producer, uint32_t num, uint32_t tslot = 0, const producer_schedule& sch = producer_schedule() ); // important function, used to prevent attack
       void clear_from( uint32_t num );
 
       EOSLIB_SERIALIZE( section_type, (first)(last)(newprod_block_num)(valid)(producers)(block_nums) )
@@ -123,7 +123,7 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rmfirstsctn( const name& relay );   // amount == 0 means remove all old sections
+      void rmfirstsctn( const name& relay ); // first section is the oldest section
 
       [[eosio::action]]
       void relay( string action, name relay );
@@ -166,13 +166,17 @@ namespace eosio {
       void pushheader( const signed_block_header& header );
       void newsection( const signed_block_header& header, const incremental_merkle& blockroot_merkle );
 
-      digest_type bhs_sig_digest( const block_header_state& hs ) const;
-      capi_public_key get_producer_capi_public_key( uint64_t id, name producer ) const;
-      void assert_producer_signature( const digest_type& digest,
-                                      const capi_signature& signature,
-                                      const capi_public_key& pub_key ) const;
-      uint32_t get_section_active_schedule_id( const section_type& section ) const;
+      digest_type       bhs_sig_digest( const block_header_state& hs ) const;
+      capi_public_key   get_producer_capi_public_key( uint64_t id, name producer ) const;
+      void              assert_producer_signature( const digest_type& digest,
+                                                   const capi_signature& signature,
+                                                   const capi_public_key& pub_key ) const;
+      uint32_t          get_section_active_schedule_id( const section_type& section ) const;
+
+      void trim_last_section_or_not();
+      void remove_first_section_or_not();
       void remove_section( uint64_t id );
+
       bool has_relay_auth();
    };
 
