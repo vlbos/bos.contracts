@@ -2,6 +2,7 @@
 
 #include <eosio.token/eosio.token.hpp>
 
+#include <vector>
 namespace eosiosystem {
 
    const int64_t  min_pervote_daily_pay = 100'0000;
@@ -52,24 +53,73 @@ namespace eosiosystem {
          });
       }
 
-      /// only update block producers once every minute, block_timestamp is in half seconds
-      if( timestamp.slot - _gstate.last_producer_schedule_update.slot > 120 ) {
-         update_elected_producers( timestamp );
+         auto modifybid = [&](auto &ns) {
+         name_bid_table bids(_self, _self.value);
+         for (auto &n : ns)
+         {
+            auto highest = bids.find(n.value);
+            if(highest != bids.end())
+            {
+            //  print( highest->last_bid_time.sec_since_epoch(), " dealed high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            bids.modify(highest, same_payer, [&](auto &b) {
+               b.high_bid = -b.high_bid;
+            });
+            }
+         }
+      };
 
-         if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
+      auto checkbidname = [&](auto &highest, auto &idx) {
+         if (highest == idx.end())
+         {
+            return;
+         }
+         std::vector<name> names;
+         static const int16_t COUNT10 = 10;
+         uint16_t deal_count = 0;
+
+         if (highest->newname.length() >= BASE_LENGTH)
+         {
+            deal_count++;
+         }
+
+         names.push_back(highest->newname);
+      //   print( highest->last_bid_time.sec_since_epoch(), " deal high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+         for (int16_t i = 0; ++highest != idx.end() && i < COUNT10; i++)
+         {
+         //   print( highest->last_bid_time.sec_since_epoch(), " high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            if (highest->high_bid > 0 &&
+                (current_time_point() - highest->last_bid_time) > microseconds(useconds_per_day) &&
+                highest->newname.length() >= BASE_LENGTH)
+            {
+               names.push_back(highest->newname);
+               deal_count++;
+               // print( highest->last_bid_time.sec_since_epoch(), " deal high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            }
+
+            if (COUNT10 == deal_count)
+            {
+               break;
+            }
+         }
+
+         modifybid(names);
+      };
+      /// only update block producers once every minute, block_timestamp is in half seconds
+      if (timestamp.slot - _gstate.last_producer_schedule_update.slot > 120) {
+         update_elected_producers(timestamp);
+
+         if ((timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day){
             name_bid_table bids(_self, _self.value);
             auto idx = bids.get_index<"highbid"_n>();
-            auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
-            if( highest != idx.end() &&
+            auto highest = idx.lower_bound(std::numeric_limits<uint64_t>::max() / 2);
+            if (highest != idx.end() &&
                 highest->high_bid > 0 &&
                 (current_time_point() - highest->last_bid_time) > microseconds(useconds_per_day) &&
                 _gstate.thresh_activated_stake_time > time_point() &&
-                (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
-            ) {
+                (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14*useconds_per_day)){
                _gstate.last_name_close = timestamp;
-               idx.modify( highest, same_payer, [&]( auto& b ){
-                  b.high_bid = -b.high_bid;
-               });
+
+               checkbidname(highest, idx);
             }
          }
       }

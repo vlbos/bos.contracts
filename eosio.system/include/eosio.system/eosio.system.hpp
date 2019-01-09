@@ -242,7 +242,7 @@ namespace eosiosystem {
          static constexpr eosio::name gov_account{"bos.gov"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
-
+         static const int16_t BASE_LENGTH = 4;
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
