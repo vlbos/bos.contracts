@@ -136,10 +136,11 @@ namespace eosio {
       require_auth( relay );
 
       auto it = _sections.begin();
-      ++it;
-      eosio_assert( it != _sections.end(), "can not delete the last section");
-      eosio_assert( it->valid == true, "next section must be valid");
+      auto next = ++it;
+      eosio_assert( next != _sections.end(), "can not delete the last section");
+      eosio_assert( next->valid == true, "next section must be valid");
 
+      it = _sections.begin();
       for( uint64_t num = it->first; num <= it->last; ++num ){
          auto existing = _chaindb.find( num );
          if ( existing != _chaindb.end() ){
@@ -151,7 +152,7 @@ namespace eosio {
       // do this again to ensure that all old chaindb data is deleted
       uint32_t lwcls_first = _sections.begin()->first;
       uint32_t count = 0;
-      while ( ++count <= 100 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
+      while ( ++count <= 200 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
          auto begin = _chaindb.begin();
          if ( begin->block_num < lwcls_first ){
             _chaindb.erase( begin );
