@@ -131,6 +131,7 @@ namespace eosio {
       _sections.erase( it );
    }
 
+   static const uint32_t max_delete = 150; // max delete 150 records per time, in order to avoid exceed cpu limit
    void chain::rmfirstsctn( const name& relay ){
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
@@ -140,24 +141,46 @@ namespace eosio {
       eosio_assert( next != _sections.end(), "can not delete the last section");
       eosio_assert( next->valid == true, "next section must be valid");
 
-      it = _sections.begin();
-      for( uint64_t num = it->first; num <= it->last; ++num ){
-         auto existing = _chaindb.find( num );
-         if ( existing != _chaindb.end() ){
-            _chaindb.erase( existing );
-            print("-- delete block -0 --");print(existing->block_num);
+      uint32_t count = 0;
+      auto begin = _sections.begin();
+      if ( begin->last - begin->first + 1 > max_delete ){
+         for ( uint32_t num = begin->first; num < begin->first + max_delete; ++num ){
+            auto it = _chaindb.find( num );
+            if ( it != _chaindb.end() ){
+               print("-- delete block1 --");print( num );
+               _chaindb.erase( it );
+            }
          }
+
+         section_type sctn = *begin;
+         sctn.first += max_delete;
+
+         _sections.erase( begin );
+         _sections.emplace( _self, [&]( auto& r ) {
+            r = std::move( sctn );
+         });
+
+         return;
+      } else {
+         for ( uint32_t num = begin->first; num <= begin->last; ++num ){
+            auto it = _chaindb.find( num );
+            if ( it != _chaindb.end() ){
+               print("-- delete block2 --");print( num );
+               _chaindb.erase( it );
+            }
+         }
+
+         count += ( begin->last - begin->first + 1 );
+         _sections.erase( begin );
       }
-      _sections.erase( _sections.begin() );
 
       // do this again to ensure that all old chaindb data is deleted
       uint32_t lwcls_first = _sections.begin()->first;
-      uint32_t count = 0;
-      while ( ++count <= 100 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
+      while ( count++ <= max_delete ){
          auto begin = _chaindb.begin();
          if ( begin->block_num < lwcls_first ){
             _chaindb.erase( begin );
-            print("-- delete block --");print(begin->block_num);
+            print("-- delete block3 --");print(begin->block_num);
          } else {
             break;
          }
@@ -477,7 +500,7 @@ namespace eosio {
       }
    }
 
-   const static uint32_t trim_length = 100;
+   const static uint32_t trim_length = 50;
 
    void chain::trim_last_section_or_not() {
       auto lwcls = *(_sections.rbegin());

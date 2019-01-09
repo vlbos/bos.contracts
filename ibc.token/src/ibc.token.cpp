@@ -688,8 +688,9 @@ namespace eosio {
          }
       }
 
-      // record to cash table
       trim_cashtrxs_table_or_not();
+
+      // record to cash table
       _cashtrxs.emplace( _self, [&]( auto& r ) {
             r.seq_num = seq_num;
             r.block_time_slot = get_block_time_slot();
@@ -1050,17 +1051,18 @@ namespace eosio {
    // ---- cash_trx_info related methods  ----
    void token::trim_cashtrxs_table_or_not() {
       uint32_t total = 0;
-      auto it = _cashtrxs.begin();
-      while ( it != _cashtrxs.end() ){ // is there any better method to get _cashtrxs size
-         ++total;
-         ++it;
+      if ( _cashtrxs.begin() == _cashtrxs.end()){
+         return;
       }
+      
+      total = (--_cashtrxs.end())->seq_num - _cashtrxs.begin()->seq_num;
+      
       if ( total > _gstate.cache_cashtrxs_table_records ){
-         auto end_block_num = _cashtrxs.rbegin()->orig_trx_block_num;
-         int i = total - _gstate.cache_cashtrxs_table_records;
+         auto last_orig_trx_block_num = _cashtrxs.rbegin()->orig_trx_block_num;
+         int i = 10; // 10 per time
          while ( i-- > 0 ){
-            auto start_block_num = _cashtrxs.begin()->orig_trx_block_num;
-            if ( end_block_num - start_block_num > 1 ) { // importand
+            auto first_orig_trx_block_num = _cashtrxs.begin()->orig_trx_block_num;
+            if ( last_orig_trx_block_num - first_orig_trx_block_num > 1 ) { // very importand
                _cashtrxs.erase( _cashtrxs.begin() );
             } else {
                break;

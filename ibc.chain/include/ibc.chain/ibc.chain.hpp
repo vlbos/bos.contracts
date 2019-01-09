@@ -123,7 +123,7 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rmfirstsctn( const name& relay ); // first section is the oldest section
+      void rmfirstsctn( const name& relay ); // first section and old data
 
       [[eosio::action]]
       void relay( string action, name relay );
