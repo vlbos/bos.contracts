@@ -145,6 +145,7 @@ namespace eosio {
          auto existing = _chaindb.find( num );
          if ( existing != _chaindb.end() ){
             _chaindb.erase( existing );
+            print("-- delete block -0 --");print(existing->block_num);
          }
       }
       _sections.erase( _sections.begin() );
@@ -152,10 +153,11 @@ namespace eosio {
       // do this again to ensure that all old chaindb data is deleted
       uint32_t lwcls_first = _sections.begin()->first;
       uint32_t count = 0;
-      while ( ++count <= 200 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
+      while ( ++count <= 100 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
          auto begin = _chaindb.begin();
          if ( begin->block_num < lwcls_first ){
             _chaindb.erase( begin );
+            print("-- delete block --");print(begin->block_num);
          } else {
             break;
          }
@@ -320,7 +322,7 @@ namespace eosio {
          }
 
          while ( _chaindb.rbegin()->block_num != header_block_num - 1 ){
-            _chaindb.erase( *(_chaindb.rbegin()) );
+            _chaindb.erase( --_chaindb.end() );
          }
 
          _sections.modify( last_section, same_payer, [&]( auto& r ) {
