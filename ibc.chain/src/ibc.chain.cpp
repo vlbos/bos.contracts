@@ -493,7 +493,7 @@ namespace eosio {
       for( auto it = _sections.begin(); it != _sections.end(); ++it) {
          ++count;
       }
-      if ( count > sections_max_records ){
+      if ( count >= sections_max_records ){
          remove_section( _sections.begin()->first );
       }
    }
