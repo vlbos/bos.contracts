@@ -738,59 +738,47 @@ namespace eosio {
       _gmutable.cash_seq_num += 1;
    }
 
-   void token::chkrollback( uint32_t amount, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM from being maliciously occupied
+   void token::chkrollback( uint64_t table_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM from being maliciously occupied
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
 
-      uint32_t count = 0;
-      while ( count < amount ){
-         auto it = _origtrxs.begin();
-         if(  it == _origtrxs.end() ){
-            break;
+      auto it = _origtrxs.find( table_id );
+      eosio_assert( it == _origtrxs.end(), "table_id is not exist");
+
+      eosio_assert( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
+
+      transfer_action_info action_info = it->action;
+      string memo = "rollback transaction: " + capi_checksum256_to_string(it->trx_id);
+      print( memo.c_str() );
+
+      if ( action_info.contract != _self ){  // rollback ibc transfer
+         const auto& acpt = get_currency_accept( action_info.contract );
+         _accepts.modify( acpt, same_payer, [&]( auto& r ) {
+            r.accept -= action_info.quantity;
+            r.total_transfer -= action_info.quantity;
+            r.total_transfer_times -= 1;
+         });
+
+         if( action_info.from != _self ) {
+            transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+            action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
+      } else { // rollback ibc withdraw
+         const auto& st = get_currency_stats( action_info.quantity.symbol.code() );
+         _stats.modify( st, same_payer, [&]( auto& r ) {
+            r.supply += action_info.quantity;
+            r.max_supply += action_info.quantity;
+            r.total_withdraw -= action_info.quantity;
+            r.total_withdraw_times -= 1;
+         });
 
-         if ( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot ){ // very important
-            transfer_action_info action_info = it->action;
-            string memo = "rollback transaction: " + capi_checksum256_to_string(it->trx_id);
-            print( memo.c_str() );
-
-            if ( action_info.contract != _self ){  // rollback ibc transfer
-               const auto& acpt = get_currency_accept( action_info.contract );
-               _accepts.modify( acpt, same_payer, [&]( auto& r ) {
-                  r.accept -= action_info.quantity;
-                  r.total_transfer -= action_info.quantity;
-                  r.total_transfer_times -= 1;
-               });
-
-               if( action_info.from != _self ) {
-                  transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
-                  action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
-               }
-            } else { // rollback ibc withdraw
-               const auto& st = get_currency_stats( action_info.quantity.symbol.code() );
-               _stats.modify( st, same_payer, [&]( auto& r ) {
-                  r.supply += action_info.quantity;
-                  r.max_supply += action_info.quantity;
-                  r.total_withdraw -= action_info.quantity;
-                  r.total_withdraw_times -= 1;
-               });
-
-               if( action_info.from != _self ) {
-                  transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
-                  action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
-               }
-            }
-
-            _origtrxs.erase( it );
-            ++count;
-         } else {
-            break;
+         if( action_info.from != _self ) {
+            transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+            action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
       }
 
-      if ( count == 0 ){
-         eosio_assert(false,"no transaction is rolled back, don't pass");
-      }
+      _origtrxs.erase( it );
    }
 
    // this action maybe needed when repairing the ibc system manually
