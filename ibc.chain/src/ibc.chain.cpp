@@ -119,7 +119,7 @@ namespace eosio {
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
 
-      auto it = _sections.rbegin();
+      auto it = --_sections.end();
       eosio_assert( false == it->valid, "lwcls is valid, can't remove");
 
       for( uint64_t num = it->first; num <= it->last; ++num ){
@@ -128,7 +128,7 @@ namespace eosio {
             _chaindb.erase( existing );
          }
       }
-      _sections.erase( *it );
+      _sections.erase( it );
    }
 
    void chain::rmfirstsctn( const name& relay ){
@@ -462,16 +462,28 @@ namespace eosio {
       }
    }
 
+   const static uint32_t trim_length = 100;
+
    void chain::trim_last_section_or_not() {
       auto lwcls = *(_sections.rbegin());
       if ( lwcls.last - lwcls.first > section_max_length ){
-         auto it = _chaindb.find( lwcls.first );
-         if ( it != _chaindb.end() ){
-            _chaindb.erase( it );
+
+         // delete first 100 blocks in _chaindb
+         for ( uint32_t num = lwcls.first; num < lwcls.first + trim_length; ++num ){
+            auto it = _chaindb.find( num );
+            if ( it != _chaindb.end() ){
+               _chaindb.erase( it );
+            }
          }
 
-         _sections.modify( lwcls, same_payer, [&]( auto& r ) {
-            r.first += 1;
+         // construct new section info
+         section_type ls = lwcls;
+         ls.first += trim_length;
+
+         // replace old section with new section in _sections
+         _sections.erase( --_sections.end() );
+         _sections.emplace( _self, [&]( auto& r ) {
+            r = std::move( ls );
          });
       }
    }
@@ -498,6 +510,10 @@ namespace eosio {
 #define BIGNUM  2000
 #define MAXSPAN 4
    void section_type::add( name prod, uint32_t num, uint32_t tslot, const producer_schedule& sch ) {
+
+      if ( tslot == 0 ){   // create section
+         return;
+      }
 
       // one node per chain test model
       if ( sch.producers.size() == 1 && sch.producers.front().producer_name == "eosio"_n ){  // for one node test
