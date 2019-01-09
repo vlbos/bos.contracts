@@ -146,7 +146,7 @@ namespace eosio {
             _chaindb.erase( existing );
          }
       }
-      _sections.erase( it );
+      _sections.erase( _sections.begin() );
    }
 
    void chain::relay( string action, name relay ) {
