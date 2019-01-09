@@ -793,7 +793,7 @@ namespace eosio {
 
       eosio_assert( it->block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
-      _origtrxs.erase( *it );
+      _origtrxs.erase( _origtrxs.find(it->id) );
 
       _rmdunrbs.emplace( _self, [&]( auto& r ) {
          r.id        = _rmdunrbs.available_primary_key();
