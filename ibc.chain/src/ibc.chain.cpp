@@ -147,6 +147,18 @@ namespace eosio {
          }
       }
       _sections.erase( _sections.begin() );
+
+      // do this again to ensure that all old chaindb data is deleted
+      uint32_t lwcls_first = _sections.begin()->first;
+      uint32_t count = 0;
+      while ( ++count <= 100 ){ // max delete 100 records per time, in order to avoid exceed cpu limit
+         auto begin = _chaindb.begin();
+         if ( begin->block_num < lwcls_first ){
+            _chaindb.erase( begin );
+         } else {
+            break;
+         }
+      }
    }
 
    void chain::relay( string action, name relay ) {
