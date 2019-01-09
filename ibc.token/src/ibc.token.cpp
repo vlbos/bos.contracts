@@ -22,7 +22,8 @@ namespace eosio {
          _origtrxs( _self, _self.value ),
          _cashtrxs( _self, _self.value ),
          _acntbls( _self, _self.value ),
-         _trxbls( _self, _self.value )
+         _trxbls( _self, _self.value ),
+         _rmdunrbs( _self, _self.value )
    {
       _gstate = _global_state.exists() ? _global_state.get() : global_state{};
       _gmutable = _global_mutable.exists() ? _global_mutable.get() : global_mutable{};
@@ -738,7 +739,7 @@ namespace eosio {
       _gmutable.cash_seq_num += 1;
    }
 
-   void token::chkrollback( uint64_t table_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM from being maliciously occupied
+   void token::rollback( uint64_t table_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM from being maliciously occupied
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
 
@@ -779,6 +780,25 @@ namespace eosio {
       }
 
       _origtrxs.erase( it );
+   }
+
+   static const uint32_t min_distance = 100;
+   void token::rmunablerb( const transaction_id_type trx_id, name relay ){
+      eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
+      require_auth( relay );
+
+      auto idx = _origtrxs.get_index<"trxid"_n>();
+      auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
+      eosio_assert( it != idx.end(), "trx_id not exist");
+
+      eosio_assert( it->block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
+
+      _origtrxs.erase( *it );
+
+      _rmdunrbs.emplace( _self, [&]( auto& r ) {
+         r.id        = _rmdunrbs.available_primary_key();
+         r.trx_id    = trx_id;
+      });
    }
 
    // this action maybe needed when repairing the ibc system manually
@@ -1113,7 +1133,7 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(transfer)(cash)(cashconfirm)(chkrollback)(fcrollback)(fcrmorigtrx)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close) )
+            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close) )
          }
          return;
       }

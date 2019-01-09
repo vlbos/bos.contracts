@@ -149,7 +149,11 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void chkrollback( uint64_t table_id, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
+      void rollback( uint64_t table_id, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
+
+      // called by ibc plugin repeatedly when there are unrollbackable original transactions
+      [[eosio::action]]
+      void rmunablerb( const transaction_id_type trx_id, name relay );   // force to remove unrollbackable transaction
 
       // this action maybe needed when repairing the ibc system manually
       [[eosio::action]]
@@ -407,6 +411,17 @@ namespace eosio {
       > _trxbls;
 
       bool is_in_trxbls( transaction_id_type trx_id );
+
+
+      // use to record removed unrollbackable transactions
+      struct [[eosio::table]] deleted_unrollbackable_trx_info {
+         uint64_t                id; // auto-increment
+         transaction_id_type     trx_id;
+
+         uint64_t primary_key()const { return id; }
+      };
+      eosio::multi_index< "rmdunrbs"_n, deleted_unrollbackable_trx_info>  _rmdunrbs;
+
 
       void withdraw( name from, name peerchain_receiver, asset quantity, string memo );
       void sub_balance( name owner, asset value );
