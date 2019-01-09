@@ -177,7 +177,7 @@ namespace eosio {
       return false;
    }
 
-   void chain::blockmerkle( uint32_t block_num, incremental_merkle merkle, name relay ){
+   void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
       static constexpr uint32_t range = 2 << 13;  // 8192 blocks, about 1.14 hours
       static constexpr uint32_t recent = range * ( 2 << 5 ); // about 36.4 hours
 

@@ -130,7 +130,7 @@ namespace eosio {
 
       // called by ibc plugin
       [[eosio::action]]
-      void blockmerkle( uint32_t block_num, incremental_merkle merkle, name relay );
+      void blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay );
 
       static void assert_block_in_lib_and_trx_mroot_in_block( name          ibc_contract_account,
                                                               uint32_t      block_num,
