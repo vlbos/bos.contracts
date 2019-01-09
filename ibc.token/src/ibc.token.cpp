@@ -741,9 +741,13 @@ namespace eosio {
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
 
-      auto it = _origtrxs.begin();
-      uint32_t i = 0;
-      while ( it != _origtrxs.end() && i < amount ){
+      uint32_t count = 0;
+      while ( count < amount ){
+         auto it = _origtrxs.begin();
+         if(  it == _origtrxs.end() ){
+            break;
+         }
+
          if ( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot ){ // very important
             transfer_action_info action_info = it->action;
             string memo = "rollback transaction: " + capi_checksum256_to_string(it->trx_id);
@@ -775,14 +779,16 @@ namespace eosio {
                   action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
                }
             }
+
             _origtrxs.erase( it );
+            ++count;
+         } else {
+            break;
          }
-         ++it;
-         ++i;
       }
 
-      if ( i == 0 ){
-         eosio_assert(false,""); // no transaction is rolled back, don't pass
+      if ( count == 0 ){
+         eosio_assert(false,"no transaction is rolled back, don't pass");
       }
    }
 
