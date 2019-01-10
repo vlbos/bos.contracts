@@ -149,7 +149,7 @@ namespace eosio {
 
       // called by ibc plugin repeatedly
       [[eosio::action]]
-      void rollback( uint64_t table_id, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
+      void rollback( const transaction_id_type trx_id, name relay );   // check if any orignal transactions should be rolled back, rollback them if have
 
       // called by ibc plugin repeatedly when there are unrollbackable original transactions
       [[eosio::action]]
