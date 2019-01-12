@@ -216,8 +216,8 @@ namespace eosio {
    }
 
    void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
-      static constexpr uint32_t range = 2 << 13;  // 8192 blocks, about 1.14 hours
-      static constexpr uint32_t recent = range * ( 2 << 5 ); // about 36.4 hours
+      static constexpr uint32_t range = 2 << 10;  // 1024 blocks, about 9 minutes
+      static constexpr uint32_t recent = range * ( 2 << 8 ); // about 36.4 hours
 
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
@@ -228,39 +228,47 @@ namespace eosio {
       auto exsiting = _blkrtmkls.find( block_num );
       eosio_assert( exsiting == _blkrtmkls.end(), "the block's blockroot_merkle already exist" );
 
-      uint32_t recent_records = 0, previous_records = 0;
-      if ( block_num > recent ){
-         auto it = _blkrtmkls.lower_bound( block_num - recent );
-         if ( _blkrtmkls.begin() != _blkrtmkls.end() ){
-            auto tmp_it = it;
-            while ( tmp_it != _blkrtmkls.end() ){
-               ++recent_records;
-               ++tmp_it;
-            }
-            tmp_it = it;
-            while ( tmp_it != _blkrtmkls.begin() ){
-               ++previous_records;
-               --tmp_it;
-            }
-         }
-
-         if ( recent_records > recent / range ){
-            if ( block_num % recent == 0 ){
-               ++previous_records;
-            } else {
-               _blkrtmkls.erase( it );
-            }
-         }
-
-         if ( previous_records > 20 ){ // past month
-            _blkrtmkls.erase( _blkrtmkls.begin() );
-         }
-      }
-
       _blkrtmkls.emplace( _self, [&]( auto& r ) {
          r.block_num = block_num;
          r.merkle = merkle;
       });
+
+      // reorgnize the list
+      if ( block_num <= recent || _blkrtmkls.begin() == _blkrtmkls.end() ){
+         return;
+      }
+
+      uint32_t recent_records = 0, previous_records = 0;
+      auto it = _blkrtmkls.lower_bound( block_num - recent );
+
+      // get recent_records
+      auto tmp_it = it;
+      while ( tmp_it != _blkrtmkls.end() ){
+         ++recent_records;
+         ++tmp_it;
+      }
+
+      // get previous_records
+      tmp_it = it;
+      while ( tmp_it != _blkrtmkls.begin() ){
+         ++previous_records;
+         --tmp_it;
+      }
+
+      // reorgnize recent_records
+      if ( recent_records > recent / range ){
+         if ( block_num % recent == 0 ){
+            ++previous_records;
+         } else {
+            _blkrtmkls.erase( it );
+         }
+      }
+
+      // reorgnize previous_records
+      if ( previous_records > 20 ){ // past month
+         _blkrtmkls.erase( _blkrtmkls.begin() );
+      }
+
    }
 
    // ---- private methods ----
@@ -444,7 +452,7 @@ namespace eosio {
 
       _sections.modify( last_section, same_payer, [&]( auto& s ) {
          s.last = header_block_num;
-         s.add( header.producer, header.timestamp.slot, header_block_num, active_schedule );
+         s.add( header.producer, header_block_num, header.timestamp.slot, active_schedule );
       });
 
       trim_last_section_or_not();
@@ -548,20 +556,12 @@ namespace eosio {
 #define BIGNUM  2000
 #define MAXSPAN 4
    void section_type::add( name prod, uint32_t num, uint32_t tslot, const producer_schedule& sch ) {
-
-      if ( tslot == 0 ){   // create section
-         return;
-      }
-
       // one node per chain test model
       if ( sch.producers.size() == 1 && sch.producers.front().producer_name == "eosio"_n ){  // for one node test
          return;
       }
 
-      // complete two blockchain networks model
-      eosio_assert( sch.producers.size() > 15, "producers.size() must greater then 15" ); // should be equal to 21 infact
-
-      // if no record
+      // section create
       if ( producers.empty() ){
          eosio_assert( block_nums.empty(), "internal error, producers not consistent with block_nums" );
          eosio_assert( prod != name() && num != 0, "internal error, invalid parameters" );
@@ -570,13 +570,9 @@ namespace eosio {
          return;
       }
 
-      eosio_assert( sch.producers.size() != 0, "producer_schedule can not be empty when section has data already");
-
-      auto bp = get_scheduled_producer( tslot, sch );
-      eosio_assert( bp == prod, "scheduled producer validate failed");
-
-      // ensure increasing one by one
-      eosio_assert( num == last + 1, "section_type::add, num is not correct");
+      eosio_assert( tslot != 0, "internal error,tslot == 0");
+      eosio_assert( sch.producers.size() > 15, "producers.size() must greater then 15" ); // should be equal to 21 infact
+      eosio_assert( get_scheduled_producer( tslot, sch ) == prod, "scheduled producer validate failed");
 
       // can not produce more then 12 blocks
       eosio_assert( num <= block_nums.back() + 12 , "one producer can not produce more then 12 blocks continuously");
