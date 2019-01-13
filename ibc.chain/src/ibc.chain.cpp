@@ -216,13 +216,13 @@ namespace eosio {
    }
 
    void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
-      static constexpr uint32_t range = 2 << 10;  // 1024 blocks, about 9 minutes
+      static constexpr uint32_t range = 1 << 10;  // 1024 blocks, about 9 minutes
       static constexpr uint32_t recent = range * ( 2 << 8 ); // about 36.4 hours
 
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
 
-      eosio_assert( block_num % range == 0, "the block number should be integral multiple of 2<<13");
+      eosio_assert( block_num % range == 0, "the block number should be integral multiple of 1024");
 
       blkrtmkls _blkrtmkls( _self, relay.value );
       auto exsiting = _blkrtmkls.find( block_num );
@@ -561,6 +561,7 @@ namespace eosio {
          return;
       }
 
+      return;
       // section create
       if ( producers.empty() ){
          eosio_assert( block_nums.empty(), "internal error, producers not consistent with block_nums" );
