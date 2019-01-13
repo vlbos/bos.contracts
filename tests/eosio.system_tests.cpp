@@ -10,6 +10,7 @@
 #include <eosio/chain/exceptions.hpp>
 #include <Runtime/Runtime.h>
 
+
 #include "eosio.system_tester.hpp"
 struct _abi_hash {
    name owner;
@@ -2456,6 +2457,8 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
 
 } FC_LOG_AND_RETHROW()
 
+
+
 BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
 
    const asset large_asset = core_sym::from_string("80.0000");
@@ -2484,7 +2487,7 @@ BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
    transfer(config::system_account_name, "producvotera", core_sym::from_string("200000000.0000"), config::system_account_name);
    BOOST_REQUIRE_EQUAL(success(), stake("producvotera", core_sym::from_string("70000000.0000"), core_sym::from_string("70000000.0000") ));
    BOOST_REQUIRE_EQUAL(success(), vote( N(producvotera), vector<account_name>(producer_names.begin(), producer_names.begin()+10)));
-   BOOST_CHECK_EQUAL( wasm_assert_msg( "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" ),
+   BOOST_CHECK_EQUAL( wasm_assert_msg( "cannot undelegate bandwidth until the chain is activated " ),
                       unstake( "producvotera", core_sym::from_string("50.0000"), core_sym::from_string("50.0000") ) );
 
    // give a chance for everyone to produce blocks
@@ -2507,7 +2510,7 @@ BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
    }
 
    {
-      const char* claimrewards_activation_error_message = "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)";
+      const char* claimrewards_activation_error_message = "cannot claim rewards until the chain is activated ";
       BOOST_CHECK_EQUAL(0, get_global_state()["total_unpaid_blocks"].as<uint32_t>());
       BOOST_REQUIRE_EQUAL(wasm_assert_msg( claimrewards_activation_error_message ),
                           push_action(producer_names.front(), N(claimrewards), mvo()("owner", producer_names.front())));
@@ -3051,6 +3054,74 @@ BOOST_FIXTURE_TEST_CASE( namebid_pending_winner, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 ///bos begin=====================================
+
+BOOST_FIXTURE_TEST_CASE( multiple_namebids_check_activated_time_by_timestamp, eosio_system_tester ) try {
+
+   const std::string not_closed_message("auction for name is not closed yet");
+
+   std::vector<account_name> accounts = { N(alice), N(bob), N(carl), N(david), N(eve) };
+   create_accounts_with_resources( accounts );
+   for ( const auto& a: accounts ) {
+      transfer( config::system_account_name, a, core_sym::from_string( "10000.0000" ) );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string( "10000.0000" ), get_balance(a) );
+   }
+   create_accounts_with_resources( { N(producer) } );
+   BOOST_REQUIRE_EQUAL( success(), regproducer( N(producer) ) );
+
+   produce_block();
+  
+   stake_with_transfer( config::system_account_name, "bob",  core_sym::from_string( "3500.0000" ), core_sym::from_string( "3500.0000" ) );
+   stake_with_transfer( config::system_account_name, "carl", core_sym::from_string( "3500.0000" ), core_sym::from_string( "3500.0000" ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(bob), { N(producer) } ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(carl), { N(producer) } ) );
+
+   // start bids
+
+   // david outbids carl on prefd
+   {
+      // BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.0000" ), get_balance("carl") );
+      // BOOST_REQUIRE_EQUAL( core_sym::from_string( "10000.0000" ), get_balance("david") );
+      BOOST_REQUIRE_EQUAL( success(),
+                           bidname( "david", "prefd", core_sym::from_string("1.9900") ) );
+      // BOOST_REQUIRE_EQUAL( core_sym::from_string( "9999.0000" ), get_balance("carl") );
+      // BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.0100" ), get_balance("david") );
+   }
+
+
+   // produce_block( fc::days(14) );
+   produce_block();
+
+   // need to wait for 14 days after going live
+   produce_blocks(10);
+   produce_block( fc::days(2) );
+   produce_blocks( 10 );
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(prefd), N(david) ),
+                            fc::exception, fc_assert_exception_message_is( not_closed_message ) );
+   // it's been 14 days, auction for prefd has been closed
+   // produce_block( fc::days(12) );
+   
+   // time_point ii = time_point::from_iso_string( "2019-01-13T14:05:00" );
+   // BOOST_TEST(9 == ii.sec_since_epoch());
+   static const int64_t min_activated_time = 1547303280000000; /// 2019-01-13 20:30:00 UTC+8
+   const static time_point at{ microseconds{ static_cast<int64_t>( min_activated_time) } };
+
+     while(time_point::now() < at)
+    {
+         BOOST_TEST(9 == time_point::now().sec_since_epoch());
+         BOOST_TEST(9 == at.sec_since_epoch());
+         sleep(10);
+    }
+
+   const auto     initial_global_state      = get_global_state();
+   const uint64_t initial_activated_time        = microseconds_since_epoch_of_iso_string( initial_global_state["thresh_activated_stake_time"] );
+   BOOST_TEST(9 == initial_activated_time);
+
+   create_account_with_resources( N(prefd), N(david) );
+   produce_blocks(2);
+   produce_block( fc::hours(23) );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(multiple_namebidsbylength, eosio_system_tester)
 try
 {

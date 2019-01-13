@@ -32,9 +32,18 @@ namespace eosiosystem {
       // Although this field is deprecated, we will continue updating it for now until the last_block_num field
       // is eventually completely removed, at which point this line can be removed.
       _gstate2.last_block_num = timestamp;
+   
+      static const int64_t min_activated_time = 1547816400000000; /// 2019-01-18 21:00:00 UTC+8
+      const static time_point at{ microseconds{ static_cast<int64_t>( min_activated_time) } };
+
+      if (current_time_point() >= at&& _gstate.thresh_activated_stake_time == time_point())
+      {
+         _gstate.thresh_activated_stake_time = current_time_point();
+      }
 
       /** until activated stake crosses this threshold no new rewards are paid */
-      if( _gstate.total_activated_stake < min_activated_stake )
+      // if( _gstate.total_activated_stake < min_activated_stake )
+      if(_gstate.thresh_activated_stake_time == time_point())
          return;
 
       if( _gstate.last_pervote_bucket_fill == time_point() )  /// start the presses
@@ -132,8 +141,10 @@ namespace eosiosystem {
       const auto& prod = _producers.get( owner.value );
       eosio_assert( prod.active(), "producer does not have an active key" );
 
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
-                    "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
+      // eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
+      //               "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
+      eosio_assert( _gstate.thresh_activated_stake_time != time_point(),
+                    "cannot claim rewards until the chain is activated " );
 
       const auto ct = current_time_point();
 
