@@ -139,10 +139,12 @@ namespace eosio {
          }
       }
 
-      uint64_t                   _node_count;
       std::vector<digest_type>   _active_nodes;
+      uint64_t                   _node_count;
 
-      EOSLIB_SERIALIZE(incremental_merkle, (_node_count)(_active_nodes))
+      // Keep the same member order as defined at libraries/chain/include/eosio/chain/incremental_merkle.hpp:251
+      // and membership order above needs to be same as serialization order below in contract.
+      EOSLIB_SERIALIZE(incremental_merkle, (_active_nodes)(_node_count))
    };
 } /// eosio
 
