@@ -148,7 +148,7 @@ namespace eosio {
                block_in_lib = true;
             }
          }
-         eosio_assert( block_in_lib, "no section contains this block");
+         eosio_assert( block_in_lib,  (string("no section contains this block ") + std::to_string( block_num)).c_str());
 
          chaindb _chaindb( ibc_contract_account, ibc_contract_account.value );
          auto bhs = _chaindb.get( block_num );
