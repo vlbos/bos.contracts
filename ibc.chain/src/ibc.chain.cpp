@@ -424,7 +424,7 @@ namespace eosio {
             auto last_pending_schedule_version = _prodsches.get( last_bhs.pending_schedule_id ).schedule.version;
             if ( header.schedule_version == last_pending_schedule_version ){  // producers replacement finished
                /* important! infact header_block_num - last_section.newprod_block_num should be approximately equal to 325 */
-               eosio_assert( header_block_num - last_section.newprod_block_num > 20 * 12, "header_block_num - last_section.newprod_block_num > 20 * 12 failed");
+//               eosio_assert( header_block_num - last_section.newprod_block_num > 20 * 12, "header_block_num - last_section.newprod_block_num > 20 * 12 failed");
                bhs.active_schedule_id  = last_bhs.pending_schedule_id;
             } else { // producers replacement not finished
                bhs.active_schedule_id  = last_bhs.active_schedule_id;
@@ -438,7 +438,7 @@ namespace eosio {
       if ( bhs.header.producer == last_bhs.header.producer && bhs.active_schedule_id == last_bhs.active_schedule_id ){
          bhs.block_signing_key = std::move(last_bhs.block_signing_key);
       } else{
-         bhs.block_signing_key = get_producer_capi_public_key( last_bhs.active_schedule_id, bhs.header.producer );
+         bhs.block_signing_key = get_producer_capi_public_key( bhs.active_schedule_id, bhs.header.producer );
       }
 
       auto dg = bhs_sig_digest( bhs );
@@ -479,7 +479,7 @@ namespace eosio {
             return cpk;
          }
       }
-      eosio_assert(false, "producer not found" );
+      eosio_assert(false, (string("producer not found: ") + producer.to_string()).c_str() );
       return capi_public_key(); //never excute, just used to suppress "no return" warning
    }
 
