@@ -216,8 +216,10 @@ namespace eosio {
    }
 
    void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
-      static constexpr uint32_t range = 1 << 10;  // 1024 blocks, about 9 minutes
-      static constexpr uint32_t recent = range * ( 2 << 8 ); // about 36.4 hours
+      static constexpr uint32_t range = 1 << 10;  // 1024 blocks, about 8 minutes
+      static constexpr uint32_t range_large = range * 6;  // about 50 minutes
+      static constexpr uint32_t recent = range * ( 1 << 9 ); // about 3 days
+      static constexpr uint32_t all = recent * 2; // about 6 days
 
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
@@ -238,37 +240,15 @@ namespace eosio {
          return;
       }
 
-      uint32_t recent_records = 0, previous_records = 0;
       auto it = _blkrtmkls.lower_bound( block_num - recent );
 
-      // get recent_records
-      auto tmp_it = it;
-      while ( tmp_it != _blkrtmkls.end() ){
-         ++recent_records;
-         ++tmp_it;
+      if ( it->block_num < block_num - recent + range * 2 && it->block_num % range_large != 0 ){
+         _blkrtmkls.erase( it );
       }
 
-      // get previous_records
-      tmp_it = it;
-      while ( tmp_it != _blkrtmkls.begin() ){
-         ++previous_records;
-         --tmp_it;
-      }
-
-      // reorgnize recent_records
-      if ( recent_records > recent / range ){
-         if ( block_num % recent == 0 ){
-            ++previous_records;
-         } else {
-            _blkrtmkls.erase( it );
-         }
-      }
-
-      // reorgnize previous_records
-      if ( previous_records > 20 ){ // past month
+      if ( _blkrtmkls.begin()->block_num < block_num - all ){
          _blkrtmkls.erase( _blkrtmkls.begin() );
       }
-
    }
 
    // ---- private methods ----
