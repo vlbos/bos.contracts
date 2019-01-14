@@ -64,6 +64,9 @@ namespace eosio {
                              name        service_fee_mode,
                              asset       service_fee_fixed,
                              double      service_fee_ratio,
+                             name        failed_fee_mode,
+                             asset       failed_fee_fixed,
+                             double      failed_fee_ratio,
                              bool        active,
                              symbol      peerchain_sym ){
       require_auth( _self );
@@ -77,43 +80,50 @@ namespace eosio {
                     max_once_transfer.symbol == max_accept.symbol &&
                     max_daily_transfer.symbol == max_accept.symbol &&
                     service_fee_fixed.symbol == max_accept.symbol &&
+                    failed_fee_fixed.symbol == max_accept.symbol &&
                     min_once_transfer.amount > 0 &&
                     max_once_transfer.amount > min_once_transfer.amount &&
                     max_daily_transfer.amount > max_once_transfer.amount &&
-                    service_fee_fixed.amount >= 0, "invalid asset");
+                    service_fee_fixed.amount >= 0 &&
+                    failed_fee_fixed.amount >= 0 , "invalid asset");
 
       eosio_assert( organization.size() < 256, "organization has more than 256 bytes");
       eosio_assert( website.size() < 256, "website has more than 256 bytes");
+
       eosio_assert( service_fee_mode == "fixed"_n || service_fee_mode == "ratio"_n, "invalid service_fee_mode");
-      eosio_assert( 0 < service_fee_ratio && service_fee_ratio <= 0.05 , "service_fee_ratio invalid");
+      eosio_assert( failed_fee_mode  == "fixed"_n || failed_fee_mode  == "ratio"_n,  "invalid failed_fee_mode");
+      eosio_assert( 0 <= service_fee_ratio && service_fee_ratio <= 0.05 , "invalid service_fee_ratio");
+      eosio_assert( 0 <= failed_fee_ratio  && failed_fee_ratio  <= 0.05 , "invalid failed_fee_ratio");
 
       eosio_assert( peerchain_sym.is_valid(), "peerchain_sym invalid");
       eosio_assert( peerchain_sym.precision() == max_accept.symbol.precision(), "precision mismatch");
-
 
       auto existing = _accepts.find( original_contract.value );
       eosio_assert( existing == _accepts.end(), "token contract already exist" );
 
       _accepts.emplace( _self, [&]( auto& r ){
-         r.original_contract = original_contract;
-         r.accept = asset{ 0, max_accept.symbol };
-         r.max_accept = max_accept;
-         r.min_once_transfer = min_once_transfer;
-         r.max_once_transfer = max_once_transfer;
+         r.original_contract  = original_contract;
+         r.accept             = asset{ 0, max_accept.symbol };
+         r.max_accept         = max_accept;
+         r.min_once_transfer  = min_once_transfer;
+         r.max_once_transfer  = max_once_transfer;
          r.max_daily_transfer = max_daily_transfer;
          r.max_tfs_per_minute = max_tfs_per_minute;
-         r.peg_token_symbol = peerchain_sym;
-         r.administrator = administrator;
-         r.organization = organization;
-         r.website = website;
-         r.service_fee_mode = service_fee_mode;
-         r.service_fee_fixed = service_fee_fixed;
-         r.service_fee_ratio = service_fee_ratio;
-         r.total_transfer =  asset{ 0, max_accept.symbol };
+         r.peg_token_symbol   = peerchain_sym;
+         r.administrator      = administrator;
+         r.organization       = organization;
+         r.website            = website;
+         r.service_fee_mode   = service_fee_mode;
+         r.service_fee_fixed  = service_fee_fixed;
+         r.service_fee_ratio  = service_fee_ratio;
+         r.failed_fee_mode    = failed_fee_mode;
+         r.failed_fee_fixed   = failed_fee_fixed;
+         r.failed_fee_ratio   = failed_fee_ratio;
+         r.total_transfer     =  asset{ 0, max_accept.symbol };
          r.total_transfer_times = 0;
-         r.total_cash =  asset{ 0, max_accept.symbol };
-         r.total_cash_times = 0;
-         r.active = active;
+         r.total_cash         =  asset{ 0, max_accept.symbol };
+         r.total_cash_times   = 0;
+         r.active             = active;
       });
    }
 
@@ -186,21 +196,32 @@ namespace eosio {
    }
 
    void token::setacptfee( name   contract,
-                           name   service_fee_mode,
-                           asset  service_fee_fixed,
-                           double service_fee_ratio ) {
+                           name   kind,
+                           name   fee_mode,
+                           asset  fee_fixed,
+                           double fee_ratio ) {
       const auto& acpt = get_currency_accept( contract );
-      eosio_assert( service_fee_mode == "fixed"_n || service_fee_mode == "ratio"_n, "mode can only be fixed or ratio");
-      eosio_assert( service_fee_fixed.symbol == acpt.accept.symbol && service_fee_fixed.amount >= 0, "service_fee_fixed invalid" );
-      eosio_assert( 0 < service_fee_ratio && service_fee_ratio <= 0.05 , "service_fee_ratio invalid");
+      eosio_assert( fee_mode == "fixed"_n || fee_mode == "ratio"_n, "mode can only be fixed or ratio");
+      eosio_assert( fee_fixed.symbol == acpt.accept.symbol && fee_fixed.amount >= 0, "service_fee_fixed invalid" );
+      eosio_assert( 0 <= fee_ratio && fee_ratio <= 0.05 , "service_fee_ratio invalid");
 
       require_auth( _self );
 
-      _accepts.modify( acpt, _self, [&]( auto& r ) {
-         r.service_fee_mode = service_fee_mode;
-         r.service_fee_fixed = service_fee_fixed;
-         r.service_fee_ratio = service_fee_ratio;
-      });
+      if ( kind == "success"_n ){
+         _accepts.modify( acpt, _self, [&]( auto& r ) {
+            r.service_fee_mode  = fee_mode;
+            r.service_fee_fixed = fee_fixed;
+            r.service_fee_ratio = fee_ratio;
+         });
+      } else if ( kind == "failed"_n ){
+         _accepts.modify( acpt, _self, [&]( auto& r ) {
+            r.failed_fee_mode  = fee_mode;
+            r.failed_fee_fixed = fee_fixed;
+            r.failed_fee_ratio = fee_ratio;
+         });
+      } else {
+         eosio_assert( false, "kind must be \"success\" or \"failed\"");
+      }
    }
    
    void token::regpegtoken( asset       max_supply,
@@ -211,6 +232,9 @@ namespace eosio {
                             name        administrator,
                             name        peerchain_contract,
                             symbol      peerchain_sym,
+                            name        failed_fee_mode,
+                            asset       failed_fee_fixed,
+                            double      failed_fee_ratio,
                             bool        active ){
       require_auth( _self );
       eosio_assert( is_account( administrator ), "administrator account does not exist");
@@ -220,11 +244,16 @@ namespace eosio {
       eosio_assert( min_once_withdraw.symbol == max_supply.symbol &&
                     max_once_withdraw.symbol == max_supply.symbol &&
                     max_daily_withdraw.symbol == max_supply.symbol &&
+                    failed_fee_fixed.symbol == max_supply.symbol &&
                     min_once_withdraw.amount > 0 &&
-                    max_daily_withdraw.amount > min_once_withdraw.amount , "invalid asset");
+                    max_daily_withdraw.amount > min_once_withdraw.amount &&
+                    failed_fee_fixed.amount >= 0 , "invalid asset");
 
       eosio_assert( peerchain_sym.is_valid(), "peerchain_sym invalid");
       eosio_assert( peerchain_sym.precision() == max_supply.symbol.precision(), "precision mismatch");
+
+      eosio_assert( failed_fee_mode  == "fixed"_n || failed_fee_mode  == "ratio"_n,  "invalid failed_fee_mode");
+      eosio_assert( 0 <= failed_fee_ratio  && failed_fee_ratio  <= 0.05 , "invalid failed_fee_ratio");
 
       auto existing = _stats.find( max_supply.symbol.code().raw() );
       eosio_assert( existing == _stats.end(), "token contract already exist" );
@@ -232,16 +261,19 @@ namespace eosio {
       _stats.emplace( _self, [&]( auto& r ){
          r.supply = asset{ 0, max_supply.symbol };
          r.max_supply = max_supply;
-         r.min_once_withdraw = min_once_withdraw;
-         r.max_once_withdraw = max_once_withdraw;
+         r.min_once_withdraw  = min_once_withdraw;
+         r.max_once_withdraw  = max_once_withdraw;
          r.max_daily_withdraw = max_daily_withdraw;
          r.max_wds_per_minute = max_wds_per_minute;
          r.peerchain_contract = peerchain_contract;
-         r.orig_token_sym = peerchain_sym;
-         r.administrator = administrator;
-         r.total_issue = asset{ 0, max_supply.symbol };
-         r.total_issue_times = 0;
-         r.total_withdraw = asset{ 0, max_supply.symbol };
+         r.orig_token_sym     = peerchain_sym;
+         r.administrator      = administrator;
+         r.failed_fee_mode    = failed_fee_mode;
+         r.failed_fee_fixed   = failed_fee_fixed;
+         r.failed_fee_ratio   = failed_fee_ratio;
+         r.total_issue        = asset{ 0, max_supply.symbol };
+         r.total_issue_times  = 0;
+         r.total_withdraw     = asset{ 0, max_supply.symbol };
          r.total_withdraw_times = 0;
          r.active = true;
       });
@@ -297,6 +329,23 @@ namespace eosio {
       eosio_assert( false, "unkown config item" );
    }
 
+   void token::setpegtkfee( symbol_code symcode,
+                            name        fee_mode,
+                            asset       fee_fixed,
+                            double      fee_ratio ) {
+      const auto& st = get_currency_stats( symcode );
+      require_auth( _self );
+
+      eosio_assert( fee_mode == "fixed"_n || fee_mode == "ratio"_n, "mode can only be fixed or ratio");
+      eosio_assert( fee_fixed.symbol == st.supply.symbol && fee_fixed.amount >= 0, "service_fee_fixed invalid" );
+      eosio_assert( 0 <= fee_ratio && fee_ratio <= 0.05 , "service_fee_ratio invalid");
+
+      _stats.modify( st, same_payer, [&]( auto& r ) {
+         r.failed_fee_mode    = fee_mode;
+         r.failed_fee_fixed   = fee_fixed;
+         r.failed_fee_ratio   = fee_ratio;
+      });
+   }
 
    /**
     * ---- 'ibc transfer action's memo string format' ----
@@ -748,7 +797,16 @@ namespace eosio {
          });
 
          if( action_info.from != _self ) {
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+
+            asset fee;
+            if ( acpt.failed_fee_mode == "fixed"_n ){
+               fee = acpt.failed_fee_fixed;
+            } else {
+               fee = asset(int64_t( action_info.quantity.amount * acpt.failed_fee_ratio), acpt.failed_fee_fixed.symbol);
+            }
+            eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
+
+            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
       } else { // rollback ibc withdraw
@@ -761,7 +819,16 @@ namespace eosio {
          });
 
          if( action_info.from != _self ) {
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity, memo };
+
+            asset fee;
+            if ( st.failed_fee_mode == "fixed"_n ){
+               fee = st.failed_fee_fixed;
+            } else {
+               fee = asset(int64_t( action_info.quantity.amount * st.failed_fee_ratio), st.failed_fee_fixed.symbol);
+            }
+            eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
+
+            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
       }
@@ -1120,7 +1187,7 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close) )
+            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)(transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close) )
          }
          return;
       }

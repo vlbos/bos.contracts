@@ -72,6 +72,9 @@ namespace eosio {
                          name        service_fee_mode,
                          asset       service_fee_fixed,
                          double      service_fee_ratio,
+                         name        failed_fee_mode,
+                         asset       failed_fee_fixed,
+                         double      failed_fee_ratio,
                          bool        active, // when non active, transfer not allowed, but cash trigger by peerchain withdraw can still execute
                          symbol      peerchain_sym );
 
@@ -89,9 +92,10 @@ namespace eosio {
 
       [[eosio::action]]
       void setacptfee( name   contract,
-                       name   service_fee_mode,
-                       asset  service_fee_fixed,
-                       double service_fee_ratio );
+                       name   kind,   // "success"_n or "failed"_n
+                       name   fee_mode,
+                       asset  fee_fixed,
+                       double fee_ratio );
 
 
       [[eosio::action]]
@@ -103,6 +107,9 @@ namespace eosio {
                         name        administrator,
                         name        peerchain_contract,
                         symbol      peerchain_sym,
+                        name        failed_fee_mode,
+                        asset       failed_fee_fixed,
+                        double      failed_fee_ratio,
                         bool        active ); // when non active, withdraw not allowed, but cash which trigger by peerchain transfer can still execute
 
       [[eosio::action]]
@@ -113,6 +120,12 @@ namespace eosio {
 
       [[eosio::action]]
       void setpegbool( symbol_code symcode, string which, bool value );
+
+      [[eosio::action]]
+      void setpegtkfee( symbol_code symcode,
+                        name        fee_mode,
+                        asset       fee_fixed,
+                        double      fee_ratio );
 
 
       // called in C apply function
@@ -260,6 +273,9 @@ namespace eosio {
          name        service_fee_mode;    // "fixed"_n or "ratio"_n
          asset       service_fee_fixed;
          double      service_fee_ratio;
+         name        failed_fee_mode;     // "fixed"_n or "ratio"_n
+         asset       failed_fee_fixed;
+         double      failed_fee_ratio;
          asset       total_transfer;
          uint64_t    total_transfer_times;
          asset       total_cash;
@@ -299,6 +315,9 @@ namespace eosio {
          name        peerchain_contract;
          symbol      orig_token_sym;
          name        administrator;
+         name        failed_fee_mode;      // "fixed"_n or "ratio"_n
+         asset       failed_fee_fixed;
+         double      failed_fee_ratio;
          asset       total_issue;
          uint64_t    total_issue_times;
          asset       total_withdraw;
