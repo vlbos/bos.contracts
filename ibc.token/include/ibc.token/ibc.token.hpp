@@ -51,6 +51,7 @@ namespace eosio {
 
       [[eosio::action]]
       void setglobal( name       ibc_chain_contract,
+                      name       peerchain_name,
                       name       peerchain_ibc_token_contract,
                       uint32_t   max_origtrxs_table_records,
                       uint32_t   cache_cashtrxs_table_records,
@@ -207,6 +208,7 @@ namespace eosio {
          global_state(){}
 
          name              ibc_chain_contract;
+         name              peerchain_name;
          name              peerchain_ibc_token_contract;
          uint32_t          max_origtrxs_table_records;
          uint32_t          cache_cashtrxs_table_records;

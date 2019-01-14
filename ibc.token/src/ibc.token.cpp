@@ -35,6 +35,7 @@ namespace eosio {
    }
    
    void token::setglobal( name       ibc_chain_contract,
+                          name       peerchain_name,
                           name       peerchain_ibc_token_contract,
                           uint32_t   max_origtrxs_table_records,
                           uint32_t   cache_cashtrxs_table_records,
@@ -42,12 +43,13 @@ namespace eosio {
                           bool       active ) {
       require_auth( _self );
 
-      _gstate.ibc_chain_contract = ibc_chain_contract;
-      _gstate.peerchain_ibc_token_contract = peerchain_ibc_token_contract;
-      _gstate.max_origtrxs_table_records = max_origtrxs_table_records;
-      _gstate.cache_cashtrxs_table_records = cache_cashtrxs_table_records;
-      _gstate.max_original_trxs_per_block = max_original_trxs_per_block;
-      _gstate.active = active;
+      _gstate.ibc_chain_contract             = ibc_chain_contract;
+      _gstate.peerchain_name                 = peerchain_name;
+      _gstate.peerchain_ibc_token_contract   = peerchain_ibc_token_contract;
+      _gstate.max_origtrxs_table_records     = max_origtrxs_table_records;
+      _gstate.cache_cashtrxs_table_records   = cache_cashtrxs_table_records;
+      _gstate.max_original_trxs_per_block    = max_original_trxs_per_block;
+      _gstate.active                         = active;
    }
 
    void token::regacpttoken( name        original_contract,
@@ -297,73 +299,60 @@ namespace eosio {
 
 
    /**
-    * ---- ibc memo format of transfer action ----
-    * memo string must start with "ibc", and the rest of the string should be composed of key-value pairs
-    * key-value pairs are separated by spaces, key and value are separated by equal-sign
-    * currently supported keys include: "receiver,r","notes". other keys will be ignored
+    * ---- 'ibc transfer action's memo string format' ----
+    * memo string format is '{account_name}@{chain_name} {user-defined string}', user-defined string is optinal
     *
     * examples:
-    * "ibc receiver=youraccount"
-    * "ibc r=youraccount"
-    * "ibc r=youraccount notes=this is notes txt"
-    *
-    * key details:
-    * "receiver,r": required,   must be a valid eosio name. The name should exist on peerchain, if not, this ibc transaction will failed finally.
-    * "notes":      optional,   user defined string, must be the last item if have, all content after "notes=" is the value of "notes"
+    * 'bosaccount31@bos happy new year 2019'
+    * 'bosaccount32@bos'
     */
 
    struct memo_info_type {
       name     receiver;
+      name     chain;
       string   notes;
    };
-   
-   memo_info_type get_memo_info( const string& memo ){
-      auto get_item = [=]( string item ) {
-         string search = string(" ") + item + "=";
-         auto pos = memo.find( search );
-         decltype(pos) pos_end;
-         if ( pos !=  std::string::npos ){
-            if ( item == "notes" ){
-               pos_end = memo.size();
-            } else {
-               pos_end = memo.find(" ", pos + search.length());
-               if( pos_end == std::string::npos ) {
-                  pos_end = memo.size();
-               }
-            }
 
-            auto start = pos + search.length();
-            auto count = pos_end - start;
-            auto res = memo.substr( start, count );
-            eosio_assert( res.length() != 0, "memo contain incomplete item" );
-            return res;
-         } else {
-            return string();
-         }
-      };
-
-      string receiver_str = get_item("receiver");
-      string r_str = get_item("r");
-      eosio_assert(  receiver_str == string() || r_str == string(), "\"receiver\" and \"r\" can not exist at the same time" );
-
+   memo_info_type get_memo_info( const string& memo_str ){
+      static const string format = "{receiver}@{chain} {user-defined string}";
       memo_info_type info;
-      if ( receiver_str != string() ){
-         info.receiver = name( receiver_str );
+
+      string memo = memo_str;
+      trim( memo );
+
+      // --- get receiver ---
+      auto pos = memo.find("@");
+      eosio_assert( pos != std::string::npos, ( string("memo format error, didn't find charactor \'@\' in memo, correct format: ") + format ).c_str() );
+      string receiver_str = memo.substr( 0, pos );
+      trim( receiver_str );
+      info.receiver = name( receiver_str );
+
+      // --- trim ---
+      memo = memo.substr( pos + 1 );
+      trim( memo );
+
+      // --- get chain name and notes ---
+      pos = memo.find(" ");
+      if ( pos == std::string::npos ){
+         info.chain = name( memo );
+         info.notes = "";
       } else {
-         eosio_assert( r_str != string(),"must provide \"receiver\" or \"r\" key-value");
-         info.receiver = name( r_str );
+         info.chain = name( memo.substr(0,pos) );
+         info.notes = memo.substr( pos + 1 );
+         trim( info.notes );
       }
 
-      info.notes = get_item("notes");
+      eosio_assert( info.receiver != name(), ( string("memo format error, receiver not provided, correct format: ") + format ).c_str() );
+      eosio_assert( info.chain != name(), ( string("memo format error, chain not provided, correct format: ") + format ).c_str() );
       return info;
    }
 
    /**
      * memo string format specification:
-     * memo string must start with "local" or "ibc", any other prefix or empty memo string will assert failed
+     * memo string must start with "local" or meet the 'ibc transfer action's memo string format' described above
+     * any other prefix or empty memo string will assert failed
+     *
      * when start with "local", means this is a local chain transaction, do not any process and return directly
-     * when start with "ibc", means this is a inter-blockchain communicatiion transaction
-     * then memo string should meet the "ibc memo format of transfer action"  described above
      */
    void token::transfer_notify( name original_contract, name from, name to, asset quantity, string memo ) {
       eosio_assert( to == _self, "to is not this contract");
@@ -371,10 +360,10 @@ namespace eosio {
       if ( memo.find("local") == 0 ){
          return;
       }
-      eosio_assert( memo.find("ibc") == 0, "memo should start with \"ibc\" or \"local\"");
 
       auto info = get_memo_info( memo );
-      eosio_assert(info.receiver != name(),"receiver not provide");
+      eosio_assert( info.receiver != name(),"receiver not provide");
+      eosio_assert( info.chain == _gstate.peerchain_name , (string("chain name must be: ") + _gstate.peerchain_name.to_string()).c_str() );
 
       // check global state
       eosio_assert( is_global_active(), "global not active" );
@@ -437,11 +426,10 @@ namespace eosio {
 
    /**
     * memo string format specification:
-    * when to == _self, memo string must start with "local" or "ibc", any other prefix or empty memo string will assert failed
-    * when start with "local", means this is a local chain transaction
-    * when start with "ibc", means this is a inter-blockchain communicatiion transaction
-    * then memo string should meet the "ibc memo format of transfer action" described above
+    * when to == _self, memo string must start with "local" or meet the 'ibc transfer action's memo string format' described above
+    * any other prefix or empty memo string will assert failed
     *
+    * when start with "local", means this is a local chain transaction
     * when to != _self, memo string will not be parsed
     */
    void token::transfer( name    from,
@@ -452,14 +440,12 @@ namespace eosio {
       eosio_assert( from != to, "cannot transfer to self" );
       require_auth( from );
 
-      if (  to == _self ) {
-         if ( memo.find("ibc") == 0 ){
+      if (  to == _self && memo.find("local") != 0 ) {
             auto info = get_memo_info( memo );
-            eosio_assert( info.receiver != name(), "receiver not provide");
-            withdraw( from, info.receiver, quantity, info.notes );
-            return;
-         }
-         eosio_assert( memo.find("local") == 0 , "when transfer to this contract, memo must start with \"ibc\" or \"local\"");
+         eosio_assert( info.receiver != name(), "receiver not provide");
+         eosio_assert( info.chain == _gstate.peerchain_name , (string("chain name must be: ") + _gstate.peerchain_name.to_string()).c_str() );
+         withdraw( from, info.receiver, quantity, info.notes );
+         return;
       }
 
       eosio_assert( is_account( to ), "to account does not exist");
