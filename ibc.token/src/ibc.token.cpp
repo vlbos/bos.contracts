@@ -739,7 +739,7 @@ namespace eosio {
       _gmutable.cash_seq_num += 1;
    }
 
-   void token::rollback( const transaction_id_type trx_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM from being maliciously occupied
+   void token::rollback( const transaction_id_type trx_id, name relay ){    // notes: if non-rollbackable attacks occurred, such records need to be deleted manually, to prevent RAM consume from being maliciously occupied
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
 
