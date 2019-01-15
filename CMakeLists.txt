@@ -39,6 +39,7 @@ add_subdirectory(eosio.token)
 add_subdirectory(bos.pegtoken)
 add_subdirectory(ibc.chain)
 add_subdirectory(ibc.token)
+add_subdirectory(redpacket)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
