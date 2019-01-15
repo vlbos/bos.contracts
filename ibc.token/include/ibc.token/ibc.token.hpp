@@ -202,6 +202,9 @@ namespace eosio {
       [[eosio::action]]
       void close( name owner, const symbol_code& symcode );
 
+      // this action maybe needed when repairing the ibc system manually
+      [[eosio::action]]
+      void fcinittxtbs( ); //force init transaction related tables: origtrxs cashtrxs and some parameters in globalm
 
       static asset get_supply( name token_contract_account, symbol_code sym_code )
       {

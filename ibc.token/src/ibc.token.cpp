@@ -1037,6 +1037,16 @@ namespace eosio {
       acnts.erase( it );
    }
 
+   void token::fcinittxtbs( ) {
+      require_auth( _self );
+
+      while ( _origtrxs.begin() != _origtrxs.end() ){ _origtrxs.erase(_origtrxs.begin()); }
+      while ( _cashtrxs.begin() != _cashtrxs.end() ){ _cashtrxs.erase(_cashtrxs.begin()); }
+
+      _gmutable.cash_seq_num = 0;
+      _gmutable.origtrxs_tb_next_id = 1;
+   }
+
    // ---- global_state related methods ----
    bool token::is_global_active(){
       if ( _gstate.active == false ){
@@ -1187,7 +1197,12 @@ extern "C" {
    void apply( uint64_t receiver, uint64_t code, uint64_t action ) {
       if( code == receiver ) {
          switch( action ) {
-            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)(regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)(regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)(transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)(trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close) )
+            EOSIO_DISPATCH_HELPER( eosio::token, (setglobal)
+            (regacpttoken)(setacptasset)(setacptstr)(setacptint)(setacptbool)(setacptfee)
+            (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
+            (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
+            (trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close)
+            (fcinittxtbs) )
          }
          return;
       }
