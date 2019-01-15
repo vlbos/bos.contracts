@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  cdt:
+    image: devbjune/eosio.cdt:v1.4.1
+    command: /bin/sh /bos-mnt/idle.sh
+    hostname: cdt
+    volumes:
+      - $PWD:/bos-mnt
