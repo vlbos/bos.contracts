@@ -652,7 +652,6 @@ namespace eosio {
 
       eosio_assert( args.to == _gstate.peerchain_ibc_token_contract, "transfer to account not correct" );
       eosio_assert( args.quantity == quantity, "quantity not equal to quantity within packed transaction" );
-      eosio_assert( args.memo.find("ibc") == 0, "internal error, memo not start with \"ibc\"" );
       const memo_info_type& memo_info = get_memo_info( args.memo );
 
       eosio_assert( to == memo_info.receiver, "to not equal to receiver，which provided in memo string" );
