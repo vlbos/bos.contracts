@@ -100,6 +100,10 @@ namespace eosio {
       require_auth( relay );
 
       std::vector<signed_block_header> headers = unpack<std::vector<signed_block_header>>( headers_data );
+
+      ///lis
+      eosio_assert( _sections.rbegin()!=_sections.rend(), "_sections is empty");
+
       const auto& last_section = *(_sections.rbegin());
       if ( headers.front().block_num() > last_section.last + 1 ) {
          if ( !last_section.valid ) {
@@ -119,8 +123,11 @@ namespace eosio {
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
 
-      auto it = --_sections.end();
-      eosio_assert( false == it->valid, "lwcls is valid, can't remove");
+      // auto it =  --_sections.end();
+      // eosio_assert( false == it->valid, "lwcls is valid, can't remove");
+      ///lis
+      auto it =  _sections.rbegin();//--_sections.end();
+      eosio_assert(it !=_sections.rend() && false == it->valid, "lwcls is valid, can't remove");
 
       for( uint64_t num = it->first; num <= it->last; ++num ){
          auto existing = _chaindb.find( num );
@@ -137,6 +144,8 @@ namespace eosio {
       require_auth( relay );
 
       auto it = _sections.begin();
+        ///lis
+      eosio_assert( it!=_sections.end(), "_sections is empty");
       auto next = ++it;
       eosio_assert( next != _sections.end(), "can not delete the last section");
       eosio_assert( next->valid == true, "next section must be valid");
@@ -215,6 +224,13 @@ namespace eosio {
       return false;
    }
 
+/**
+ * @brief 
+ * 
+ * @param block_num 
+ * @param merkle 
+ * @param relay 
+ */
    void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
       static constexpr uint32_t range = 1 << 10;  // 1024 blocks, about 9 minutes
       static constexpr uint32_t recent = range * ( 2 << 8 ); // about 36.4 hours
@@ -248,7 +264,7 @@ namespace eosio {
          ++tmp_it;
       }
 
-      // get previous_records
+      // get previous_records ///lis  begin is first element 
       tmp_it = it;
       while ( tmp_it != _blkrtmkls.begin() ){
          ++previous_records;
@@ -279,6 +295,13 @@ namespace eosio {
     * the header should not have header.new_producers and schedule_version consist with the last valid lwc section
     * the header block number should greater then the last block number of last section
     */
+   
+    /**
+    * @brief 
+    * 
+    * @param header 
+    * @param blockroot_merkle 
+    */
    void chain::newsection( const signed_block_header& header,
                            const incremental_merkle&  blockroot_merkle ){
       eosio_assert( !header.new_producers, "section root header can not contain new_producers" );
@@ -286,7 +309,9 @@ namespace eosio {
       remove_first_section_or_not();
 
       auto header_block_num = header.block_num();
-
+      
+      ///lis
+      eosio_assert( _sections.rbegin()!=_sections.rend(), "_sections is empty" );
       const auto& last_section = *(_sections.rbegin());
       eosio_assert( last_section.valid, "last_section is not valid" );
       eosio_assert( header_block_num > last_section.last + 1, "header_block_num should larger then last_section.last + 1" );
@@ -334,10 +359,13 @@ namespace eosio {
       auto header_block_num = header.block_num();
       auto header_block_id = header.id();
 
+      ///lis
+      eosio_assert( _sections.rbegin()!=_sections.rend(), "_sections is empty" );
       const auto& last_section = *(_sections.rbegin());
       auto last_section_first = last_section.first;
       auto last_section_last = last_section.last;
       
+      ///lis header_block_num <= last_section_last + 1
       eosio_assert( header_block_num > last_section_first, "new header number must larger then section root number" );
       eosio_assert( header_block_num <= last_section_last + 1, "unlinkable block" );
 
@@ -352,8 +380,11 @@ namespace eosio {
             });
          }
 
-         while ( _chaindb.rbegin()->block_num != header_block_num - 1 ){
-            _chaindb.erase( --_chaindb.end() );
+         ///lis  
+         // while (_chaindb.rbegin()->block_num != header_block_num - 1 ){
+                    //_chaindb.erase( --_chaindb.end() );
+         while ( _chaindb.rbegin()!=_chaindb.end() && _chaindb.rbegin()->block_num != header_block_num - 1 ){
+             _chaindb.erase( _chaindb.rbegin() );
          }
 
          _sections.modify( last_section, same_payer, [&]( auto& r ) {
