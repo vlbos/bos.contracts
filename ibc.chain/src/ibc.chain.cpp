@@ -524,6 +524,13 @@ namespace eosio {
       }
    }
 
+   void chain::fcinit(){
+      require_auth(_self);
+      while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
+      while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
+      while ( _sections.begin() != _sections.end() ){ _sections.erase(_sections.begin()); }
+   }
+
 // ---- class: section_type ----
 
    name get_scheduled_producer( uint32_t tslot, const producer_schedule& active_schedule) {
@@ -612,6 +619,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle)(fcinit) )
 
 

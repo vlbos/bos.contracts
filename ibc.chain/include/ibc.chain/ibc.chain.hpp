@@ -161,6 +161,9 @@ namespace eosio {
          return it != _relays.end();
       }
 
+      // this action maybe needed when repairing the ibc system manually
+      [[eosio::action]]
+      void fcinit( );
 
    private:
       void pushheader( const signed_block_header& header );
