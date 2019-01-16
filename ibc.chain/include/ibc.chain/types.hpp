@@ -17,8 +17,6 @@ namespace eosio {
    typedef capi_checksum256   transaction_id_type;
    typedef capi_signature     signature_type;
 
-   typedef std::vector<std::pair<uint16_t, std::vector<char>>> extensions_type_v2;
-
    template<typename T>
    void push(T&){}
 
