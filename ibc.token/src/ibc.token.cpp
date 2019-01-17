@@ -275,7 +275,7 @@ namespace eosio {
          r.total_issue_times  = 0;
          r.total_withdraw     = asset{ 0, max_supply.symbol };
          r.total_withdraw_times = 0;
-         r.active = true;
+         r.active = active;//true;///lis
       });
    }
 
@@ -296,7 +296,7 @@ namespace eosio {
       }
       if ( which == "max_once_withdraw" ){
          eosio_assert( quantity.amount >= st.min_once_withdraw.amount, "max_once_withdraw.amount should not less then min_once_withdraw.amount");
-         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_supply = quantity; });
+         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_once_withdraw = quantity; });///lis
          return;
       }
       if ( which == "max_daily_withdraw" ){
@@ -481,6 +481,7 @@ namespace eosio {
     * when start with "local", means this is a local chain transaction
     * when to != _self, memo string will not be parsed
     */
+
    void token::transfer( name    from,
                          name    to,
                          asset   quantity,
@@ -573,8 +574,8 @@ namespace eosio {
       }
 
       _stats.modify( st, same_payer, [&]( auto& r ) {
-         r.supply -= quantity;
-         r.total_withdraw += quantity;
+         r.supply -= quantity;///lis  supply>=quantity
+         r.total_withdraw += quantity;   ///max  value
          r.total_withdraw_times += 1;
       });
 
@@ -639,7 +640,7 @@ namespace eosio {
       eosio_assert( false == is_orig_trx_id_exist_in_cashtrxs_tb(orig_trx_id), "orig_trx_id already exist");      // important! used to prevent replay attack
 
       const transaction_receipt& trx_receipt = unpack<transaction_receipt>( orig_trx_packed_trx_receipt );
-      packed_transaction pkd_trx = std::get<packed_transaction>(trx_receipt.trx);
+      packed_transaction pkd_trx = std::get<packed_transaction>(trx_receipt.trx);///lis try  catch
       transaction trxn = unpack<transaction>( pkd_trx.packed_trx );
       eosio_assert( trxn.actions.size() == 1, "transfer transaction contains more then one action" );
 
@@ -790,8 +791,8 @@ namespace eosio {
       if ( action_info.contract != _self ){  // rollback ibc transfer
          const auto& acpt = get_currency_accept( action_info.contract );
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
-            r.accept -= action_info.quantity;
-            r.total_transfer -= action_info.quantity;
+            r.accept -= action_info.quantity;    ///lis validate info
+            r.total_transfer -= action_info.quantity; ///lis validate info
             r.total_transfer_times -= 1;
          });
 
@@ -805,6 +806,7 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
+            ///lis  action_info.quantity - fee
             transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
@@ -827,11 +829,13 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
+            ///lis  action_info.quantity - fee
             transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
       }
 
+      ///lis _origtrxs.find(it->id)==end()
       _origtrxs.erase( _origtrxs.find(it->id) );
    }
 
@@ -846,6 +850,7 @@ namespace eosio {
 
       eosio_assert( it->block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + min_distance < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
+      ///lis _origtrxs.find(it->id)==end()
       _origtrxs.erase( _origtrxs.find(it->id) );
 
       _rmdunrbs.emplace( _self, [&]( auto& r ) {
@@ -868,7 +873,7 @@ namespace eosio {
          if ( action_info.contract != _self ){  // rollback ibc transfer
             const auto& acpt = get_currency_accept( action_info.contract );
             _accepts.modify( acpt, same_payer, [&]( auto& r ) {
-               r.accept -= action_info.quantity;
+               r.accept -= action_info.quantity;    ///lis validate info
                r.total_transfer -= action_info.quantity;
                r.total_transfer_times -= 1;
             });
@@ -988,6 +993,7 @@ namespace eosio {
    void token::sub_balance( name owner, asset value ) {
       accounts from_acnts( _self, owner.value );
 
+      ///lis  ///lis 
       const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
       eosio_assert( from.balance.amount >= value.amount, "overdrawn balance" );
 
@@ -1110,12 +1116,15 @@ namespace eosio {
       auto idx = _origtrxs.get_index<"trxid"_n>();
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
 
-      _gmutable.last_confirmed_orig_trx_block_time_slot = it->block_time_slot;
-
-      if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by _self manully operation
+   if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by _self manully operation
          print("fatal internal error, trx_id not exist in origtrxs table!, removed it manully?");
          return;
       }
+      
+      ///lis
+      _gmutable.last_confirmed_orig_trx_block_time_slot = it->block_time_slot;
+
+    
       idx.erase(it);
    }
 
@@ -1131,7 +1140,7 @@ namespace eosio {
       if ( total > _gstate.cache_cashtrxs_table_records ){
          auto last_orig_trx_block_num = _cashtrxs.rbegin()->orig_trx_block_num;
          int i = 10; // 10 per time
-         while ( i-- > 0 ){
+         while (_cashtrxs.begin() != _cashtrxs.end()&& i-- > 0 ){///lis  erase
             auto first_orig_trx_block_num = _cashtrxs.begin()->orig_trx_block_num;
             if ( last_orig_trx_block_num - first_orig_trx_block_num > 1 ) { // very importand
                _cashtrxs.erase( _cashtrxs.begin() );

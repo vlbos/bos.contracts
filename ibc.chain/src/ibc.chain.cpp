@@ -501,8 +501,12 @@ namespace eosio {
    const static uint32_t trim_length = 50;
 
    void chain::trim_last_section_or_not() {
+      ///lis
+      eosio_assert( _sections.rbegin() != _sections.rend(), "_sections is empty" );
       auto lwcls = *(_sections.rbegin());
-      if ( lwcls.last - lwcls.first > section_max_length ){
+      ///lis
+      //if ( lwcls.last - lwcls.first > section_max_length ){
+      if ( lwcls.last - lwcls.first +1> section_max_length ){
 
          // delete first 100 blocks in _chaindb
          for ( uint32_t num = lwcls.first; num < lwcls.first + trim_length; ++num ){
@@ -544,6 +548,8 @@ namespace eosio {
 // ---- class: section_type ----
 
    name get_scheduled_producer( uint32_t tslot, const producer_schedule& active_schedule) {
+      eosio_assert(active_schedule.producers.size() >0, " active_schedule.producers.  is empty" );
+      static_assert(producer_repetitions>0, "must be greater then zero");
       auto index = tslot % (active_schedule.producers.size() * producer_repetitions);
       index /= producer_repetitions;
       return active_schedule.producers[index].producer_name;
@@ -556,7 +562,7 @@ namespace eosio {
       // one node per chain test model
       if ( sch.producers.size() == 1 && sch.producers.front().producer_name == "eosio"_n ){  // for one node test
          return;
-      }
+     }
 
 #ifdef FEW_BP_NODES_TEST
       return;
@@ -621,7 +627,9 @@ namespace eosio {
       int pos = 0;
       eosio_assert( first < num && num <= last , "invalid number" );
 
-      while ( num <= block_nums.back() ){
+      ///lis  
+      // while ( num <= block_nums.back() ){
+      while (!producers.empty() && !block_nums.empty() && num <= block_nums.back() ){
          producers.pop_back();
          block_nums.pop_back();
       }
