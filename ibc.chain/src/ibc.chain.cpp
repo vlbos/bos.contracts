@@ -264,7 +264,7 @@ namespace eosio {
          ++tmp_it;
       }
 
-      // get previous_records ///lis  begin is first element 
+      // get previous_records ///lis  begin() is first element 
       tmp_it = it;
       while ( tmp_it != _blkrtmkls.begin() ){
          ++previous_records;
@@ -395,6 +395,8 @@ namespace eosio {
       }
 
       // verify linkable
+      ///lis
+       eosio_assert(_chaindb.rbegin()!=_chaindb.end(), "chaindb is empty" );
       auto last_bhs = *(_chaindb.rbegin());   // don't make pointer or const, for it needs change
       eosio_assert(std::memcmp(last_bhs.block_id.hash, header.previous.hash, 32) == 0 , "unlinkable block" );
 
