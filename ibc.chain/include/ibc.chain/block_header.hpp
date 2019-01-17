@@ -21,7 +21,7 @@ namespace eosio {
       capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version;
       std::optional<eosio::producer_schedule>   new_producers;
-      extensions_type_v2                        header_extensions;
+      extensions_type                           header_extensions;
 
       capi_checksum256     digest()const;
       block_id_type        id() const;
