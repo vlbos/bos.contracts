@@ -100,6 +100,7 @@ namespace eosio {
       require_auth( relay );
 
       std::vector<signed_block_header> headers = unpack<std::vector<signed_block_header>>( headers_data );
+      eosio_assert( _sections.begin() != _sections.end(), "fatal error, _sections is empty");
       const auto& last_section = *(_sections.rbegin());
       if ( headers.front().block_num() > last_section.last + 1 ) {
          if ( !last_section.valid ) {
