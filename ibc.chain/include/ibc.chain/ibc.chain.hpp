@@ -4,6 +4,8 @@
  */
 #pragma once
 
+// #define FEW_BP_NODES_TEST // comment this define in release version
+
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
