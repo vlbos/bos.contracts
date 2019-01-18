@@ -100,6 +100,7 @@ namespace eosio {
       require_auth( relay );
 
       std::vector<signed_block_header> headers = unpack<std::vector<signed_block_header>>( headers_data );
+      eosio_assert( _sections.begin() != _sections.end(), "fatal error, _sections is empty");
       const auto& last_section = *(_sections.rbegin());
       if ( headers.front().block_num() > last_section.last + 1 ) {
          if ( !last_section.valid ) {
@@ -404,8 +405,18 @@ namespace eosio {
             auto last_pending_schedule_version = _prodsches.get( last_bhs.pending_schedule_id ).schedule.version;
             if ( header.schedule_version == last_pending_schedule_version ){  // producers replacement finished
                /* important! infact header_block_num - last_section.newprod_block_num should be approximately equal to 325 */
+               #ifndef FEW_BP_NODES_TEST
                eosio_assert( header_block_num - last_section.newprod_block_num > 20 * 12, "header_block_num - last_section.newprod_block_num > 20 * 12 failed");
+               #endif
+
+               // replace
                bhs.active_schedule_id  = last_bhs.pending_schedule_id;
+
+               // clear last_section's producers and block_nums
+               _sections.modify( last_section, same_payer, [&]( auto& s ) {
+                  s.producers = std::vector<name>();
+                  s.block_nums = std::vector<uint32_t>();
+               });
             } else { // producers replacement not finished
                bhs.active_schedule_id  = last_bhs.active_schedule_id;
             }
@@ -524,6 +535,13 @@ namespace eosio {
       }
    }
 
+   void chain::fcinit(){
+      require_auth(_self);
+      while ( _chaindb.begin() != _chaindb.end() ){ _chaindb.erase(_chaindb.begin()); }
+      while ( _prodsches.begin() != _prodsches.end() ){ _prodsches.erase(_prodsches.begin()); }
+      while ( _sections.begin() != _sections.end() ){ _sections.erase(_sections.begin()); }
+   }
+
 // ---- class: section_type ----
 
    name get_scheduled_producer( uint32_t tslot, const producer_schedule& active_schedule) {
@@ -541,6 +559,10 @@ namespace eosio {
          return;
       }
 
+#ifdef FEW_BP_NODES_TEST
+      return;
+#endif
+
       // section create
       if ( producers.empty() ){
          eosio_assert( block_nums.empty(), "internal error, producers not consistent with block_nums" );
@@ -554,9 +576,6 @@ namespace eosio {
       eosio_assert( sch.producers.size() > 15, "producers.size() must greater then 15" ); // should be equal to 21 infact
       eosio_assert( get_scheduled_producer( tslot, sch ) == prod, "scheduled producer validate failed");
 
-      // can not produce more then 12 blocks
-      eosio_assert( num <= block_nums.back() + 12 , "one producer can not produce more then 12 blocks continuously");
-
       // same producer, do nothing
       if( prod == producers.back() ){
          return;
@@ -569,7 +588,7 @@ namespace eosio {
          eosio_assert( prod != producers[ size - 1 - i ] , "producer can not repeat within last 15 producers" );
       }
 
-      // Check if the distance from producers.back() to prod is greater then MAXSPAN
+      // Check if the distance from producers.back() to prod is not greater then MAXSPAN
       int index_last = BIGNUM;
       int index_this = BIGNUM;
       int i = 0;
@@ -611,6 +630,6 @@ namespace eosio {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle) )
+EOSIO_DISPATCH( eosio::chain, (setglobal)(chaininit)(pushsection)(rminvalidls)(rmfirstsctn)(relay)(blockmerkle)(fcinit) )
 
 

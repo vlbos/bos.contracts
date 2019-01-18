@@ -4,6 +4,8 @@
  */
 #pragma once
 
+// #define FEW_BP_NODES_TEST // comment this define in release version
+
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
@@ -161,6 +163,9 @@ namespace eosio {
          return it != _relays.end();
       }
 
+      // this action maybe needed when repairing the ibc system manually
+      [[eosio::action]]
+      void fcinit( );
 
    private:
       void pushheader( const signed_block_header& header );
