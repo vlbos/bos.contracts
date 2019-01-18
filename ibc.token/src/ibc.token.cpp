@@ -296,7 +296,7 @@ namespace eosio {
       }
       if ( which == "max_once_withdraw" ){
          eosio_assert( quantity.amount >= st.min_once_withdraw.amount, "max_once_withdraw.amount should not less then min_once_withdraw.amount");
-         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_supply = quantity; });
+         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_once_withdraw = quantity; });
          return;
       }
       if ( which == "max_daily_withdraw" ){
