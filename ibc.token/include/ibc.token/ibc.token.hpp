@@ -226,9 +226,9 @@ namespace eosio {
          name              ibc_chain_contract;
          name              peerchain_name;
          name              peerchain_ibc_token_contract;
-         uint32_t          max_origtrxs_table_records;
-         uint32_t          cache_cashtrxs_table_records;
-         uint32_t          max_original_trxs_per_block;
+         uint32_t          max_origtrxs_table_records = 0;
+         uint32_t          cache_cashtrxs_table_records = 0;
+         uint32_t          max_original_trxs_per_block = 0;
 
          bool              active = true;  // use as global lock
          uint32_t          lock_start_time = 0;
