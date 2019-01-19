@@ -550,7 +550,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
+     (init)(setram)(setramrate)(setparams)(namelist)(setguaminres)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
      (rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
