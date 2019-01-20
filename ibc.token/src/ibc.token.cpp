@@ -703,12 +703,14 @@ namespace eosio {
 
          if ( acpt.service_fee_mode == "fixed"_n ){
             eosio_assert( acpt.service_fee_fixed.amount >= 0, "internal error, service_fee_fixed config error");
-            new_quantity.amount -= acpt.service_fee_fixed.amount;
+            new_quantity.amount = new_quantity.amount > acpt.service_fee_fixed.amount ? new_quantity.amount - acpt.service_fee_fixed.amount : 1; // 1 is used to avoid rollback failure
          } else {
             auto diff = int64_t( new_quantity.amount * acpt.service_fee_ratio );
             eosio_assert( diff >= 0, "internal error, service_fee_ratio config error");
-            new_quantity.amount -= diff;
+            new_quantity.amount = new_quantity.amount > diff ? new_quantity.amount - diff : 1; // 1 is used to avoid rollback failure
          }
+
+         eosio_assert( new_quantity.amount > 0, "must issue positive quantity" );
 
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= new_quantity;
@@ -805,7 +807,8 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
+            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
       } else { // rollback ibc withdraw
@@ -827,7 +830,8 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
+            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
       }
