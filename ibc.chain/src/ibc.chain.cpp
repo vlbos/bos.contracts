@@ -220,7 +220,7 @@ namespace eosio {
       static constexpr uint32_t range = ( 1 << 10 ) * 4;    // about 30 minutes
       static constexpr uint32_t range_large = range * 6;    // about 3 hours
       static constexpr uint32_t recent = range * 24;        // about 3 days
-      static constexpr uint32_t past = recent * 3;          // about 9 days
+      static constexpr uint32_t past = recent * 5;          // about 15 days
 
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
@@ -247,7 +247,7 @@ namespace eosio {
          ++it;
       }
 
-      while ( _blkrtmkls.begin()->block_num < block_num - max_days ){
+      while ( _blkrtmkls.begin()->block_num < block_num - past ){
          _blkrtmkls.erase( _blkrtmkls.begin() );
       }
    }
