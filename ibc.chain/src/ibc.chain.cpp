@@ -622,7 +622,7 @@ namespace eosio {
       int pos = 0;
       eosio_assert( first < num && num <= last , "invalid number" );
 
-      while ( num <= block_nums.back() ){
+      while ( num <= block_nums.back() && !producers.empty() && !block_nums.empty() ){
          producers.pop_back();
          block_nums.pop_back();
       }

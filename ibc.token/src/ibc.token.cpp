@@ -275,7 +275,7 @@ namespace eosio {
          r.total_issue_times  = 0;
          r.total_withdraw     = asset{ 0, max_supply.symbol };
          r.total_withdraw_times = 0;
-         r.active = true;
+         r.active = active;
       });
    }
 
@@ -1112,8 +1112,7 @@ namespace eosio {
 
       _gmutable.last_confirmed_orig_trx_block_time_slot = it->block_time_slot;
 
-      if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by _self manully operation
-         print("fatal internal error, trx_id not exist in origtrxs table!, removed it manully?");
+      if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by two ibc_plugin channels
          return;
       }
       idx.erase(it);
