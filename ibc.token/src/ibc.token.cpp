@@ -835,7 +835,7 @@ namespace eosio {
       _origtrxs.erase( _origtrxs.find(it->id) );
    }
 
-   static const uint32_t min_distance = 100;
+   static const uint32_t min_distance = 3600 * 24 * 2;   // one day
    void token::rmunablerb( const transaction_id_type trx_id, name relay ){
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
