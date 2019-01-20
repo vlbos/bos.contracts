@@ -781,7 +781,7 @@ namespace eosio {
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
       eosio_assert( it != idx.end(), "trx_id not exist");
 
-      eosio_assert( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
+      eosio_assert( it->block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
       transfer_action_info action_info = it->action;
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
