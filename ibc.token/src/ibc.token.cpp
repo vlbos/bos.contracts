@@ -275,7 +275,7 @@ namespace eosio {
          r.total_issue_times  = 0;
          r.total_withdraw     = asset{ 0, max_supply.symbol };
          r.total_withdraw_times = 0;
-         r.active = true;
+         r.active = active;
       });
    }
 
@@ -703,12 +703,14 @@ namespace eosio {
 
          if ( acpt.service_fee_mode == "fixed"_n ){
             eosio_assert( acpt.service_fee_fixed.amount >= 0, "internal error, service_fee_fixed config error");
-            new_quantity.amount -= acpt.service_fee_fixed.amount;
+            new_quantity.amount = new_quantity.amount > acpt.service_fee_fixed.amount ? new_quantity.amount - acpt.service_fee_fixed.amount : 1; // 1 is used to avoid rollback failure
          } else {
             auto diff = int64_t( new_quantity.amount * acpt.service_fee_ratio );
             eosio_assert( diff >= 0, "internal error, service_fee_ratio config error");
-            new_quantity.amount -= diff;
+            new_quantity.amount = new_quantity.amount > diff ? new_quantity.amount - diff : 1; // 1 is used to avoid rollback failure
          }
+
+         eosio_assert( new_quantity.amount > 0, "must issue positive quantity" );
 
          _accepts.modify( acpt, same_payer, [&]( auto& r ) {
             r.accept -= new_quantity;
@@ -781,7 +783,7 @@ namespace eosio {
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
       eosio_assert( it != idx.end(), "trx_id not exist");
 
-      eosio_assert( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
+      eosio_assert( it->block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
       transfer_action_info action_info = it->action;
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
@@ -805,7 +807,8 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
+            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, acpt.original_contract, "transfer"_n, action_data ).send();
          }
       } else { // rollback ibc withdraw
@@ -827,7 +830,8 @@ namespace eosio {
             }
             eosio_assert( fee.amount >= 0, "internal error, service_fee_ratio config error");
 
-            transfer_action_type action_data{ _self, action_info.from, action_info.quantity - fee, memo };
+            auto final_quantity = asset( action_info.quantity.amount > fee.amount ?  action_info.quantity.amount - fee.amount : 1, action_info.quantity.symbol ); // 1 is used to avoid rollback failure
+            transfer_action_type action_data{ _self, action_info.from, final_quantity, memo };
             action( permission_level{ _self, "active"_n }, _self, "transfer"_n, action_data ).send();
          }
       }
@@ -835,7 +839,7 @@ namespace eosio {
       _origtrxs.erase( _origtrxs.find(it->id) );
    }
 
-   static const uint32_t min_distance = 100;
+   static const uint32_t min_distance = 3600 * 24 * 2;   // one day
    void token::rmunablerb( const transaction_id_type trx_id, name relay ){
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
@@ -1112,8 +1116,7 @@ namespace eosio {
 
       _gmutable.last_confirmed_orig_trx_block_time_slot = it->block_time_slot;
 
-      if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by _self manully operation
-         print("fatal internal error, trx_id not exist in origtrxs table!, removed it manully?");
+      if (  it == idx.end() ){   // do not use eosio_assert(), for this situation may be caused by two ibc_plugin channels
          return;
       }
       idx.erase(it);

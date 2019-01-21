@@ -217,15 +217,15 @@ namespace eosio {
    }
 
    void chain::blockmerkle( uint64_t block_num, incremental_merkle merkle, name relay ){
-      static constexpr uint32_t range = 1 << 10;  // 1024 blocks, about 8 minutes
-      static constexpr uint32_t range_large = range * 6;  // about 50 minutes
-      static constexpr uint32_t recent = range * ( 1 << 9 ); // about 3 days
-      static constexpr uint32_t all = recent * 2; // about 6 days
+      static constexpr uint32_t range = ( 1 << 10 ) * 4;    // about 30 minutes
+      static constexpr uint32_t range_large = range * 6;    // about 3 hours
+      static constexpr uint32_t recent = range * 24;        // about 3 days
+      static constexpr uint32_t past = recent * 5;          // about 15 days
 
       eosio_assert( is_relay( _self, relay ), "relay not found");
       require_auth( relay );
 
-      eosio_assert( block_num % range == 0, "the block number should be integral multiple of 1024");
+      eosio_assert( block_num % range == 0, "the block number should be integral multiple of 1024 * 4");
 
       blkrtmkls _blkrtmkls( _self, relay.value );
       auto exsiting = _blkrtmkls.find( block_num );
@@ -242,12 +242,12 @@ namespace eosio {
       }
 
       auto it = _blkrtmkls.lower_bound( block_num - recent );
-
-      if ( it->block_num < block_num - recent + range * 2 && it->block_num % range_large != 0 ){
+      while ( it != _blkrtmkls.end() && it->block_num < block_num - recent + range * 2 && it->block_num % range_large != 0  ){
          _blkrtmkls.erase( it );
+         ++it;
       }
 
-      if ( _blkrtmkls.begin()->block_num < block_num - all ){
+      while ( _blkrtmkls.begin()->block_num < block_num - past ){
          _blkrtmkls.erase( _blkrtmkls.begin() );
       }
    }
@@ -622,7 +622,7 @@ namespace eosio {
       int pos = 0;
       eosio_assert( first < num && num <= last , "invalid number" );
 
-      while ( num <= block_nums.back() ){
+      while ( num <= block_nums.back() && !producers.empty() && !block_nums.empty() ){
          producers.pop_back();
          block_nums.pop_back();
       }
