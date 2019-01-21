@@ -296,7 +296,7 @@ namespace eosio {
       }
       if ( which == "max_once_withdraw" ){
          eosio_assert( quantity.amount >= st.min_once_withdraw.amount, "max_once_withdraw.amount should not less then min_once_withdraw.amount");
-         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_once_withdraw = quantity; });///lis
+         _stats.modify( st, same_payer, [&]( auto& r ) { r.max_once_withdraw = quantity; });
          return;
       }
       if ( which == "max_daily_withdraw" ){
@@ -782,7 +782,7 @@ namespace eosio {
       auto it = idx.find( fixed_bytes<32>(trx_id.hash) );
       eosio_assert( it != idx.end(), "trx_id not exist");
 
-      eosio_assert( it->block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 2 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
+      eosio_assert( it->block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot, "(block_time_slot + 25 < _gmutable.last_confirmed_orig_trx_block_time_slot) is false");
 
       transfer_action_info action_info = it->action;
       string memo = "rollback transaction: " + capi_checksum256_to_string(trx_id);
@@ -839,7 +839,7 @@ namespace eosio {
       _origtrxs.erase( _origtrxs.find(it->id) );
    }
 
-   static const uint32_t min_distance = 100;
+   static const uint32_t min_distance = 3600 * 24 * 2;   // one day
    void token::rmunablerb( const transaction_id_type trx_id, name relay ){
       eosio_assert( chain::is_relay( _gstate.ibc_chain_contract, relay ), "relay not exist");
       require_auth( relay );
