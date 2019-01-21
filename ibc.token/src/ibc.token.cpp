@@ -1053,7 +1053,7 @@ namespace eosio {
       while ( _rmdunrbs.begin() != _rmdunrbs.end() && count++ < max_delete_per_time ){
          _rmdunrbs.erase(_rmdunrbs.begin());
       }
-      _gmutable.cash_seq_num = global_mutable();
+      _gmutable = global_mutable();
    }
 
    // ---- global_state related methods ----
@@ -1210,7 +1210,7 @@ extern "C" {
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close)
-            (fcinittxtbs) )
+            (fcinit) )
          }
          return;
       }
