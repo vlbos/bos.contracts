@@ -139,6 +139,8 @@ namespace eosio {
 
       auto it = _sections.begin();
       auto next = ++it;
+      eosio_assert( next != _sections.end(), "can not delete");
+      next = ++it;
       eosio_assert( next != _sections.end(), "can not delete the last section");
       eosio_assert( next->valid == true, "next section must be valid");
 
@@ -356,9 +358,55 @@ namespace eosio {
       last_bhs.blockroot_merkle.append( last_bhs.block_id );
       bhs.blockroot_merkle = std::move(last_bhs.blockroot_merkle);
 
+      // handle bps list replacement
+      if ( last_bhs.active_schedule_id == last_bhs.pending_schedule_id ){  // normal circumstances
+
+         // check if last_section valid
+         bool valid = false;
+         if ( last_section.newprod_block_num != 0 ){
+            if ( header_block_num - last_section.newprod_block_num >= 325 + _gstate.lib_depth ){
+               valid = true;
+            }
+         } else {
+            if ( header_block_num - last_section_first >= _gstate.lib_depth ){
+               valid = true;
+            }
+         }
+
+         if ( valid && ! last_section.valid ){
+            _sections.modify( last_section, same_payer, [&]( auto& r ) {
+               r.valid = true;
+            });
+         }
+
+         bhs.active_schedule_id  = last_bhs.active_schedule_id;
+         bhs.pending_schedule_id = last_bhs.pending_schedule_id;
+      }
+      else { // producers replacement interval
+         auto last_pending_schedule_version = _prodsches.get( last_bhs.pending_schedule_id ).schedule.version;
+         if ( header.schedule_version == last_pending_schedule_version ){  // producers replacement finished
+            /* important! infact header_block_num - last_section.newprod_block_num should be approximately equal to 325 */
+            #ifndef FEW_BP_NODES_TEST
+            eosio_assert( header_block_num - last_section.newprod_block_num > 20 * 12, "header_block_num - last_section.newprod_block_num > 20 * 12 failed");
+            #endif
+
+            // replace
+            bhs.active_schedule_id  = last_bhs.pending_schedule_id;
+
+            // clear last_section's producers and block_nums
+            _sections.modify( last_section, same_payer, [&]( auto& s ) {
+               s.producers = std::vector<name>();
+               s.block_nums = std::vector<uint32_t>();
+            });
+         } else { // producers replacement not finished
+            bhs.active_schedule_id  = last_bhs.active_schedule_id;
+         }
+         bhs.pending_schedule_id = last_bhs.pending_schedule_id;
+      }
+
+      // handle header.new_producers
       if ( header.new_producers ){  // has new producers
-         auto last_active_schedule_version = _prodsches.get( last_bhs.active_schedule_id ).schedule.version;
-         eosio_assert( header.new_producers->version == last_active_schedule_version + 1, " header.new_producers version invalid" );
+         eosio_assert( header.new_producers->version == header.schedule_version + 1, " header.new_producers version invalid" );
 
          _sections.modify( last_section, same_payer, [&]( auto& r ) {
             r.valid = false;
@@ -377,51 +425,6 @@ namespace eosio {
          }
 
          bhs.pending_schedule_id = new_schedule_id;
-         bhs.active_schedule_id  = last_bhs.active_schedule_id;
-      } else {
-         if ( last_bhs.active_schedule_id == last_bhs.pending_schedule_id ){  // normal circumstances
-
-            // check if last_section valid
-            bool valid = false;
-            if ( last_section.newprod_block_num != 0 ){
-               if ( header_block_num - last_section.newprod_block_num >= 325 + _gstate.lib_depth ){
-                  valid = true;
-               }
-            } else {
-               if ( header_block_num - last_section_first >= _gstate.lib_depth ){
-                  valid = true;
-               }
-            }
-
-            if ( valid && ! last_section.valid ){
-               _sections.modify( last_section, same_payer, [&]( auto& r ) {
-                  r.valid = true;
-               });
-            }
-
-            bhs.active_schedule_id  = last_bhs.active_schedule_id;
-            bhs.pending_schedule_id = last_bhs.pending_schedule_id;
-         } else { // producers replacement interval
-            auto last_pending_schedule_version = _prodsches.get( last_bhs.pending_schedule_id ).schedule.version;
-            if ( header.schedule_version == last_pending_schedule_version ){  // producers replacement finished
-               /* important! infact header_block_num - last_section.newprod_block_num should be approximately equal to 325 */
-               #ifndef FEW_BP_NODES_TEST
-               eosio_assert( header_block_num - last_section.newprod_block_num > 20 * 12, "header_block_num - last_section.newprod_block_num > 20 * 12 failed");
-               #endif
-
-               // replace
-               bhs.active_schedule_id  = last_bhs.pending_schedule_id;
-
-               // clear last_section's producers and block_nums
-               _sections.modify( last_section, same_payer, [&]( auto& s ) {
-                  s.producers = std::vector<name>();
-                  s.block_nums = std::vector<uint32_t>();
-               });
-            } else { // producers replacement not finished
-               bhs.active_schedule_id  = last_bhs.active_schedule_id;
-            }
-            bhs.pending_schedule_id = last_bhs.pending_schedule_id;
-         }
       }
 
       bhs.header = std::move(header);

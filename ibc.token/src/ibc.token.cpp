@@ -1040,14 +1040,20 @@ namespace eosio {
       acnts.erase( it );
    }
 
-   void token::fcinittxtbs( ) {
+   void token::fcinit( ) {
       require_auth( _self );
 
-      while ( _origtrxs.begin() != _origtrxs.end() ){ _origtrxs.erase(_origtrxs.begin()); }
-      while ( _cashtrxs.begin() != _cashtrxs.end() ){ _cashtrxs.erase(_cashtrxs.begin()); }
-
-      _gmutable.cash_seq_num = 0;
-      _gmutable.origtrxs_tb_next_id = 1;
+      uint32_t count = 0, max_delete_per_time = 200;
+      while ( _origtrxs.begin() != _origtrxs.end() && count++ < max_delete_per_time ){
+         _origtrxs.erase(_origtrxs.begin());
+      }
+      while ( _cashtrxs.begin() != _cashtrxs.end() && count++ < max_delete_per_time ){
+         _cashtrxs.erase(_cashtrxs.begin());
+      }
+      while ( _rmdunrbs.begin() != _rmdunrbs.end() && count++ < max_delete_per_time ){
+         _rmdunrbs.erase(_rmdunrbs.begin());
+      }
+      _gmutable = global_mutable();
    }
 
    // ---- global_state related methods ----
@@ -1204,7 +1210,7 @@ extern "C" {
             (regpegtoken)(setpegasset)(setpegint)(setpegbool)(setpegtkfee)
             (transfer)(cash)(cashconfirm)(rollback)(rmunablerb)(fcrollback)(fcrmorigtrx)
             (trxbls)(acntbls)(lockall)(unlockall)(tmplock)(rmtmplock)(open)(close)
-            (fcinittxtbs) )
+            (fcinit) )
          }
          return;
       }

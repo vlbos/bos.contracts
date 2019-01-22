@@ -146,7 +146,7 @@ namespace eosio {
             if ( it->first <= block_num && block_num <= it->last ){
                eosio_assert( it->valid, "section not yet valid");
                eosio_assert( it->last - it->first >= _gstate.lib_depth, "section internal error, not valid yet");
-               eosio_assert( it->first <= block_num && block_num <= it->last - _gstate.lib_depth, "block not in section lib");
+               eosio_assert( it->first <= block_num && block_num <= it->last - _gstate.lib_depth + 2, "block not in section lib");
                block_in_lib = true;
             }
          }
