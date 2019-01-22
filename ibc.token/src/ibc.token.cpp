@@ -489,8 +489,10 @@ namespace eosio {
       eosio_assert( from != to, "cannot transfer to self" );
       require_auth( from );
 
+      eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
+
       if (  to == _self && memo.find("local") != 0 ) {
-            auto info = get_memo_info( memo );
+         auto info = get_memo_info( memo );
          eosio_assert( info.receiver != name(), "receiver not provide");
          eosio_assert( info.chain == _gstate.peerchain_name , (string("chain name must be: ") + _gstate.peerchain_name.to_string()).c_str() );
          withdraw( from, info.receiver, quantity, info.notes );
@@ -507,7 +509,6 @@ namespace eosio {
       eosio_assert( quantity.is_valid(), "invalid quantity" );
       eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
       eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
-      eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
       auto payer = has_auth( to ) ? to : from;
 
