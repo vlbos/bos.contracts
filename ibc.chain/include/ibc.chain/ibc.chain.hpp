@@ -64,7 +64,7 @@ namespace eosio {
 
 
    struct [[eosio::table("global"), eosio::contract("ibc.chain")]] global_state {
-      uint32_t    lib_depth;
+      uint32_t    lib_depth = 50;
 
       EOSLIB_SERIALIZE( global_state, (lib_depth) )
    };
