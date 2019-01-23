@@ -24,6 +24,8 @@ namespace eosio {
    }
 
    void chain::setglobal( const global_state& gs ){
+      require_auth( _self );
+      eosio_assert( 50 <= gs.lib_depth && gs.lib_depth <= 400, "lib_depth range must be between 50 and 400" );
       _gstate = gs;
    }
 
