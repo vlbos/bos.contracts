@@ -18,6 +18,8 @@ Dependencies:
 * [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.1)
 * [bos.cdt v2.0.x](https://github.com/boscore/bos.cdt/releases/tag/v2.0.1)
 
+The ibc contracts had moved to a independent repository [ibc_contracts](https://github.com/ibc_contracts).
+
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
 * Second, make sure that you have ```sudo make install```ed __eosio__.
