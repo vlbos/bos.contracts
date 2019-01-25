@@ -247,7 +247,8 @@ namespace eosio {
          ++it;
       }
 
-      while ( _blkrtmkls.begin()->block_num < block_num - past ){
+      ///lis
+      while ( _blkrtmkls.begin()!= _blkrtmkls.end() && _blkrtmkls.begin()->block_num < block_num - past ){
          _blkrtmkls.erase( _blkrtmkls.begin() );
       }
    }
