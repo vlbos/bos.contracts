@@ -159,7 +159,13 @@ namespace eosiosystem {
                res.ram_bytes += bytes_out;
             });
       }
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
    }
 
   /**
@@ -197,7 +203,13 @@ namespace eosiosystem {
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
       });
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {ram_account, active_permission}, {account, active_permission} },
@@ -214,12 +226,12 @@ namespace eosiosystem {
       }
    }
 
-   void validate_b1_vesting( int64_t stake ) {
-      const int64_t base_time = 1527811200; /// 2018-06-01
-      const int64_t max_claimable = 100'000'000'0000ll;
-      const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
+   void validate_bos_vesting( int64_t stake ) {
+      const int64_t base_time = 1546272000; /// 2019-01-01 00:00:00
+      const int64_t max_claimable = 200'000'000'0000ll;
+      const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (4*seconds_per_year) );
 
-      eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
+      eosio_assert( max_claimable - claimable <= stake, "bos can only claim their tokens over 4 years" );
    }
 
    void system_contract::changebw( name from, name receiver,
@@ -280,10 +292,28 @@ namespace eosiosystem {
          eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
-         int64_t ram_bytes, net, cpu;
-         get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+         {
+            bool ram_managed = false;
+            bool net_managed = false;
+            bool cpu_managed = false;
 
-         set_resource_limits( receiver.value, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+            auto voter_itr = _voters.find( receiver.value );
+            if( voter_itr != _voters.end() ) {
+               ram_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed );
+               net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+               cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
+            }
+
+            if( !(net_managed && cpu_managed) ) {
+               int64_t ram_bytes, net, cpu;
+               get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+               set_resource_limits( receiver.value,
+                                    ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
+                                    net_managed ? net : tot_itr->net_weight.amount,
+                                    cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+            }
+         }
 
          if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
             totals_tbl.erase( tot_itr );
@@ -395,8 +425,9 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == "b1"_n ) {
-            validate_b1_vesting( from_voter->staked );
+         
+         if( from == "bos"_n ) {
+            validate_bos_vesting( from_voter->staked );
          }
 
          if( from_voter->producers.size() || from_voter->proxy ) {
@@ -425,13 +456,16 @@ namespace eosiosystem {
       eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
-                    "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
+      // eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
+      //               "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
+      eosio_assert( _gstate.thresh_activated_stake_time != time_point(),
+                    "cannot undelegate bandwidth until the chain is activated " );
+
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
 
-
+ 
    void system_contract::refund( const name owner ) {
       require_auth( owner );
 

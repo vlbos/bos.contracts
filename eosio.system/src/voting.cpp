@@ -103,8 +103,14 @@ namespace eosiosystem {
          return;
       }
 
-      /// sort by producer name
-      std::sort( top_producers.begin(), top_producers.end() );
+      /// sort by producer location
+      struct {
+          bool operator()(std::pair<eosio::producer_key,uint16_t> a, std::pair<eosio::producer_key,uint16_t> b) const
+          {
+             return a.second ==b.second?a.first<b.first:a.second < b.second;
+          }
+      } cmp;
+      std::sort( top_producers.begin(), top_producers.end(), cmp);
 
       std::vector<eosio::producer_key> producers;
 
@@ -221,9 +227,10 @@ namespace eosiosystem {
        */
       if( voter->last_vote_weight <= 0.0 ) {
          _gstate.total_activated_stake += voter->staked;
-         if( _gstate.total_activated_stake >= min_activated_stake && _gstate.thresh_activated_stake_time == time_point() ) {
-            _gstate.thresh_activated_stake_time = current_time_point();
-         }
+         /// modified
+         // if( _gstate.total_activated_stake >= min_activated_stake && _gstate.thresh_activated_stake_time == time_point() ) {
+         //    _gstate.thresh_activated_stake_time = current_time_point();
+         // }
       }
 
       auto new_vote_weight = stake2vote( voter->staked );

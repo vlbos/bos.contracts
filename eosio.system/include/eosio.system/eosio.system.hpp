@@ -12,6 +12,8 @@
 #include <eosio.system/exchange_state.hpp>
 
 #include <string>
+#include <type_traits>
+#include <optional>
 
 namespace eosiosystem {
 
@@ -25,6 +27,25 @@ namespace eosiosystem {
    using eosio::time_point;
    using eosio::microseconds;
    using eosio::datastream;
+
+   template<typename E, typename F>
+   static inline auto has_field( F flags, E field )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, bool>
+   {
+      return ( (flags & static_cast<F>(field)) != 0 );
+   }
+
+   template<typename E, typename F>
+   static inline auto set_field( F flags, E field, bool value = true )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, F >
+   {
+      if( value )
+         return ( flags | static_cast<F>(field) );
+      else
+         return ( flags & ~static_cast<F>(field) );
+   }
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -60,7 +81,7 @@ namespace eosiosystem {
       time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
-      uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid
+      uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid                                   
       int64_t              total_activated_stake = 0;
       time_point           thresh_activated_stake_time;
       uint16_t             last_producer_schedule_size = 0;
@@ -151,16 +172,32 @@ namespace eosiosystem {
       bool                is_proxy = 0; /// whether the voter is a proxy for others
 
 
-      uint32_t            reserved1 = 0;
+      uint32_t            flags1 = 0;
       uint32_t            reserved2 = 0;
       eosio::asset        reserved3;
 
       uint64_t primary_key()const { return owner.value; }
 
+      enum class flags1_fields : uint32_t {
+         ram_managed = 1,
+         net_managed = 2,
+         cpu_managed = 4
+      };
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
+      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(flags1)(reserved2)(reserved3) )
    };
 
+   // *bos*
+   struct [[eosio::table("guaranminres"), eosio::contract("eosio.system")]] eosio_guaranteed_min_res{
+      eosio_guaranteed_min_res(){}
+
+      uint32_t ram = 0;  ///  guaranteed minimum ram  in kb for every account.
+      uint32_t cpu = 0;  ///  guaranteed minimum cpu  in bos for every account.
+      uint32_t net = 0;  ///  guaranteed minimum net  in bos for every account.
+
+      EOSLIB_SERIALIZE( eosio_guaranteed_min_res, (ram)(cpu)(net) )
+   };
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
 
@@ -172,6 +209,7 @@ namespace eosiosystem {
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
+   typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;      // *bos*
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -184,6 +222,7 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
+         guaranteed_min_res_singleton  _guarantee;     // *bos*
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
@@ -199,9 +238,11 @@ namespace eosiosystem {
          static constexpr eosio::name vpay_account{"eosio.vpay"_n};
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
+         static constexpr eosio::name dev_account{"bos.dev"_n};
+         static constexpr eosio::name gov_account{"bos.gov"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
-
+         static const int16_t BASE_LENGTH = 4;
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
@@ -219,6 +260,16 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+
+         [[eosio::action]]
+         void setacctram( name account, std::optional<int64_t> ram_bytes );
+
+         [[eosio::action]]
+         void setacctnet( name account, std::optional<int64_t> net_weight );
+
+         [[eosio::action]]
+         void setacctcpu( name account, std::optional<int64_t> cpu_weight );
+
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -251,7 +302,7 @@ namespace eosiosystem {
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
-
+    
          /**
           * Increases receiver's ram quota based upon current price and quantity of
           * tokens provided. An inline transfer from receiver to system contract of
@@ -298,6 +349,14 @@ namespace eosiosystem {
          [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
 
+         // *bos*
+         [[eosio::action]]
+         void namelist(std::string list, std::string action, const std::vector<name>& names );
+
+         // *bos*
+         [[eosio::action]]
+         void setguaminres(uint32_t ram, uint32_t cpu, uint32_t net);
+         
          // functions defined in producer_pay.cpp
          [[eosio::action]]
          void claimrewards( const name owner );

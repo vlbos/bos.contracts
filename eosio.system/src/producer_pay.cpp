@@ -2,17 +2,20 @@
 
 #include <eosio.token/eosio.token.hpp>
 
+#include <vector>
 namespace eosiosystem {
 
    const int64_t  min_pervote_daily_pay = 100'0000;
-   const int64_t  min_activated_stake   = 150'000'000'0000;
-   const double   continuous_rate       = 0.04879;          // 5% annual rate
+   const int64_t  min_activated_stake   = 10'000'0000;
+   // const double   continuous_rate       = 0.04879;          // 5% annual rate
+   const double   continuous_rate       = 0.0198;          // 2% annual rate
    const double   perblock_rate         = 0.0025;           // 0.25%
    const double   standby_rate          = 0.0075;           // 0.75%
    const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
    const uint32_t seconds_per_year      = 52*7*24*3600;
    const uint32_t blocks_per_day        = 2 * 24 * 3600;
    const uint32_t blocks_per_hour       = 2 * 3600;
+
    const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
    const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
@@ -29,9 +32,18 @@ namespace eosiosystem {
       // Although this field is deprecated, we will continue updating it for now until the last_block_num field
       // is eventually completely removed, at which point this line can be removed.
       _gstate2.last_block_num = timestamp;
+   
+      static const int64_t min_activated_time = 1547816400000000; /// 2019-01-18 21:00:00 UTC+8
+      const static time_point at{ microseconds{ static_cast<int64_t>( min_activated_time) } };
+
+      if (current_time_point() >= at&& _gstate.thresh_activated_stake_time == time_point())
+      {
+         _gstate.thresh_activated_stake_time = current_time_point();
+      }
 
       /** until activated stake crosses this threshold no new rewards are paid */
-      if( _gstate.total_activated_stake < min_activated_stake )
+      // if( _gstate.total_activated_stake < min_activated_stake )
+      if(_gstate.thresh_activated_stake_time == time_point())
          return;
 
       if( _gstate.last_pervote_bucket_fill == time_point() )  /// start the presses
@@ -50,24 +62,73 @@ namespace eosiosystem {
          });
       }
 
-      /// only update block producers once every minute, block_timestamp is in half seconds
-      if( timestamp.slot - _gstate.last_producer_schedule_update.slot > 120 ) {
-         update_elected_producers( timestamp );
+         auto modifybid = [&](auto &ns) {
+         name_bid_table bids(_self, _self.value);
+         for (auto &n : ns)
+         {
+            auto highest = bids.find(n.value);
+            if(highest != bids.end())
+            {
+            //  print( highest->last_bid_time.sec_since_epoch(), " dealed high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            bids.modify(highest, same_payer, [&](auto &b) {
+               b.high_bid = -b.high_bid;
+            });
+            }
+         }
+      };
 
-         if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
+      auto checkbidname = [&](auto &highest, auto &idx) {
+         if (highest == idx.end())
+         {
+            return;
+         }
+         std::vector<name> names;
+         static const int16_t COUNT10 = 10;
+         uint16_t deal_count = 0;
+
+         if (highest->newname.length() >= BASE_LENGTH)
+         {
+            deal_count++;
+         }
+
+         names.push_back(highest->newname);
+      //   print( highest->last_bid_time.sec_since_epoch(), " deal high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+         for (int16_t i = 0; ++highest != idx.end() && i < COUNT10; i++)
+         {
+         //   print( highest->last_bid_time.sec_since_epoch(), " high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            if (highest->high_bid > 0 &&
+                (current_time_point() - highest->last_bid_time) > microseconds(useconds_per_day) &&
+                highest->newname.length() >= BASE_LENGTH)
+            {
+               names.push_back(highest->newname);
+               deal_count++;
+               // print( highest->last_bid_time.sec_since_epoch(), " deal high_bid: ", highest->high_bid, " newname: ", name{highest->newname}, "\n" );
+            }
+
+            if (COUNT10 == deal_count)
+            {
+               break;
+            }
+         }
+
+         modifybid(names);
+      };
+      /// only update block producers once every minute, block_timestamp is in half seconds
+      if (timestamp.slot - _gstate.last_producer_schedule_update.slot > 120) {
+         update_elected_producers(timestamp);
+
+         if ((timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day){
             name_bid_table bids(_self, _self.value);
             auto idx = bids.get_index<"highbid"_n>();
-            auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
-            if( highest != idx.end() &&
+            auto highest = idx.lower_bound(std::numeric_limits<uint64_t>::max() / 2);
+            if (highest != idx.end() &&
                 highest->high_bid > 0 &&
                 (current_time_point() - highest->last_bid_time) > microseconds(useconds_per_day) &&
                 _gstate.thresh_activated_stake_time > time_point() &&
-                (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
-            ) {
+                (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14*useconds_per_day)){
                _gstate.last_name_close = timestamp;
-               idx.modify( highest, same_payer, [&]( auto& b ){
-                  b.high_bid = -b.high_bid;
-               });
+
+               checkbidname(highest, idx);
             }
          }
       }
@@ -80,8 +141,10 @@ namespace eosiosystem {
       const auto& prod = _producers.get( owner.value );
       eosio_assert( prod.active(), "producer does not have an active key" );
 
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
-                    "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
+      // eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
+      //               "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
+      eosio_assert( _gstate.thresh_activated_stake_time != time_point(),
+                    "cannot claim rewards until the chain is activated " );
 
       const auto ct = current_time_point();
 
@@ -93,19 +156,33 @@ namespace eosiosystem {
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
          auto new_tokens = static_cast<int64_t>( (continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
 
-         auto to_producers     = new_tokens / 5;
+         // auto to_producers     = new_tokens / 5;
+         // auto to_savings       = new_tokens - to_producers;
+         auto to_producers     = new_tokens / 2;
          auto to_savings       = new_tokens - to_producers;
          auto to_per_block_pay = to_producers / 4;
          auto to_per_vote_pay  = to_producers - to_per_block_pay;
+         auto to_gov_fund = to_savings / 5;
+         auto to_dev_fund  = to_savings - to_gov_fund;
 
          INLINE_ACTION_SENDER(eosio::token, issue)(
             token_account, { {_self, active_permission} },
             { _self, asset(new_tokens, core_symbol()), std::string("issue tokens for producer pay and savings") }
          );
 
+         // INLINE_ACTION_SENDER(eosio::token, transfer)(
+         //    token_account, { {_self, active_permission} },
+         //    { _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" }
+         // );
+
          INLINE_ACTION_SENDER(eosio::token, transfer)(
             token_account, { {_self, active_permission} },
-            { _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" }
+            { _self, dev_account, asset(to_dev_fund, core_symbol()), "unallocated inflation" }
+         );
+
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {_self, active_permission} },
+            { _self, gov_account, asset(to_gov_fund, core_symbol()), "unallocated inflation" }
          );
 
          INLINE_ACTION_SENDER(eosio::token, transfer)(
