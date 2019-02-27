@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
+
 project(eosio_contracts VERSION 2.0.2)
+
 
 set(EOSIO_CDT_VERSION_MIN "2.0")
 set(EOSIO_CDT_VERSION_SOFT_MAX "2.0")
@@ -36,6 +38,7 @@ add_subdirectory(eosio.wrap)
 add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
 add_subdirectory(bos.pegtoken)
+
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
