@@ -6,7 +6,7 @@ endif()
 
 ExternalProject_Add(
    redpacket_project
-   SOURCE_DIR ${CMAKE_SOURCE_DIR}/src
+   SOURCE_DIR ${CMAKE_SOURCE_DIR}/redpacket
    BINARY_DIR ${CMAKE_BINARY_DIR}/redpacket
    CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake
    UPDATE_COMMAND ""
