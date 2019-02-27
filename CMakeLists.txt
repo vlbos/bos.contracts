@@ -39,7 +39,6 @@ add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
 add_subdirectory(bos.pegtoken)
 
-
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
 elseif (UNIX)
