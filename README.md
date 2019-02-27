@@ -17,8 +17,9 @@ The following unprivileged contract(s) are also part of the system.
    * [eosio.token](https://github.com/boscore/bos.contracts/tree/master/eosio.token)
 
 Dependencies:
-* [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.1)
-* [bos.cdt v2.0.x](https://github.com/boscore/bos.cdt/releases/tag/v2.0.1)
+
+* [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.2)
+* [bos.cdt v2.0.x](https://github.com/boscore/bos.cdt/releases/tag/v2.0.2)
 
 The ibc contracts had moved to a independent repository [ibc_contracts](https://github.com/boscore/ibc_contracts).
 
