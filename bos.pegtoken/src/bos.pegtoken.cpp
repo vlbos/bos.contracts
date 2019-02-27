@@ -1,3 +1,4 @@
+
 #include "bos.pegtoken.hpp"
 #include <eosiolib/transaction.hpp>
 
@@ -5,11 +6,13 @@
     eosio_assert( ( str ).size() <= len, "param " #str " too long, maximum length is " #len );
 
 #define ACCOUNT_CHECK( account ) \
-    eosio_assert( is_account( account ), "invalid account " #account );
+
+eosio_assert( is_account( account ), "invalid account " #account );
 
 #define NIL_ACCOUNT "nil"_n
 
 namespace eosio {
+
 
 constexpr uint32_t ONE_DAY = 24 * 60 * 60;
 
@@ -23,6 +26,7 @@ enum withdraw_state : uint64_t {
 ////////////////////////
 // private funcs
 ////////////////////////
+
 void pegtoken::verify_address( name style, string addr )
 {
     if ( style == "bitcoin"_n ) {
@@ -95,6 +99,7 @@ bool pegtoken::addr_check( symbol_code sym_code, name user )
 ////////////////////////
 // actions
 ////////////////////////
+
 
 void pegtoken::create( symbol sym, name issuer, name acceptor, name address_style, string organization, string website )
 {
@@ -875,3 +880,4 @@ void pegtoken::rmwithdraw( uint64_t id, symbol_code sym_code )
 } // namespace eosio
 
 EOSIO_DISPATCH(eosio::pegtoken, (create)(update)(setlimit)(setauditor)(setfee)(issue)(retire)(setpartner)(applyaddr)(assignaddr)(withdraw)(deposit)(transfer)(clear)(feedback)(rollback)(setacceptor)(setdelay)(lockall)(unlockall)(approve)(unapprove)(sendback)(rmwithdraw));
+
