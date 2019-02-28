@@ -6,3 +6,4 @@ target_include_directories(redpacket.wasm
 set_target_properties(redpacket.wasm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
