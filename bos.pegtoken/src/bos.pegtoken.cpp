@@ -6,7 +6,6 @@
     eosio_assert( ( str ).size() <= len, "param " #str " too long, maximum length is " #len );
 
 #define ACCOUNT_CHECK( account ) \
-
 eosio_assert( is_account( account ), "invalid account " #account );
 
 #define NIL_ACCOUNT "nil"_n
@@ -392,6 +391,7 @@ void pegtoken::assignaddr( symbol_code sym_code, name to, string address )
     auto iter1 = addr.find( hash64( address ) );
     eosio_assert( iter1 == addr.end(), ( "this address " + address + " has been assigned to " + iter1->owner.to_string() ).c_str() );
 
+
     auto iter2 = addresses.find( to.value );
     if ( iter2 == addresses.end() ) {
         addresses.emplace( get_self(), [&]( auto& p ) {
@@ -427,6 +427,7 @@ void pegtoken::withdraw( name from, string to, asset quantity, string memo )
         auto appl = applicants( get_self(), sym_raw );
         eosio_assert( appl.find( account.value ) == appl.end(), "from can't be applicant " );
     }
+
 
     eosio_assert( iter->active, "underwriter is not active" );
 
