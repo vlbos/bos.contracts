@@ -1,3 +1,4 @@
+
 #include "bos.pegtoken.hpp"
 #include <eosiolib/transaction.hpp>
 
@@ -5,11 +6,12 @@
     eosio_assert( ( str ).size() <= len, "param " #str " too long, maximum length is " #len );
 
 #define ACCOUNT_CHECK( account ) \
-    eosio_assert( is_account( account ), "invalid account " #account );
+eosio_assert( is_account( account ), "invalid account " #account );
 
 #define NIL_ACCOUNT "nil"_n
 
 namespace eosio {
+
 
 constexpr uint32_t ONE_DAY = 24 * 60 * 60;
 
@@ -23,6 +25,7 @@ enum withdraw_state : uint64_t {
 ////////////////////////
 // private funcs
 ////////////////////////
+
 void pegtoken::verify_address( name style, string addr )
 {
     if ( style == "bitcoin"_n ) {
@@ -95,6 +98,7 @@ bool pegtoken::addr_check( symbol_code sym_code, name user )
 ////////////////////////
 // actions
 ////////////////////////
+
 
 void pegtoken::create( symbol sym, name issuer, name acceptor, name address_style, string organization, string website )
 {
@@ -387,6 +391,7 @@ void pegtoken::assignaddr( symbol_code sym_code, name to, string address )
     auto iter1 = addr.find( hash64( address ) );
     eosio_assert( iter1 == addr.end(), ( "this address " + address + " has been assigned to " + iter1->owner.to_string() ).c_str() );
 
+
     auto iter2 = addresses.find( to.value );
     if ( iter2 == addresses.end() ) {
         addresses.emplace( get_self(), [&]( auto& p ) {
@@ -422,6 +427,7 @@ void pegtoken::withdraw( name from, string to, asset quantity, string memo )
         auto appl = applicants( get_self(), sym_raw );
         eosio_assert( appl.find( account.value ) == appl.end(), "from can't be applicant " );
     }
+
 
     eosio_assert( iter->active, "underwriter is not active" );
 
@@ -875,3 +881,4 @@ void pegtoken::rmwithdraw( uint64_t id, symbol_code sym_code )
 } // namespace eosio
 
 EOSIO_DISPATCH(eosio::pegtoken, (create)(update)(setlimit)(setauditor)(setfee)(issue)(retire)(setpartner)(applyaddr)(assignaddr)(withdraw)(deposit)(transfer)(clear)(feedback)(rollback)(setacceptor)(setdelay)(lockall)(unlockall)(approve)(unapprove)(sendback)(rmwithdraw));
+
