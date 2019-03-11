@@ -3054,6 +3054,196 @@ BOOST_FIXTURE_TEST_CASE( namebid_pending_winner, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 ///bos begin=====================================
+/// bos namelist
+BOOST_FIXTURE_TEST_CASE( namelist, eosio_system_tester ) try {
+   //install multisig contract
+   abi_serializer msig_abi_ser = initialize_multisig();
+   auto producer_names = active_and_vote_producers();
+
+   //helper function
+   auto push_action_msig = [&]( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) -> action_result {
+         string action_type_name = msig_abi_ser.get_action_type(name);
+
+         action act;
+         act.account = N(eosio.msig);
+         act.name = name;
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+
+         return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
+   };
+
+   // test begins
+   vector<permission_level> prod_perms;
+   for ( auto& x : producer_names ) {
+      prod_perms.push_back( { name(x), config::active_name } );
+   }
+
+   // eosio::chain::chain_config2 cfg2;
+   // cfgs = control->get_global_properties2().cfg2;
+   //change some values
+   std::vector<name> actor_blacklist= {N(actblklst123)};
+   
+
+   transaction trx;
+   {
+      variant pretty_trx = fc::mutable_variant_object()
+         ("expiration", "2020-01-01T00:30")
+         ("ref_block_num", 2)
+         ("ref_block_prefix", 3)
+         ("net_usage_words", 0)
+         ("max_cpu_usage_ms", 0)
+         ("delay_sec", 0)
+         ("actions", fc::variants({
+               fc::mutable_variant_object()
+                  ("account", name(config::system_account_name))
+                  ("name", "namelist")
+                  ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name } })
+                  ("data", fc::mutable_variant_object()
+                   ("list", "actor_blacklist")
+                   ("action", "insert")
+                   ("name", actor_blacklist)
+                  )
+                  })
+         );
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+   }
+
+   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "namelist1")
+                                                    ("trx",           trx)
+                                                    ("requested", prod_perms)
+                       )
+   );
+
+   // get 16 approvals
+   for ( size_t i = 0; i < 15; ++i ) {
+      BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
+                                                       ("proposer",      "alice1111111")
+                                                       ("proposal_name", "namelist1")
+                                                       ("level",         permission_level{ name(producer_names[i]), config::active_name })
+                          )
+      );
+   }
+
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "namelist1")
+                                                    ("executer",      "alice1111111")
+                       )
+   );
+
+   BOOST_REQUIRE( bool(trace) );
+   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+
+   produce_blocks( 250 );
+
+   // make sure that changed parameters were applied
+   auto active_params = control->get_global_properties().cfg2;
+   // BOOST_REQUIRE_EQUAL( params.max_block_net_usage, active_params.max_block_net_usage );
+   // BOOST_REQUIRE_EQUAL( params.max_transaction_lifetime, active_params.max_transaction_lifetime );
+
+} FC_LOG_AND_RETHROW()
+///bos namelist end
+/// bos garanteed minimum resource 
+BOOST_FIXTURE_TEST_CASE( setguaminres, eosio_system_tester ) try {
+   //install multisig contract
+   abi_serializer msig_abi_ser = initialize_multisig();
+   auto producer_names = active_and_vote_producers();
+
+   //helper function
+   auto push_action_msig = [&]( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) -> action_result {
+         string action_type_name = msig_abi_ser.get_action_type(name);
+
+         action act;
+         act.account = N(eosio.msig);
+         act.name = name;
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+
+         return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
+   };
+
+   // test begins
+   vector<permission_level> prod_perms;
+   for ( auto& x : producer_names ) {
+      prod_perms.push_back( { name(x), config::active_name } );
+   }
+
+   eosio::chain::guaranteed_minimum_resources gmr;
+   gmr = control->get_global_properties2().gmr;
+   //change some values
+   gmr.net_byte += 10*1024;
+   gmr.ram_byte += 10*1024;
+   gmr.cpu_us += 10*1000;
+
+   transaction trx;
+   {
+      variant pretty_trx = fc::mutable_variant_object()
+         ("expiration", "2020-01-01T00:30")
+         ("ref_block_num", 2)
+         ("ref_block_prefix", 3)
+         ("net_usage_words", 0)
+         ("max_cpu_usage_ms", 0)
+         ("delay_sec", 0)
+         ("actions", fc::variants({
+               fc::mutable_variant_object()
+                  ("account", name(config::system_account_name))
+                  ("name", "setguaminres")
+                  ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name } })
+                  ("data", fc::mutable_variant_object()
+                   ("ram", gmr.ram_byte)
+                   ("net", gmr.net_byte)
+                   ("cpu", gmr.cpu_us)
+                  )
+                  })
+         );
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+   }
+
+   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "setguaminres1")
+                                                    ("trx",           trx)
+                                                    ("requested", prod_perms)
+                       )
+   );
+
+   // get 16 approvals
+   for ( size_t i = 0; i < 15; ++i ) {
+      BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
+                                                       ("proposer",      "alice1111111")
+                                                       ("proposal_name", "setguaminres1")
+                                                       ("level",         permission_level{ name(producer_names[i]), config::active_name })
+                          )
+      );
+   }
+
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "setparams1")
+                                                    ("executer",      "alice1111111")
+                       )
+   );
+
+   BOOST_REQUIRE( bool(trace) );
+   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+
+   produce_blocks( 250 );
+
+   // make sure that changed parameters were applied
+   auto active_gmr= control->get_global_properties2().gmr;
+   BOOST_REQUIRE_EQUAL( gmr.ram_byte, active_gmr.ram_byte );
+   BOOST_REQUIRE_EQUAL( gmr.net_byte, active_gmr.net_byte );
+   BOOST_REQUIRE_EQUAL( gmr.cpu_us, active_gmr.cpu_us );
+} FC_LOG_AND_RETHROW()
+///garanteed minimum resource   end
+
 
 BOOST_FIXTURE_TEST_CASE( multiple_namebids_check_activated_time_by_timestamp, eosio_system_tester ) try {
 

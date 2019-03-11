@@ -22,7 +22,7 @@ public:
    eosio_token_tester() {
       produce_blocks( 2 );
 
-      create_accounts( { N(alice), N(bob), N(carol), N(eosio.token) } );
+      create_accounts( { N(alice), N(bob), N(carol),N(boblacklist),N(boblacklist1),N(boblacklist2),N(boblacklist3),N(boblacklist4),N(boblacklist5), N(eosio.token) } );
       produce_blocks( 2 );
 
       set_code( N(eosio.token), contracts::token_wasm() );
@@ -117,7 +117,20 @@ public:
            ( "symbol", "0,CERO" )
       );
    }
+   ///bos begin
+   action_result addblacklist(const vector<name>& list) {
+      return push_action( owner, N(addblacklist), mvo()
+           ( "list", list )
+      );
+   }
 
+   action_result rmblacklist(const vector<name>& list) {
+      return push_action( owner, N(rmblacklist), mvo()
+           ( "list", list )
+      );
+   }
+   ///bos end
+   
    abi_serializer abi_ser;
 };
 
@@ -295,7 +308,7 @@ BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
       ("balance", "0.000 TKN")
    );
 
-   //trying to retire tokens with zero supply
+   //trying to retire tokens with zero supply 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("overdrawn balance"), retire( N(alice), asset::from_string("1.000 TKN"), "hola" ) );
 
 } FC_LOG_AND_RETHROW()
@@ -346,6 +359,112 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+///bos begin
+///transfer blacklist
+BOOST_FIXTURE_TEST_CASE( transfer_blacklist_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000 CERO"));
+   produce_blocks(1);
+
+   issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" );
+
+   auto stats = get_stats("0,CERO");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "1000 CERO")
+      ("max_supply", "1000 CERO")
+      ("issuer", "alice")
+   );
+
+   auto alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "1000 CERO")
+   );
+
+   transfer( N(alice), N(bob), asset::from_string("300 CERO"), "hola" );
+
+   alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "700 CERO")
+      ("frozen", 0)
+      ("whitelist", 1)
+   );
+
+   auto bob_balance = get_account(N(bob), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
+      ("balance", "300 CERO")
+      ("frozen", 0)
+      ("whitelist", 1)
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "overdrawn balance" ),
+      transfer( N(alice), N(bob), asset::from_string("701 CERO"), "hola" )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "must transfer positive quantity" ),
+      transfer( N(alice), N(bob), asset::from_string("-1000 CERO"), "hola" )
+   );
+
+   BOOST_CHECK_EXCEPTION( transfer( N(alice), N(bob), asset::from_string("300 CERO"), "hola" ) , asset_type_exception, [](const asset_type_exception& e) {
+      return expect_assert_message(e, "account is on the blacklist");
+   });
+
+
+
+} FC_LOG_AND_RETHROW()
+///transfer blacklist  end
+///add blacklist 
+BOOST_FIXTURE_TEST_CASE( add_blacklist_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000 CERO"));
+   produce_blocks(1);
+
+   issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" );
+
+   auto stats = get_stats("0,CERO");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "1000 CERO")
+      ("max_supply", "1000 CERO")
+      ("issuer", "alice")
+   );
+
+   auto alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "1000 CERO")
+   );
+
+   transfer( N(alice), N(bob), asset::from_string("300 CERO"), "hola" );
+
+   alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "700 CERO")
+      ("frozen", 0)
+      ("whitelist", 1)
+   );
+
+   auto bob_balance = get_account(N(bob), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
+      ("balance", "300 CERO")
+      ("frozen", 0)
+      ("whitelist", 1)
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "overdrawn balance" ),
+      transfer( N(alice), N(bob), asset::from_string("701 CERO"), "hola" )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "must transfer positive quantity" ),
+      transfer( N(alice), N(bob), asset::from_string("-1000 CERO"), "hola" )
+   );
+
+   BOOST_CHECK_EXCEPTION( transfer( N(alice), N(bob), asset::from_string("300 CERO"), "hola" ) , asset_type_exception, [](const asset_type_exception& e) {
+      return expect_assert_message(e, "account is on the blacklist");
+   });
+
+
+
+} FC_LOG_AND_RETHROW()
+///add blaklist end
+///bos end
 BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
 
    auto token = create( N(alice), asset::from_string("1000 CERO"));

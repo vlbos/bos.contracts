@@ -89,6 +89,7 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
+    eosio_assert( check_blacklist(from), "account is on the blacklist" );///bos 
     eosio_assert( from != to, "cannot transfer to self" );
     require_auth( from );
     eosio_assert( is_account( to ), "to account does not exist");
@@ -164,7 +165,36 @@ void token::close( name owner, const symbol& symbol )
    eosio_assert( it->balance.amount == 0, "Cannot close because the balance is not zero." );
    acnts.erase( it );
 }
+///bos begin
+   void addblacklist(const std::vector<name>& list )
+   {
+      name ram_payer = "eosio"_n;
+      require_auth("eosio"_n);
+
+      static const std::string msg  = std::string("account does not exist");
+      blacklist blklst( _self, _self );
+      for (auto l : list) {
+        std::string m =  l.to_string() + msg;
+        eosio_assert(is_account(l), m.c_str());
+        blklst.emplace(ram_payer, [&](auto &a) {
+            a.account = l; 
+            });
+      }
+   }
+
+   void rmblacklist(const std::vector<name> &list) {
+     require_auth("eosio"_n);
+
+     blacklist blklst(_self, _self);
+     for (auto l : list) {
+       auto it = blklst.find(l);
+       if (it != acnts.end()) {
+         blklst.erase(it);
+       }
+     }
+   }
+   ///bos end
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist) )
