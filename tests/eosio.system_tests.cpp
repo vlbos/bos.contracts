@@ -3060,7 +3060,6 @@ BOOST_FIXTURE_TEST_CASE( namebid_pending_winner, eosio_system_tester ) try {
    //despite "perfa" account hasn't been created, we should be able to create "perfb" account
    create_account_with_resources( N(prefb), N(bob111111111) );
 } FC_LOG_AND_RETHROW()
-
 ///bos begin=====================================
 /// bos namelist
 BOOST_FIXTURE_TEST_CASE(actor_namelist, eosio_system_tester)

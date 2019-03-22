@@ -65,7 +65,6 @@ public:
 
    action_result create( account_name issuer,
                 asset        maximum_supply ) {
-
       return push_action( N(eosio.token), N(create), mvo()
            ( "issuer", issuer)
            ( "maximum_supply", maximum_supply)

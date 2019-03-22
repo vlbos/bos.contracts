@@ -6,8 +6,11 @@
 
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
-
+#include <eosiolib/system.h>
+#include <eosiolib/time.hpp>
 #include <string>
+
+using eosio::microseconds;
 
 namespace eosiosystem {
    class system_contract;
@@ -93,6 +96,8 @@ namespace eosio {
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
          bool is_on_blacklist(name account); ///bos
+
+      
    };
 
 } /// namespace eosio

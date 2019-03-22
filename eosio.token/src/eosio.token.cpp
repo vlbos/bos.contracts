@@ -185,9 +185,12 @@ void token::addblacklist(const std::vector<name>& accounts)
       std::string m = acc.to_string() + msg;
       eosio_assert(is_account(acc), m.c_str());
       tokenblacklist blklst(_self, acc.value);
+      auto it = blklst.find(acc.value);
+      if (it == blklst.end()){
       blklst.emplace(_self, [&](auto &a) {
          a.account = acc;
       });
+      }
    }
 }
 
