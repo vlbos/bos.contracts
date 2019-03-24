@@ -538,14 +538,12 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
    create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
 
-  
-   
-   create_account_with_resources( N(.bos), N(apple), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bos.apple), N(apple), core_sym::from_string("1.0000"), false );
+   // create_account_with_resources( N(.bos), N(apple), core_sym::from_string("1.0000"), false );
+   // create_account_with_resources( N(bos.apple), N(apple), core_sym::from_string("1.0000"), false );
 
 
-   create_account_with_resources( N(.bos), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bos.o), N(eosio), core_sym::from_string("1.0000"), false );
+   // create_account_with_resources( N(.bos), N(eosio), core_sym::from_string("1.0000"), false );
+   // create_account_with_resources( N(bos.o), N(eosio), core_sym::from_string("1.0000"), false );
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
                         get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
