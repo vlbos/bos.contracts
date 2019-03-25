@@ -3545,7 +3545,7 @@ try
    }
 
    // eosio::chain::guaranteed_minimum_resources gmr;
-   // gmr = control->get_global_properties2().gmr;
+   // const eosio::chain::guaranteed_minimum_resources& gmr= control->get_global_properties2().gmr;
    //change some values
    uint64_t net_byte =  10 * 1024;
    uint64_t ram_byte = 10 * 1024;
@@ -3602,14 +3602,16 @@ try
                        )
    );
 
-   // BOOST_REQUIRE(bool(trace));
+   BOOST_REQUIRE(bool(trace));
    BOOST_REQUIRE_EQUAL(1, trace->action_traces.size());
    BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace->receipt->status);
 
    produce_blocks(250);
 
    // make sure that changed parameters were applied
-   // const auto active_gmr = control->get_global_properties2().gmr;
+   // eosio::chain::guaranteed_minimum_resources active_gmr;
+   // active_gmr = control->get_global_properties2().gmr;
+   // auto active_gmr = control->get_global_properties2().gmr;
    // BOOST_REQUIRE_EQUAL(ram_byte, active_gmr.ram_byte);
    // BOOST_REQUIRE_EQUAL(net_byte, active_gmr.net_byte);
    // BOOST_REQUIRE_EQUAL(cpu_us, active_gmr.cpu_us);
