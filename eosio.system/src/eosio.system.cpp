@@ -117,8 +117,9 @@ namespace eosiosystem {
    // *bos begin*
    void system_contract::namelist(std::string list, std::string action, const std::vector<name> &names)
    {
-      const int MAX_LIST_LENGTH = 30;
-      const int MAX_ACTION_LENGTH = 10;
+      const int max_list_length = 30;
+      const int max_list_size = 20;
+      const int max_action_length = 10;
       enum  class list_type:int64_t
       {
          actor_blacklist_type = 1,
@@ -147,8 +148,9 @@ namespace eosiosystem {
 
       require_auth(_self);
       eosio_assert(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
-      eosio_assert(list.length() < MAX_LIST_LENGTH, "list string is greater than max length 30");
-      eosio_assert(action.length() < MAX_ACTION_LENGTH, " action string is greater than max length 10");
+      eosio_assert(list.length() < max_list_length, "list string must be less than 30");
+      eosio_assert(names.size() < max_list_size, "list's size must be less than 20");
+      eosio_assert(action.length() < max_action_length, " action string must be less than 10");
       eosio_assert(itlt != list_type_string_to_enum.end(), " unknown list type string  support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
       eosio_assert(itlat != list_action_type_string_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
 
