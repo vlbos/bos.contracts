@@ -36,7 +36,7 @@ public:
       produce_blocks( 2 );
 
       create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names) });
+               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names),N(bos.dev),N(bos.gov) });
 
 
       produce_blocks( 100 );
@@ -83,6 +83,12 @@ public:
       create_account_with_resources( N(alice1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
       create_account_with_resources( N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false );
       create_account_with_resources( N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
+
+
+      create_account_with_resources( N(actorblklst1), config::system_account_name, core_sym::from_string("1.0000"), false );
+      create_account_with_resources( N(contrblklst1), config::system_account_name, core_sym::from_string("0.4500"), false );
+      create_account_with_resources( N(resgreylst12), config::system_account_name, core_sym::from_string("1.0000"), false );
+
 
       BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
    }
@@ -484,6 +490,42 @@ public:
       return msig_abi_ser;
    }
 
+   ///bos begin
+   bool is_full_contains_subset(const shared_vector<account_name> &allblklst, const std::vector<account_name> &blklst)
+   {
+      std::vector<account_name> allblacklist = std::vector<account_name>(allblklst.begin(), allblklst.end());
+      std::sort(allblacklist.begin(), allblacklist.end());
+      std::vector<account_name> blacklist = std::vector<account_name>(blklst.begin(), blklst.end());
+      std::sort(blacklist.begin(), blacklist.end());
+
+      // vector<account_name> blacklisted;
+      // blacklisted.reserve(actors.size());
+      // set_intersection(allblacklist.begin(), allblacklist.end(), blacklist.begin(),
+      //                  blacklist.end(), std::back_inserter(blacklisted));
+
+      // std::sort(blacklisted.begin(), blacklisted.end());
+      vector<account_name> excluded;
+      excluded.reserve(blacklist.size());
+      std::set_difference(blacklist.begin(),
+                          blacklist.end(), allblacklist.begin(), allblacklist.end(), std::back_inserter(excluded));
+
+      return excluded.empty();
+   }
+
+   bool is_empty_intersection_between_vectors(const shared_vector<account_name> &allblklst, const std::vector<account_name> &blklst)
+   {
+      std::vector<account_name> allblacklist = std::vector<account_name>(allblklst.begin(), allblklst.end());
+      std::sort(allblacklist.begin(), allblacklist.end());
+      std::vector<account_name> blacklist = std::vector<account_name>(blklst.begin(), blklst.end());
+      std::sort(blacklist.begin(), blacklist.end());
+
+      vector<account_name> excluded;
+      excluded.reserve(blacklist.size());
+      std::set_intersection(blacklist.begin(), blacklist.end(), allblacklist.begin(), allblacklist.end(), std::back_inserter(excluded));
+
+      return excluded.empty();
+   }
+   ///bos end
    vector<name> active_and_vote_producers() {
       //stake more than 15% of total EOS supply to activate chain
       transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );

@@ -22,7 +22,7 @@ public:
    eosio_token_tester() {
       produce_blocks( 2 );
 
-      create_accounts( { N(alice), N(bob), N(carol), N(eosio.token) } );
+      create_accounts( { N(alice), N(bob), N(carol),N(boblacklist),N(boblacklist1),N(boblacklist2),N(boblacklist3),N(boblacklist4),N(boblacklist5), N(eosio.token) } );
       produce_blocks( 2 );
 
       set_code( N(eosio.token), contracts::token_wasm() );
@@ -65,7 +65,6 @@ public:
 
    action_result create( account_name issuer,
                 asset        maximum_supply ) {
-
       return push_action( N(eosio.token), N(create), mvo()
            ( "issuer", issuer)
            ( "maximum_supply", maximum_supply)
@@ -118,6 +117,26 @@ public:
       );
    }
 
+   ///bos begin
+   fc::variant get_blacklist( account_name acc)
+   {
+      vector<char> data = get_row_by_account( N(eosio.token), N(eosio.token), N(blacklist), acc );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_blacklist", data, abi_serializer_max_time );
+   }
+
+   action_result addblacklist(const vector<name>& list) {
+      return push_action( N(eosio), N(addblacklist), mvo()
+           ( "accounts", list )
+      );
+   }
+
+   action_result rmblacklist(const vector<name>& list) {
+      return push_action(  N(eosio), N(rmblacklist), mvo()
+           ( "accounts", list )
+      );
+   }
+   ///bos end
+   
    abi_serializer abi_ser;
 };
 
@@ -346,6 +365,57 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+///bos begin commit out checkot
+///transfer blacklist
+BOOST_FIXTURE_TEST_CASE( transfer_blacklist_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000 CERO"));
+   produce_blocks(1);
+
+   issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" );
+
+   auto stats = get_stats("0,CERO");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "1000 CERO")
+      ("max_supply", "1000 CERO")
+      ("issuer", "alice")
+   );
+
+   auto alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "1000 CERO")
+   );
+
+   transfer( N(alice), N(boblacklist), asset::from_string("300 CERO"), "hola" );
+
+   std::vector<name> list = {N(boblacklist)};
+   addblacklist(list);
+   produce_blocks(250);
+   auto blklst = get_blacklist(N(boblacklist));
+   REQUIRE_MATCHING_OBJECT(blklst, mvo()("account", "boblacklist"));
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "account is on the blacklist" ),
+      transfer( N(boblacklist), N(bob), asset::from_string("100 CERO"), "hola" )
+   );
+
+   rmblacklist(list);
+   produce_blocks(250);
+   transfer(N(boblacklist), N(bob), asset::from_string("100 CERO"), "hola");
+
+   produce_blocks(250);
+   auto boblklst_balance = get_account(N(boblacklist), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( boblklst_balance, mvo()
+      ("balance", "200 CERO")
+   );
+
+   auto bob_balance = get_account(N(bob), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
+      ("balance", "100 CERO")
+   );
+
+} FC_LOG_AND_RETHROW()
+///add blaklist end
+///bos end
 BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
 
    auto token = create( N(alice), asset::from_string("1000 CERO"));

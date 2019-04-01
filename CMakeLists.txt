@@ -39,6 +39,7 @@ add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
 add_subdirectory(bos.pegtoken)
 add_subdirectory(redpacket)
+add_subdirectory(personal.bos)
 
 
 if (APPLE)

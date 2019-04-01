@@ -351,7 +351,7 @@ namespace eosiosystem {
 
          // *bos*
          [[eosio::action]]
-         void namelist(std::string list, std::string action, const std::vector<name>& names );
+         void namelist(name list, name action, const std::vector<name>& names );
 
          // *bos*
          [[eosio::action]]
