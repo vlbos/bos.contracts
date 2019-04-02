@@ -433,8 +433,8 @@ namespace eosiosystem {
 
       check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
 
-      if( from == "bos"_n ) {
-         validate_bos_vesting( from_voter->staked );
+      if( voter == "bos"_n ) {
+         validate_bos_vesting( voter_itr->staked );
       }
 
       if( voter_itr->producers.size() || voter_itr->proxy ) {
