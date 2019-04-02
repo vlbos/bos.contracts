@@ -4259,7 +4259,6 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE( rex_auth, eosio_system_tester ) try {
 
    const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount) };
@@ -5789,31 +5788,29 @@ BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-
-BOOST_AUTO_TEST_CASE( setabi_bios ) try {
-   validating_tester t( validating_tester::default_config() );
-   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);
-   t.set_code( config::system_account_name, contracts::bios_wasm() );
-   t.set_abi( config::system_account_name, contracts::bios_abi().data() );
-   t.create_account(N(eosio.token));
-   t.set_abi( N(eosio.token), contracts::token_abi().data() );
+BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
+   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
+   set_code( config::system_account_name, contracts::bios_wasm() );
+   set_abi( config::system_account_name, contracts::bios_abi().data() );
+   create_account(N(eosio.token));
+   set_abi( N(eosio.token), contracts::token_abi().data() );
    {
-      auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
       BOOST_REQUIRE( abi_hash.hash == result );
    }
 
-   t.set_abi( N(eosio.token), contracts::system_abi().data() );
+   set_abi( N(eosio.token), contracts::system_abi().data() );
    {
-      auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5845,146 +5842,6 @@ BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
 
       BOOST_REQUIRE( abi_hash.hash == result );
    }
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( change_limited_account_back_to_unlimited, eosio_system_tester ) try {
-   BOOST_REQUIRE( get_total_stake( "eosio" ).is_null() );
-
-   transfer( N(eosio), N(alice1111111), core_sym::from_string("1.0000") );
-
-   auto error_msg = stake( N(alice1111111), N(eosio), core_sym::from_string("0.0000"), core_sym::from_string("1.0000") );
-   auto semicolon_pos = error_msg.find(';');
-
-   BOOST_REQUIRE_EQUAL( error("account eosio has insufficient ram"),
-                        error_msg.substr(0, semicolon_pos) );
-
-   int64_t ram_bytes_needed = 0;
-   {
-      std::istringstream s( error_msg );
-      s.seekg( semicolon_pos + 7, std::ios_base::beg );
-      s >> ram_bytes_needed;
-      ram_bytes_needed += 256; // enough room to cover total_resources_table
-   }
-
-   push_action( N(eosio), N(setalimits), mvo()
-                                          ("account", "eosio")
-                                          ("ram_bytes", ram_bytes_needed)
-                                          ("net_weight", -1)
-                                          ("cpu_weight", -1)
-              );
-
-   stake( N(alice1111111), N(eosio), core_sym::from_string("0.0000"), core_sym::from_string("1.0000") );
-
-   REQUIRE_MATCHING_OBJECT( get_total_stake( "eosio" ), mvo()
-      ("owner", "eosio")
-      ("net_weight", core_sym::from_string("0.0000"))
-      ("cpu_weight", core_sym::from_string("1.0000"))
-      ("ram_bytes",  0)
-   );
-
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "only supports unlimited accounts" ),
-                        push_action( N(eosio), N(setalimits), mvo()
-                                          ("account", "eosio")
-                                          ("ram_bytes", ram_bytes_needed)
-                                          ("net_weight", -1)
-                                          ("cpu_weight", -1)
-                        )
-   );
-
-   BOOST_REQUIRE_EQUAL( error( "transaction net usage is too high: 128 > 0" ),
-                        push_action( N(eosio), N(setalimits), mvo()
-                           ("account", "eosio.saving")
-                           ("ram_bytes", -1)
-                           ("net_weight", -1)
-                           ("cpu_weight", -1)
-                        )
-   );
-
-   BOOST_REQUIRE_EQUAL( success(),
-                        push_action( N(eosio), N(setacctnet), mvo()
-                           ("account", "eosio")
-                           ("net_weight", -1)
-                        )
-   );
-
-   BOOST_REQUIRE_EQUAL( success(),
-                        push_action( N(eosio), N(setacctcpu), mvo()
-                           ("account", "eosio")
-                           ("cpu_weight", -1)
-
-                        )
-   );
-
-   BOOST_REQUIRE_EQUAL( success(),
-                        push_action( N(eosio), N(setalimits), mvo()
-                                          ("account", "eosio.saving")
-                                          ("ram_bytes", ram_bytes_needed)
-                                          ("net_weight", -1)
-                                          ("cpu_weight", -1)
-                        )
-   );
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( buy_pin_sell_ram, eosio_system_tester ) try {
-   BOOST_REQUIRE( get_total_stake( "eosio" ).is_null() );
-
-   transfer( N(eosio), N(alice1111111), core_sym::from_string("1020.0000") );
-
-   auto error_msg = stake( N(alice1111111), N(eosio), core_sym::from_string("10.0000"), core_sym::from_string("10.0000") );
-   auto semicolon_pos = error_msg.find(';');
-
-   BOOST_REQUIRE_EQUAL( error("account eosio has insufficient ram"),
-                        error_msg.substr(0, semicolon_pos) );
-
-   int64_t ram_bytes_needed = 0;
-   {
-      std::istringstream s( error_msg );
-      s.seekg( semicolon_pos + 7, std::ios_base::beg );
-      s >> ram_bytes_needed;
-      ram_bytes_needed += ram_bytes_needed/10; // enough buffer to make up for buyrambytes estimation errors
-   }
-
-   auto alice_original_balance = get_balance( N(alice1111111) );
-
-   BOOST_REQUIRE_EQUAL( success(), buyrambytes( N(alice1111111), N(eosio), static_cast<uint32_t>(ram_bytes_needed) ) );
-
-   auto tokens_paid_for_ram = alice_original_balance - get_balance( N(alice1111111) );
-
-   auto total_res = get_total_stake( "eosio" );
-
-   REQUIRE_MATCHING_OBJECT( total_res, mvo()
-      ("owner", "eosio")
-      ("net_weight", core_sym::from_string("0.0000"))
-      ("cpu_weight", core_sym::from_string("0.0000"))
-      ("ram_bytes",  total_res["ram_bytes"].as_int64() )
-   );
-
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "only supports unlimited accounts" ),
-                        push_action( N(eosio), N(setalimits), mvo()
-                                          ("account", "eosio")
-                                          ("ram_bytes", ram_bytes_needed)
-                                          ("net_weight", -1)
-                                          ("cpu_weight", -1)
-                        )
-   );
-
-   BOOST_REQUIRE_EQUAL( success(),
-                        push_action( N(eosio), N(setacctram), mvo()
-                           ("account", "eosio")
-                           ("ram_bytes", total_res["ram_bytes"].as_int64() )
-                        )
-   );
-
-   auto eosio_original_balance = get_balance( N(eosio) );
-
-   BOOST_REQUIRE_EQUAL( success(), sellram( N(eosio), total_res["ram_bytes"].as_int64() ) );
-
-   auto tokens_received_by_selling_ram = get_balance( N(eosio) ) - eosio_original_balance;
-
-   BOOST_REQUIRE( double(tokens_paid_for_ram.get_amount() - tokens_received_by_selling_ram.get_amount()) / tokens_paid_for_ram.get_amount() < 0.01 );
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( change_limited_account_back_to_unlimited, eosio_system_tester ) try {
