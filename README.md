@@ -17,7 +17,7 @@ The following unprivileged contract(s) are also part of the system.
 
 Dependencies:
 
-* [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.2)
+* [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.3)
 * [bos.cdt v2.0.x](https://github.com/boscore/bos.cdt/releases/tag/v2.0.2)
 
 The ibc contracts had moved to a independent repository [ibc_contracts](https://github.com/boscore/ibc_contracts).
