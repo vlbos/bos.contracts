@@ -207,6 +207,7 @@ namespace eosiosystem {
    }
 
    void system_contract::update_votes( const name voter_name, const name proxy, const std::vector<name>& producers, bool voting ) {
+      print("210");
       //validate input
       if ( proxy ) {
          check( producers.size() == 0, "cannot vote for producers and proxy at same time" );
@@ -326,6 +327,7 @@ namespace eosiosystem {
          av.producers = producers;
          av.proxy     = proxy;
       });
+      print("330");
    }
 
    /**

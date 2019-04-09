@@ -230,16 +230,19 @@ namespace eosiosystem {
    }
 
    void validate_bos_vesting( int64_t stake ) {
+      print(">233");
       const int64_t base_time = 1546272000; /// 2019-01-01 00:00:00
       const int64_t max_claimable = 200'000'000'0000ll;
       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (4*seconds_per_year) );
 
+   print(">238");
       check( max_claimable - claimable <= stake, "bos can only claim their tokens over 4 years" );
    }
 
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {
+      print("243");
       require_auth( from );
       check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
       check( std::abs( (stake_net_delta + stake_cpu_delta).amount )
@@ -251,6 +254,7 @@ namespace eosiosystem {
          from = receiver;
       }
 
+print("255");
       // update stake delegated from "from" to "receiver"
       {
          del_bandwidth_table     del_tbl( _self, from.value );
@@ -276,6 +280,7 @@ namespace eosiosystem {
          }
       } // itr can be invalid, should go out of scope
 
+print("280");
       // update totals of "receiver"
       {
          user_resources_table   totals_tbl( _self, receiver.value );
@@ -322,7 +327,7 @@ namespace eosiosystem {
             totals_tbl.erase( tot_itr );
          }
       } // tot_itr can be invalid, should go out of scope
-
+ print("328");
       // create refund or update from existing refund
       if ( stake_account != source_stake_from ) { //for eosio both transfer and refund make no sense
          refunds_table refunds_tbl( _self, from.value );
@@ -390,6 +395,7 @@ namespace eosiosystem {
                need_deferred_trx = true;
             } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
          } /// end if is_delegating_to_self || is_undelegating
+ print("396");
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
@@ -412,13 +418,16 @@ namespace eosiosystem {
             );
          }
       }
+ print("419");
 
       vote_stake_updater( from );
+       print("422");
       update_voting_power( from, stake_net_delta + stake_cpu_delta );
    }
 
    void system_contract::update_voting_power( const name& voter, const asset& total_update )
    {
+       print(">428");
       auto voter_itr = _voters.find( voter.value );
       if( voter_itr == _voters.end() ) {
          voter_itr = _voters.emplace( voter, [&]( auto& v ) {
@@ -430,14 +439,15 @@ namespace eosiosystem {
             v.staked += total_update.amount;
          });
       }
-
+      print(">440");
       check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
 
-      if( voter == "bos"_n ) {
+      if( voter == "b1"_n ) {
          validate_bos_vesting( voter_itr->staked );
       }
-
+ print(">446");
       if( voter_itr->producers.size() || voter_itr->proxy ) {
+          print(">450");
          update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
       }
    }
@@ -458,15 +468,20 @@ namespace eosiosystem {
    void system_contract::undelegatebw( name from, name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
+      print("468");
       asset zero_asset( 0, core_symbol() );
+      print("472");
       check( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
+      print("472");
       check( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
+       print("472");
       check( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
+       print("473");
       //check( _gstate.total_activated_stake >= min_activated_stake,
       //       "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
       check( _gstate.thresh_activated_stake_time != time_point(),
                     "cannot undelegate bandwidth until the chain is activated " );
-
+ print("477");
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
 

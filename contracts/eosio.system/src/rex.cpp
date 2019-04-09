@@ -144,7 +144,7 @@ namespace eosiosystem {
       asset pending_sell_order = update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
          if ( from == "b1"_n ) {
-            check( false, "b1 sellrex orders should not be queued" );
+            check( false, "bos sellrex orders should not be queued" );
          }
          /**
           * REX order couldn't be filled and is added to queue.
