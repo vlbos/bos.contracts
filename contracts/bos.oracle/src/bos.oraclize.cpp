@@ -4,6 +4,7 @@
 #include <eosiolib/crypto.h>
 #include <eosiolib/print.h>
 #include "bos.oracle/bos.oraclize.hpp"
+#include "bos.oracle/bos.oraclized.hpp"
 
 namespace ducatur
 {
@@ -209,4 +210,4 @@ uint64_t pack_hash(checksum256 hash)
 } // namespace ducatur
 
 
-EOSIO_DISPATCH(masteroracle, (addoracle)(removeoracle)(ask)(once)(disable)(push))
+EOSIO_DISPATCH( ducatur::masteroracle, (addoracle)(removeoracle)(ask)(once)(disable)(push))

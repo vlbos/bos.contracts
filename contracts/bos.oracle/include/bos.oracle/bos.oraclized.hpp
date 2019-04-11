@@ -156,6 +156,13 @@ public:
   // @abi action
   [[eosio::action]]
   void setup(name master);
+
+    void ask_data(name administrator,
+                name registry,
+                string data,
+                uint32_t update_each,
+                string memo,
+                bytes args);
 };
 
 // extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action)
