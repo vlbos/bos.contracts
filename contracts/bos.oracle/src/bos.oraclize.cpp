@@ -4,7 +4,7 @@
 #include <eosiolib/crypto.h>
 #include <eosiolib/print.h>
 #include "bos.oracle/bos.oraclize.hpp"
-#include "bos.oracle/bos.oraclized.hpp"
+
 
 namespace ducatur
 {

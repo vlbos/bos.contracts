@@ -4,7 +4,8 @@
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/time.hpp>
 #include <eosiolib/system.h>
-#include "bos.oracle/bos.oraclize.hpp"
+
+#include "bos.oracle/bos.oraclized.hpp"
 
 using namespace eosio;
 using std::string;
