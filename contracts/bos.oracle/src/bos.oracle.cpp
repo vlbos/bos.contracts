@@ -1,13 +1,13 @@
 /*
 
-  DelphiOracle
+  bos_oracle
 
   Author: Guillaume "Gnome" Babin-Tremblay - EOS Titan
   
   Website: https://eostitan.com
   Email: guillaume@eostitan.com
 
-  Github: https://github.com/eostitan/delphioracle/
+  Github: https://github.com/eostitan/bos_oracle/
   
   Published under MIT License
 
@@ -17,71 +17,72 @@
 #include <eosiolib/fixedpoint.hpp>
 #include <eosiolib/chain.h>
 #include "bos.oracle/bos.oraclize.hpp"
+#include "bos.oracle/bos.oracle.hpp"
 
 using namespace eosio;
 
-//Controlling account
-static const name titan_account = "eostitanprod"_n;
+// //Controlling account
+// static const name titan_account = "eostitanprod"_n;
 
-//Number of datapoints to hold
-static const uint64_t datapoints_count = 21;
+// //Number of datapoints to hold
+// static const uint64_t datapoints_count = 21;
 
-//Min value set to 0.01$ , max value set to 10,000$
-static const uint64_t val_min = 100;
-static const uint64_t val_max = 100000000;
+// //Min value set to 0.01$ , max value set to 10,000$
+// static const uint64_t val_min = 100;
+// static const uint64_t val_max = 100000000;
 
-const uint64_t one_minute = 1000000 * 55; //give extra time for cron jobs
+// const uint64_t one_minute = 1000000 * 55; //give extra time for cron jobs
 
-class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract {
- public:
- using contract::contract;
-  DelphiOracle(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ){}
+// class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
+//  public:
+//  using contract::contract;
+//   bos_oracle(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ){}
 
-  //Types
+//   //Types
 
-  //Holds the last datapoints_count datapoints from qualified oracles
-  struct [[eosio::table]] eosusd {
-    uint64_t id;
-    name owner; 
-    uint64_t value;
-    uint64_t average;
-    uint64_t timestamp;
+//   //Holds the last datapoints_count datapoints from qualified oracles
+//   struct [[eosio::table,eosio::contract("bos.oracle")]] eosusd {
+//     uint64_t id;
+//     name owner; 
+//     uint64_t value;
+//     uint64_t average;
+//     uint64_t timestamp;
 
-    uint64_t primary_key() const {return id;}
-    uint64_t by_timestamp() const {return timestamp;}
-    uint64_t by_value() const {return value;}
+//     uint64_t primary_key() const {return id;}
+//     uint64_t by_timestamp() const {return timestamp;}
+//     uint64_t by_value() const {return value;}
 
-    EOSLIB_SERIALIZE( eosusd, (id)(owner)(value)(average)(timestamp))
+//     EOSLIB_SERIALIZE( eosusd, (id)(owner)(value)(average)(timestamp))
 
-  };
+//   };
 
-  //Holds the count and time of last eosusd writes for approved oracles
-  struct [[eosio::table]] eosusdstats {
-    name owner; 
-    uint64_t timestamp;
-    uint64_t count;
+//   //Holds the count and time of last eosusd writes for approved oracles
+//   struct [[eosio::table,eosio::contract("bos.oracle")]] eosusdstats {
+//     name owner; 
+//     uint64_t timestamp;
+//     uint64_t count;
 
-    uint64_t primary_key() const {return owner.value;}
+//     uint64_t primary_key() const {return owner.value;}
 
-  };
+//   };
 
-  //Holds the list of oracles
-  struct [[eosio::table]] oracles {
-    name owner;
+//   //Holds the list of oracles
+//   struct [[eosio::table,eosio::contract("bos.oracle")]] oracles {
+//     name owner;
 
-    uint64_t primary_key() const {return owner.value;}
+//     uint64_t primary_key() const {return owner.value;}
 
-  };
+//   };
 
-  //Multi index types definition
-  typedef eosio::multi_index<"eosusdstats"_n, eosusdstats> statstable;
-  typedef eosio::multi_index<"oracles"_n, oracles> oraclestable;
-  typedef eosio::multi_index<"eosusd"_n, eosusd,
-      indexed_by<"value"_n, const_mem_fun<eosusd, uint64_t, &eosusd::by_value>>, 
-      indexed_by<"timestamp"_n, const_mem_fun<eosusd, uint64_t, &eosusd::by_timestamp>>> usdtable;
+//   //Multi index types definition
+//   typedef eosio::multi_index<"eosusdstats"_n, eosusdstats> statstable;
+//   typedef eosio::multi_index<"oracles"_n, oracles> oraclestable;
+//   typedef eosio::multi_index<"eosusd"_n, eosusd,
+//       indexed_by<"value"_n, const_mem_fun<eosusd, uint64_t, &eosusd::by_value>>, 
+//       indexed_by<"timestamp"_n, const_mem_fun<eosusd, uint64_t, &eosusd::by_timestamp>>> usdtable;
 
   //Check if calling account is a qualified oracle
-  bool check_oracle(const name owner){
+  bool bos_oracle::check_oracle(const name owner){
 
     oraclestable oracles(_self, _self.value);
 
@@ -108,7 +109,7 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
   }
 
   //Ensure account cannot push data more often than every 60 seconds
-  void check_last_push(const name owner){
+  void bos_oracle::check_last_push(const name owner){
 
     statstable store(_self, _self.value);
 
@@ -138,7 +139,7 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
   }
 
   //Push oracle message on top of queue, pop oldest element if queue size is larger than X
-  void update_eosusd_oracle(const name owner, const uint64_t value){
+  void bos_oracle::update_eosusd_oracle(const name owner, const uint64_t value){
 
     usdtable usdstore(_self,_self.value);
 
@@ -229,8 +230,8 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
   }
 
   //Write datapoint
-  [[eosio::action]]
-  void write(const name owner, const uint64_t value) {
+
+  void bos_oracle::write(const name owner, const uint64_t value) {
     
     require_auth(owner);
 
@@ -243,8 +244,8 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
   }
 
   //Update oracles list
-  [[eosio::action]]
-  void setoracles(const std::vector<name>& oracleslist) {
+ 
+  void bos_oracle::setoracles(const std::vector<name>& oracleslist) {
     
     require_auth(titan_account);
 
@@ -265,8 +266,8 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
   }
 
   //Clear all data
-  [[eosio::action]]
-  void clear() {
+
+  void bos_oracle::clear() {
     require_auth(titan_account);
     statstable lstore(_self,_self.value);
     usdtable estore(_self,_self.value);
@@ -292,6 +293,6 @@ class [[eosio::contract("DelphiOracle")]] DelphiOracle : public eosio::contract 
 
   }
 
-};
 
-EOSIO_DISPATCH(DelphiOracle, (write)(setoracles)(clear))
+
+EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear))
