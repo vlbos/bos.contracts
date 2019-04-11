@@ -73,6 +73,9 @@ set(SECP256K1_ROOT "/usr/local")
 
 string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
 string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
+#set(EOSIO_ROOT "/Users/lisheng/opt/eosio");
+
+message(STATUS "============lll==================：（${TEST_FRAMEWORK_PATH}）, ：（${TEST_MODULE_PATH}）,：（）${EOSIO_ROOT}）")
 
 ExternalProject_Add(
   contracts_unit_tests
