@@ -23,7 +23,8 @@ typedef uint8_t request_type;
 typedef std::tuple<> args_tupple;
 
 // @abi table args i64
-struct request_args
+
+struct [[eosio::table, eosio::contract("bos.oraclize")]] request_args
 {
   bytes schema;
   bytes args;
@@ -32,7 +33,7 @@ struct request_args
 };
 
 // @abi table price i64
-struct price
+struct [[eosio::table, eosio::contract("bos.oraclize")]] price
 {
   uint64_t value;
   uint8_t decimals;
@@ -51,7 +52,7 @@ checksum256 get_full_hash(const string &task, const string &memo, const name &co
 uint64_t pack_hash(checksum256 hash);
 
 // @abi table request i64
-struct request
+struct [[eosio::table, eosio::contract("bos.oraclize")]] request
 {
   string task;
   string memo;
@@ -71,7 +72,7 @@ struct request
 };
 
 // @abi table oracles i64
-struct oracles
+struct [[eosio::table, eosio::contract("bos.oraclize")]] oracles
 {
   name account;
 
@@ -86,7 +87,7 @@ struct oracles
 typedef multi_index<"request"_n, request> request_table;
 typedef multi_index<"oracles"_n, oracles> oracle_identities;
 
-class masteroracle : public eosio::contract
+class [[eosio::contract("bos.oraclize")]] masteroracle : public eosio::contract
 {
 public:
   using contract::contract;
@@ -102,15 +103,19 @@ public:
   void removeoracle(name oracle);
 
   // @abi action
+  [[eosio::action]]
   void ask(name administrator, name contract, string task, uint32_t update_each, string memo, bytes args);
 
   // @abi action
+  [[eosio::action]]
   void disable(name administrator, name contract, string task, string memo);
 
   // @abi action
+  [[eosio::action]]
   void once(name administrator, name contract, string task, string memo, bytes args);
 
   // @abi action
+  [[eosio::action]]
   void push(name oracle, name contract, string task, string memo, bytes data);
 
   void set(const request &value, name bill_to_account);

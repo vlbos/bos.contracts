@@ -104,7 +104,7 @@ public:
 //   bytes args;
 // };
 // carbon-copy call structure
-struct push_data
+struct [[eosio::table, eosio::contract("bos.oraclize")]]  push_data
 {
   name oracle;
   name contract;
@@ -124,7 +124,7 @@ struct push_data
 // };
 
 // @abi table ethbtc i64
-struct ethbtc
+struct [[eosio::table, eosio::contract("bos.oraclized")]] ethbtc
 {
   uint32_t best_before;
   uint32_t update_after;
@@ -137,7 +137,7 @@ typedef oraclized<("ethbtc"_n).value, 11, 10, price> ethbtc_data;
 
 typedef singleton<"master"_n, name> account_master;
 
-class [[eosio::contract("ycn")]] YOUR_CONTRACT_NAME : public eosio::contract
+class [[eosio::contract("bos.oraclized")]] YOUR_CONTRACT_NAME : public eosio::contract
 {
 private:
   ethbtc_data ethbtc;

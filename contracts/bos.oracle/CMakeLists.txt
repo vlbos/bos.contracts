@@ -17,7 +17,7 @@ target_include_directories(bos.oraclize
 
 set_target_properties(bos.oraclize
    PROPERTIES
-   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/.oraclize")
+   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_contract(bos.oraclized bos.oraclized ${CMAKE_CURRENT_SOURCE_DIR}/src/bos.oraclized.cpp)
 
@@ -27,4 +27,4 @@ target_include_directories(bos.oraclized
 
 set_target_properties(bos.oraclized
    PROPERTIES
-   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/.oraclized")
+   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
