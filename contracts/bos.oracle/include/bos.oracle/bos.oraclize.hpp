@@ -1,8 +1,6 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
-using std::vector;
-
-typedef std::vector<char> bytes;
+#include "bostypes.hpp"
 
 
 using namespace eosio;
@@ -24,7 +22,7 @@ typedef std::tuple<> args_tupple;
 
 // @abi table args i64
 
-struct [[eosio::table, eosio::contract("bos.oraclize")]] request_args
+struct [[eosio::table("args"), eosio::contract("bos.oraclize")]] request_args
 {
   bytes schema;
   bytes args;
@@ -42,7 +40,7 @@ struct [[eosio::table, eosio::contract("bos.oraclize")]] price
 };
 
 
-namespace ducatur
+namespace bosoracle
 {
 
 checksum256 get_hash(const string &task, const name &contract);
@@ -87,7 +85,7 @@ struct [[eosio::table, eosio::contract("bos.oraclize")]] oracles
 typedef multi_index<"request"_n, request> request_table;
 typedef multi_index<"oracles"_n, oracles> oracle_identities;
 
-class [[eosio::contract("bos.oraclize")]] masteroracle : public eosio::contract
+class [[eosio::contract("bos.oraclize")]] oraclize : public eosio::contract
 {
 public:
   using contract::contract;
@@ -96,10 +94,12 @@ public:
   name token;
   oracle_identities oracles_table;
 
-  masteroracle(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ), requests(_self, _self.value), token("ducaturtoken"_n), oracles_table(_self, _self.value) {}
+  oraclize(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ), requests(_self, _self.value), token("boracletoken"_n), oracles_table(_self, _self.value) {}
 
+[[eosio::action]]
   void addoracle(name oracle);
 
+[[eosio::action]]
   void removeoracle(name oracle);
 
   // @abi action
@@ -122,4 +122,4 @@ public:
 };
 
 
-} // namespace ducatur
+} // namespace bosoracle

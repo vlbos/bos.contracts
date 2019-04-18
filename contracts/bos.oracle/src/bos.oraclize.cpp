@@ -6,7 +6,7 @@
 #include "bos.oracle/bos.oraclize.hpp"
 
 
-namespace ducatur
+namespace bosoracle
 {
 
 checksum256 get_hash(const string &task, const name &contract)
@@ -75,7 +75,7 @@ uint64_t pack_hash(checksum256 hash)
 // typedef multi_index<"request"_n, request> request_table;
 // typedef multi_index<"oracles"_n, oracles> oracle_identities;
 
-// class masteroracle : public eosio::contract
+// class oraclize : public eosio::contract
 // {
 // public:
 //   using contract::contract;
@@ -84,9 +84,9 @@ uint64_t pack_hash(checksum256 hash)
 //   name token;
 //   oracle_identities oracles_table;
 
-  // masteroracle(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ), requests(_self, _self.value), token("ducaturtoken"_n), oracles_table(_self, _self.value) {}
+  // oraclize(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ), requests(_self, _self.value), token("bosoracletoken"_n), oracles_table(_self, _self.value) {}
 
-  void masteroracle::addoracle(name oracle)
+  void oraclize::addoracle(name oracle)
   {
     require_auth(_self);
     auto itt = oracles_table.find(oracle.value);
@@ -97,7 +97,7 @@ uint64_t pack_hash(checksum256 hash)
     });
   }
 
-  void masteroracle::removeoracle(name oracle)
+  void oraclize::removeoracle(name oracle)
   {
     require_auth(_self);
     auto itt = oracles_table.find(oracle.value);
@@ -107,7 +107,7 @@ uint64_t pack_hash(checksum256 hash)
   }
 
   // @abi action
-  void masteroracle::ask(name administrator, name contract, string task, uint32_t update_each, string memo, bytes args)
+  void oraclize::ask(name administrator, name contract, string task, uint32_t update_each, string memo, bytes args)
   {
     require_auth(administrator);
     auto itt = requests.find(pack_hash(get_full_hash(task, memo, contract)));
@@ -124,7 +124,7 @@ uint64_t pack_hash(checksum256 hash)
   }
 
   // @abi action
-  void masteroracle::disable(name administrator, name contract, string task, string memo)
+  void oraclize::disable(name administrator, name contract, string task, string memo)
   {
     require_auth(administrator);
     uint64_t id = pack_hash(get_full_hash(task, memo, contract));
@@ -138,7 +138,7 @@ uint64_t pack_hash(checksum256 hash)
   }
 
   // @abi action
-  void masteroracle::once(name administrator, name contract, string task, string memo, bytes args)
+  void oraclize::once(name administrator, name contract, string task, string memo, bytes args)
   {
     require_auth(administrator);
     auto itt = requests.find(pack_hash(get_full_hash(task, memo, contract)));
@@ -155,7 +155,7 @@ uint64_t pack_hash(checksum256 hash)
   }
 
   // @abi action
-  void masteroracle::push(name oracle, name contract, string task, string memo, bytes data)
+  void oraclize::push(name oracle, name contract, string task, string memo, bytes data)
   {
     require_auth(oracle);
     uint64_t id = pack_hash(get_full_hash(task, memo, contract));
@@ -176,7 +176,7 @@ uint64_t pack_hash(checksum256 hash)
     set(changed, _self);
   }
 
-  void masteroracle::set(const request &value, name bill_to_account)
+  void oraclize::set(const request &value, name bill_to_account)
   {
     auto itr = requests.find(value.primary_key());
     if (itr != requests.end())
@@ -207,7 +207,7 @@ uint64_t pack_hash(checksum256 hash)
 // };
 
 
-} // namespace ducatur
+} // namespace bosoracle
 
 
-EOSIO_DISPATCH( ducatur::masteroracle, (addoracle)(removeoracle)(ask)(once)(disable)(push))
+EOSIO_DISPATCH( bosoracle::oraclize, (addoracle)(removeoracle)(ask)(once)(disable)(push))

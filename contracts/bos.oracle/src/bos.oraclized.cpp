@@ -174,11 +174,11 @@ using std::string;
   }
 
   // @abi action
-  void YOUR_CONTRACT_NAME::setup(name master)
+  void YOUR_CONTRACT_NAME::setup(name oracle)
   {
     require_auth(_self);
-    account_master(_self, _self.value).set(master, _self);
-    ask_data(_self, master, "c0fe86756e446503eed0d3c6a9be9e6276018fead3cd038932cf9cc2b661d9de", 10u,string(),
+    account_master(_self, _self.value).set(oracle, _self);
+    ask_data(_self, oracle, "c0fe86756e446503eed0d3c6a9be9e6276018fead3cd038932cf9cc2b661d9de", 10u,string(),
              pack(request_args{
                  bytes{},
                  bytes{}}));

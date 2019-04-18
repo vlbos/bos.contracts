@@ -1,7 +1,7 @@
 #pragma once
-
 #include <eosiolib/eosio.hpp>
-#include "bos.oracle/bos.oraclize.hpp"
+#include "bostypes.hpp"
+
 using namespace eosio;
 using std::string;
 template <uint64_t OraclizeName, uint32_t BestBeforeOffset, uint32_t UpdateOffset, typename T>
@@ -98,13 +98,14 @@ public:
 };
 
 // // @abi table args i64
-// struct request_args
-// {
-//   bytes schema;
-//   bytes args;
-// };
+struct request_args
+{
+  bytes schema;
+  bytes args;
+};
+
 // carbon-copy call structure
-struct [[eosio::table, eosio::contract("bos.oraclize")]]  push_data
+struct  push_data
 {
   name oracle;
   name contract;
@@ -115,13 +116,13 @@ struct [[eosio::table, eosio::contract("bos.oraclize")]]  push_data
   EOSLIB_SERIALIZE(push_data, (oracle)(contract)(task)(memo)(data))
 };
 
-// struct price
-// {
-//   uint64_t value;
-//   uint8_t decimals;
+struct price
+{
+  uint64_t value;
+  uint8_t decimals;
 
-//   EOSLIB_SERIALIZE(price, (value)(decimals))
-// };
+  EOSLIB_SERIALIZE(price, (value)(decimals))
+};
 
 // @abi table ethbtc i64
 struct [[eosio::table, eosio::contract("bos.oraclized")]] ethbtc
@@ -156,7 +157,7 @@ public:
 
   // @abi action
   [[eosio::action]]
-  void setup(name master);
+  void setup(name oracle);
 
     void ask_data(name administrator,
                 name registry,
