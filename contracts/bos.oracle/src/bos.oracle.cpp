@@ -16,8 +16,8 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/fixedpoint.hpp>
 #include <eosiolib/chain.h>
-#include "bos.oracle/bos.oraclize.hpp"
 #include "bos.oracle/bos.oracle.hpp"
+#include "bos.oraclize.cpp"
 
 using namespace eosio;
 
@@ -295,4 +295,4 @@ using namespace eosio;
 
 
 
-EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear))
+EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push))

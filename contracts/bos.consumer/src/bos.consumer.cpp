@@ -5,7 +5,7 @@
 #include <eosiolib/time.hpp>
 #include <eosiolib/system.h>
 
-#include "bos.oracle/bos.oraclized.hpp"
+#include "bos.consumer/bos.consumer.hpp"
 
 using namespace eosio;
 using std::string;
