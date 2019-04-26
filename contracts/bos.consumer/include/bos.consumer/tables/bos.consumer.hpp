@@ -1,6 +1,6 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
-#include "bos.consumer/bostypes.hpp"
+#include "bos.consumer/bos.types.hpp"
 #include "bos.oraclized.hpp"
 // using namespace eosio;
 // using std::string;

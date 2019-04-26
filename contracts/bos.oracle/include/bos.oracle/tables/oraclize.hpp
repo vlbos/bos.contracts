@@ -1,6 +1,6 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
-#include "bos.oracle/bostypes.hpp"
+#include "bos.oracle/bos.types.hpp"
 
 
 using namespace eosio;
@@ -107,91 +107,3 @@ typedef multi_index<"request"_n, request> request_table;
 typedef multi_index<"oraclizes"_n, oraclizes> oracle_identities;
 
 
-// namespace bosoracle
-// {
-
-// checksum256 get_hash(const string &task, const name &contract);
-
-// checksum256 get_full_hash(const string &task, const string &memo, const name &contract);
-
-// uint64_t pack_hash(checksum256 hash);
-
-// // @abi table request i64
-// struct [[eosio::table, eosio::contract("bos.oracle")]] request
-// {
-//   string task;
-//   string memo;
-//   bytes args;
-//   name administrator;
-//   name contract;
-//   uint32_t timestamp;
-//   uint32_t update_each;
-//   request_type mode;
-
-//   uint64_t primary_key() const
-//   {
-//     return pack_hash(get_full_hash(task, memo, contract));
-//   }
-
-//   EOSLIB_SERIALIZE(request, (task)(memo)(args)(administrator)(contract)(timestamp)(update_each)(mode))
-// };
-
-// // @abi table oraclizes i64
-// struct [[eosio::table, eosio::contract("bos.oracle")]] oraclizes
-// {
-//   name account;
-
-//   uint64_t primary_key() const
-//   {
-//     return account.value;
-//   }
-
-//   EOSLIB_SERIALIZE(oraclizes, (account))
-// };
-
-// typedef multi_index<"request"_n, request> request_table;
-// typedef multi_index<"oraclizes"_n, oraclizes> oracle_identities;
-
-// class [[eosio::contract("bos.oracle")]] oraclize : public eosio::contract
-// {
-// public:
-//   using contract::contract;
-
-// //   ///bos.oraclize begin
-// //   request_table requests;
-// //   name token;
-// //   oracle_identities oraclizes_table;
-
-// //   oraclize(name receiver, name code, datastream<const char*> ds ) : contract( receiver,  code, ds ), requests(_self, _self.value), token("boracletoken"_n), oraclizes_table(_self, _self.value) {}
-
-// // [[eosio::action]]
-// //   void addoracle(name oracle);
-
-// // [[eosio::action]]
-// //   void removeoracle(name oracle);
-
-// //   // @abi action
-// //   [[eosio::action]]
-// //   void ask(name administrator, name contract, string task, uint32_t update_each, string memo, bytes args);
-
-// //   // @abi action
-// //   [[eosio::action]]
-// //   void disable(name administrator, name contract, string task, string memo);
-
-// //   // @abi action
-// //   [[eosio::action]]
-// //   void once(name administrator, name contract, string task, string memo, bytes args);
-
-// //   // @abi action
-// //   [[eosio::action]]
-// //   void push(name oracle, name contract, string task, string memo, bytes data);
-
-// //   void set(const request &value, name bill_to_account);
-
-
-
-// //   ///bos.oraclize end
-// };
-
-
-// } // namespace bosoracle
