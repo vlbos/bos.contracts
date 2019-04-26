@@ -22,7 +22,7 @@
 #include "bos.oracle/tables/riskcontrol.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/consumer.hpp"
-#include "bos.oracle/tables/arbiration.hpp"
+#include "bos.oracle/tables/arbitration.hpp"
 
 using namespace eosio;
 
@@ -103,18 +103,19 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /// bos.provideer begin
    ///
    ///
-void register(uint64_t service_id,uint64_t service_price,uint64_t fee_type,std::string data_format,
-uint64_t data_type,std::string criteria,uint64_t  acceptance,std::string declaration,uint64_t injection_method,
-uint64_t stake_amount,uint64_t duration,uint64_t provider_limit,uint64_t update_cycle,uint64_t update_start_time);
-void unregister(uint64_t service_id,std::string signature,name account,uint64_t is_suspense);
+//    
+void regservice(uint64_t service_id,uint64_t stake_amount,uint64_t service_price,uint64_t fee_type,std::string data_format,
+uint64_t data_type,std::string criteria,uint64_t  acceptance,std::string declaration,
+uint64_t injection_method,uint64_t duration,uint64_t provider_limit,uint64_t update_cycle,uint64_t update_start_time);
+void unregservice(uint64_t service_id,std::string signature,name account,uint64_t is_suspense);
 void execaction(uint64_t service_id,uint64_t action_type);
 void stakeamount(uint64_t service_id,uint64_t provider_id,name account,std::string signature,stake_amount);
 void pushdata(uint64_t service_id,uint64_t update_number,uint64_t data_json,uint64_t provider_signature,uint64_t request_id);
 
 using register_action =
-    eosio::action_wrapper<"register"_n, &bos_oracle::register>;
+    eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 using unregister_action =
-    eosio::action_wrapper<"unregister"_n, &bos_oracle::unregister>;
+    eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
 using execaction_action =
     eosio::action_wrapper<"execaction"_n, &bos_oracle::execaction>;
 using stakeamount_action =

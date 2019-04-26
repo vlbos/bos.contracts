@@ -66,8 +66,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_reco
 
 
 typedef eosio::multi_index<"dataconsumer"_n, data_consumer> data_consumers;
-typedef eosio::multi_index<"subscription"_n, data_service_subscription,
-indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>> data_service_subscriptions;
+typedef eosio::multi_index<"subscription"_n, data_service_subscription,indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>> > data_service_subscriptions;
 
 typedef eosio::multi_index<"request"_n, data_service_request> data_service_requests;
 

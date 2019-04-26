@@ -1,6 +1,6 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
-#include "bos.types.hpp"
+#include "bos.oracle/bos.types.hpp"
 
 
 // using namespace eosio;
@@ -93,13 +93,12 @@
          typedef eosio::multi_index< "dataservices"_n, data_service > data_services;
 
          typedef eosio::multi_index< "servicefees"_n, data_service_fee > data_service_fees;
-         typedef eosio::multi_index< "dataprovides"_n, data_provider > data_providers;
-         typedef eosio::multi_index< "datasvcprovs"_n, data_service_provision,
-         indexed_by<"byaccount"_n, const_mem_fun<data_service_provision, uint64_t, &data_service_provision::by_account>> data_service_provisions;
+         typedef eosio::multi_index< "providers"_n, data_provider > data_providers;
+         typedef eosio::multi_index< "svcprovision"_n, data_service_provision,indexed_by<"byaccount"_n, const_mem_fun<data_service_provision, uint64_t, &data_service_provision::by_account>>> data_service_provisions;
  
-         typedef eosio::multi_index< "cancelappys"_n, svc_provision_cancel_apply > svc_provision_cancel_applys;
+         typedef eosio::multi_index< "cancelapplys"_n, svc_provision_cancel_apply > svc_provision_cancel_applys;
 
-         typedef eosio::multi_index< "svcprovilogs"_n, data_service_provision_log > data_service_provision_logs;
+         typedef eosio::multi_index< "provisionlog"_n, data_service_provision_log > data_service_provision_logs;
 
 
 

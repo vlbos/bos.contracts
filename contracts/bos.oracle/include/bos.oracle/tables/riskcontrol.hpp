@@ -74,10 +74,10 @@ struct [[eosio::table]] account {
 };
 
 typedef eosio::multi_index<"accounts"_n, account> accounts;
-typedef eosio::multi_index<"users"_n, account_user> users;
+// typedef eosio::multi_index<"users"_n, account_user> users;
 
 typedef eosio::multi_index<"servicestake"_n, data_service_stake> data_service_stakes;
-typedef eosio::multi_index<"freezedelays"_n, transfer_freeze> transfer_freeze_delays;
+typedef eosio::multi_index<"freezedelays"_n, transfer_freeze_delay> transfer_freeze_delays;
 // typedef eosio::multi_index<"tfdelays"_n, transfer_delay> transfer_delays;
 typedef eosio::multi_index<"riskguarant"_n, risk_guarantee> risk_guarantees;
 // };

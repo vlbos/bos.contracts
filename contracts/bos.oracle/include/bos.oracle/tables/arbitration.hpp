@@ -39,7 +39,7 @@ enum complainant_status : uint8_t
 
 enum arbi_method_type : uint8_t
 {
-   public = 1,
+   crowd_arbitration = 1,
    multiple_rounds = 2
 };
 
@@ -155,16 +155,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_delay
    uint64_t primary_key() const { return delay_id; }
 };
 
-struct [[eosio::table]] risk_guarantee
-{
-   uint64_t risk_id;
-   name account;
-   asset amount;
-   time_point_sec duration;
-   signature sig;
 
-   uint64_t primary_key() const { return risk_id; }
-};
 
 typedef eosio::multi_index<"complainants"_n, complainant,
                            indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>>

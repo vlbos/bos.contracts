@@ -42,13 +42,12 @@ void bos_oracle::deposit(name from, name to, asset quantity,
     // notify dapp
   }
 }
-
+  enum transfer_type : uint8_t { freeze = 0, delay = 1 };
 /// from dapp to dapp user
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
   sub_balance(from, to, quantity);
 
-  transfer(from, to, quantity, memo);
 
   // find service
   data_service_subscriptions svcsubstable(_self, _self.value);
@@ -62,25 +61,31 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
+   uint64_t time_length = 1;
   if (svcstake_itr->total_stake_amount - svcstake_itr->freeze_amount >=
       quantity) {
     svcstaketable.modify(svcstake_itr, same_payer, [&](auto &ss) {
       ss.freeze_amount += quantity;
     });
+
+   transfer(from, to, quantity, memo);
+      add_freeze_delay(svcsubs_itr->service_id,from,now(),time_point_sec(time_length),quantity,0,transfer_type::freeze);
   } else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
     //    auto svc_itr=datasvctable.find(svcsubs_itr->service_id);
     //   check( svc_itr != datasvctable.end(), " no service   found" );
-
     // if(svc_itr->risk_control_amount.amount==0)
     // {
     //    //risk delay
-
     // }
-    /// delay time length
-    uint64_t delay_time_length = 1;
 
+  
+
+    /// delay time length
+   
+    add_freeze_delay(svcsubs_itr->service_id,from,now(),time_point_sec(time_length),quantity,0,transfer_type::delay);
+    
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,
                            "transfer"_n,
