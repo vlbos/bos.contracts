@@ -1,9 +1,13 @@
-#include "bos.oracle/bos.oracle.hpp"
+
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.h>
 #include <eosiolib/time.hpp>
+#include <eosiolib/transaction.hpp>
+#include <eosiolib/action.hpp>
 #include <string>
+#include "bos.oracle/bos.oracle.hpp"
+
 
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   check(from != to, "cannot transfer to self");
@@ -18,7 +22,7 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 
   check(quantity.is_valid(), "invalid quantity");
   check(quantity.amount > 0, "must transfer positive quantity");
-  check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+  // check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
   check(memo.size() <= 256, "memo has more than 256 bytes");
 
   //   token::transfer_action transfer_act{ token_account, { account,
@@ -26,17 +30,22 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   //          transfer_act.send( account, consumer_account, amount, memo );
 
   //  auto payer = has_auth( to ) ? to : from;
-  INLINE_ACTION_SENDER(eosio::token, transfer)
-  (token_account, {{from, active_permission}, {to, active_permission}},
-   {from, to, quantity, memo});
+   action(permission_level{from, "active"_n},
+           token_account, "transfer"_n,
+           std::make_tuple(from, to, quantity, memo))
+        .send();
+  // INLINE_ACTION_SENDER(eosio::token, transfer)
+  // (token_account, {{from, active_permission}, {to, active_permission}},
+  //  {from, to, quantity, memo});
 }
 
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to, asset quantity,
-                         string memo，bool is_notify) {
+                         string memo,bool is_notify) {
   transfer(from, to, quantity, memo);
 
-  add_balance(from, to, quantity, payer);
+  auto payer = has_auth( to ) ? to : from;
+  add_balance(from, quantity, payer);
 
   if (is_notify) {
     // notify dapp
@@ -46,7 +55,7 @@ void bos_oracle::deposit(name from, name to, asset quantity,
 /// from dapp to dapp user
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
-  sub_balance(from, to, quantity);
+  sub_balance(from,  quantity);
 
 
   // find service
@@ -69,8 +78,9 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
     });
 
    transfer(from, to, quantity, memo);
-      add_freeze_delay(svcsubs_itr->service_id,from,now(),time_point_sec(time_length),quantity,0,transfer_type::freeze);
-  } else {
+      add_freeze_delay(svcsubs_itr->service_id,from,time_point_sec(now()),time_point_sec(time_length),quantity,0,transfer_type::freeze);
+  }
+   else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
     //    auto svc_itr=datasvctable.find(svcsubs_itr->service_id);
@@ -84,13 +94,13 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
     /// delay time length
    
-    add_freeze_delay(svcsubs_itr->service_id,from,now(),time_point_sec(time_length),quantity,0,transfer_type::delay);
+    add_freeze_delay(svcsubs_itr->service_id,from,time_point_sec(now()),time_point_sec(time_length),quantity,0,transfer_type::delay);
     
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,
                            "transfer"_n,
                            std::make_tuple(from, to, quantity, memo));
-    t.delay_sec = delay_time_length;
+    t.delay_sec = time_length;
     uint128_t deferred_id = (uint128_t(from.value) << 64) | to.value;
     cancel_deferred(deferred_id);
     t.send(deferred_id, from);
@@ -98,8 +108,7 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 }
 
 void bos_oracle::add_freeze_delay(uint64_t service_id, name account,time_point_sec start_time,
-                            time_point_sec duration,
-                            asset amount, uint64_t status, uint64_t type) {
+                            time_point_sec duration,asset amount, uint64_t status, uint64_t type) {
   transfer_freeze_delays transfertable(_self, _self.value);
 
   transfertable.emplace(_self, [&](auto &t) {
@@ -119,7 +128,7 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,time_point_
                             asset amount, uint64_t status) {
   risk_guarantees guaranteetable(_self, _self.value);
 
-  uint64_t risk_id = 0;
+   uint64_t risk_id = 0;
   guaranteetable.emplace(_self, [&](auto &g) {
     g.risk_id = guaranteetable.available_primary_key();
     g.account =  account;
@@ -128,13 +137,13 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,time_point_
     g.duration = duration;
     g.status = status;
    //  g.sig = sig;
-   risk_id = g.risk_id;
+    risk_id = g.risk_id;
   });
 
-      return risk_id;
+     return risk_id;
 }
 
-void bos_oracle::sub_balance(name owner, name user, asset value) {
+void bos_oracle::sub_balance(name owner, asset value) {
   accounts dapp_acnts(_self, owner.value);
 
   const auto &dapp =
@@ -144,7 +153,7 @@ void bos_oracle::sub_balance(name owner, name user, asset value) {
   dapp_acnts.modify(dapp, owner, [&](auto &a) { a.balance -= value; });
 }
 
-void bos_oracle::add_balance(name owner, name user, asset value,
+void bos_oracle::add_balance(name owner, asset value,
                              name ram_payer) {
   accounts dapp_acnts(_self, owner.value);
   auto dapp = dapp_acnts.find(value.symbol.code().raw());

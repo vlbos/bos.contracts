@@ -9,16 +9,14 @@
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/time.hpp>
 #include <string>
-
+#include "bos.oracle/bos.oracle.hpp"
 // namespace eosio {
 
 using eosio::asset;
 using eosio::public_key;
 using std::string;
 
-void subscribe(uint64_t service_id, name contract_account, name action_name,
-               std::string publickey, name account, asset amount,
-               std::string memo) {
+void bos_oracle::subscribe(uint64_t service_id, name contract_account, name action_name,std::string publickey, name account, asset amount,std::string memo) {
 
   // //   token::transfer_action transfer_act{ token_account, { account,
   // active_permission } };
@@ -34,13 +32,13 @@ void subscribe(uint64_t service_id, name contract_account, name action_name,
 
   // add consumer
   data_consumers consumertable(_self, _self.value);
-  auto consumer_itr = consumertable.find(value.symbol.code().raw());
+  auto consumer_itr = consumertable.find(account.value);
   if (consumer_itr == consumertable.end()) {
-    consumertable.emplace(ram_payer, [&](auto &c) {
+    consumertable.emplace(_self, [&](auto &c) {
       c.account = account;
-      c.pubkey = publickey;
+      // c.pubkey = publickey;
       c.status = 1;
-      c.create_time = now();
+      c.create_time = time_point_sec(now());
     });
   }
 
@@ -55,11 +53,11 @@ void subscribe(uint64_t service_id, name contract_account, name action_name,
     subs.contract_account = contract_account;
     subs.action_name = action_name;
     subs.payment = amount;
-    subs.consumption = 0;
+    subs.consumption = asset(0,core_symbol());
   });
 }
 
-void payservice(uint64_t service_id, name contract_account, name account,
+void bos_oracle::payservice(uint64_t service_id, name contract_account, name account,
                 asset amount, std::string memo) {
 
   // //   token::transfer_action transfer_act{ token_account, { account,
@@ -83,16 +81,16 @@ void payservice(uint64_t service_id, name contract_account, name account,
                    [&](auto &subs) { subs.payment += amount; });
 }
 
-void requestdata(uint64_t update_number, uint64_t service_id, name request,
+void bos_oracle::requestdata(uint64_t update_number, uint64_t service_id, name request,
                  std::string request_content) {
   require_auth(request);
-  data_service_request reqtable(_self, _self.value);
+  data_service_requests reqtable(_self, _self.value);
 
   reqtable.emplace(_self, [&](auto &r) {
     r.request_id = reqtable.available_primary_key();
     r.service_id = service_id;
     r.request = request;
-    r.request_time = now();
+    r.request_time = time_point_sec(now());
   });
 }
 

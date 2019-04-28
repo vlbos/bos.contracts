@@ -65,7 +65,7 @@ struct [[eosio::table]] risk_guarantee
    uint64_t primary_key() const { return risk_id; }
 };
 
-struct [[eosio::table]] account {
+struct [[eosio::table]] riskcontrol_account {
 
   asset balance;
   asset unconfirmed_balance;
@@ -73,7 +73,7 @@ struct [[eosio::table]] account {
   uint64_t primary_key() const { return balance.symbol.code().raw(); }
 };
 
-typedef eosio::multi_index<"accounts"_n, account> accounts;
+typedef eosio::multi_index<"accounts"_n, riskcontrol_account> accounts;
 // typedef eosio::multi_index<"users"_n, account_user> users;
 
 typedef eosio::multi_index<"servicestake"_n, data_service_stake> data_service_stakes;

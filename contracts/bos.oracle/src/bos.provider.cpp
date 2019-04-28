@@ -1,16 +1,15 @@
 #pragma once
-#include "bos.types.hpp"
-#include <eosiolib/eosio.hpp>
 
+#include <eosiolib/eosio.hpp>
+#include <eosiolib/asset.hpp>
+#include "bos.oracle/bos.oracle.hpp"
+#include <cmath>
 // using namespace eosio;
 // using std::string;
 
-void register(uint64_t service_id, name account, uint64_t service_price,
-              uint64_t fee_type, std::string data_format, uint64_t data_type,
-              std::string criteria, uint64_t acceptance,
-              std::string declaration, uint64_t injection_method,
-              uint64_t stake_amount, uint64_t duration, uint64_t provider_limit,
-              uint64_t update_cycle, uint64_t update_start_time) {
+void bos_oracle::regservice(uint64_t service_id,name account,asset stake_amount,asset service_price,uint64_t fee_type,std::string data_format,
+uint64_t data_type,std::string criteria,uint64_t  acceptance,std::string declaration,
+uint64_t injection_method,time_point_sec duration,uint64_t provider_limit,uint64_t update_cycle,time_point_sec update_start_time){
   uint64_t new_service_id = service_id;
   data_services svctable(_self, _self.value);
   if (0 == service_id) {
@@ -34,8 +33,8 @@ void register(uint64_t service_id, name account, uint64_t service_price,
       s.appeal_freeze_period = 0;
       s.exceeded_risk_control_freeze_period = 0;
       s.guarantee_id = 0;
-      s.risk_control_amount = 0;
-      s.pause_service_stake_amount = 0;
+      s.risk_control_amount = asset(0,core_symbol());
+      s.pause_service_stake_amount = asset(0,core_symbol());
       s.freeze_flag = 0;
       s.emergency_flag = 0;
       s.status = 0;
@@ -51,7 +50,7 @@ void register(uint64_t service_id, name account, uint64_t service_price,
   if (provider_itr == providertable.end()) {
     providertable.emplace(_self, [&](auto &p) {
       p.account = account;
-      p.pubkey = publickey;
+      // p.pubkey = publickey;
       p.total_stake_amount = stake_amount;
     });
   } else {
@@ -70,9 +69,11 @@ void register(uint64_t service_id, name account, uint64_t service_price,
   });
 }
 enum data_service_status : uint8_t { normal = 0, cancel, pause };
-void unregister(uint64_t service_id, std::string signature, name account,
+
+void bos_oracle::unregservice(uint64_t service_id, std::string signature, name account,
                 uint64_t status) {
 
+  data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
   check(service_itr == svctable.end(), "service does not exist");
   svctable.modify(service_itr, _self, [&](auto &s) { s.status = status; });
@@ -80,20 +81,22 @@ void unregister(uint64_t service_id, std::string signature, name account,
   if (static_cast<uint64_t>(data_service_status::cancel) == status) {
     svc_provision_cancel_applys applytable(_self, _self.value);
     applytable.emplace(_self, [&](auto &a) {
-      l.apply_id = applytable.available_primary_key();
-      l.service_id = service_id;
-      l.provider = account;
-      l.status = 0;
-      l.cancel_time = now();
-      l.finish_time = now();
+      a.apply_id = applytable.available_primary_key();
+      a.service_id = service_id;
+      a.provider = account;
+      a.status = 0;
+      a.cancel_time = time_point_sec(now());
+      a.finish_time = time_point_sec(now());
     });
+
+    asset stake_amount   = asset(0,core_symbol());
 
     transfer(provider_account, account, stake_amount, "");
   }
 }
 
-void execction(uint64_t service_id, uint64_t action_type) {
-
+void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
+  data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
   check(service_itr == svctable.end(), "service does not exist");
   svctable.modify(service_itr, _self, [&](auto &s) {
@@ -105,7 +108,7 @@ void execction(uint64_t service_id, uint64_t action_type) {
   });
 }
 
-void stakeamount(uint64_t service_id, uint64_t provider_id, name account,
+void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id, name account,
                  std::string signature, asset stake_amount) {
 
   if (stake_amount.amount > 0) {
@@ -128,14 +131,14 @@ void stakeamount(uint64_t service_id, uint64_t provider_id, name account,
   check(acc_itr != provision_idx.end() && acc_itr->service_id == service_id,
         "account does not subscribe services");
 
-  auto provision_itr = provisionstable.find(acc_itr.provision_id);
+  auto provision_itr = provisionstable.find(acc_itr->provision_id);
   check(provision_itr != provisionstable.end(),
         "account does not subscribe services");
 
   if (stake_amount.amount < 0) {
-    check(provider_itr->total_stake_amount >= asset(fabs(stake_amount.amount)),
+    check(provider_itr->total_stake_amount >= asset(fabs(stake_amount.amount), core_symbol()),
           "");
-    check(provision_itr->total_stake_amount >= asset(fabs(stake_amount.amount)),
+    check(provision_itr->stake_amount >= asset(fabs(stake_amount.amount), core_symbol()),
           "");
   }
 
@@ -146,40 +149,41 @@ void stakeamount(uint64_t service_id, uint64_t provider_id, name account,
                          [&](auto &p) { p.stake_amount += stake_amount; });
 
   if (stake_amount.amount < 0) {
-    transfer(provider_account, account, asset(fabs(stake_amount.amount)), "");
+    transfer(provider_account, account, asset(fabs(stake_amount.amount),core_symbol()), "");
   }
 }
 
-void pushdata(uint64_t service_id, uint64_t update_number, uint64_t data_json,
+void bos_oracle::pushdata(uint64_t service_id, uint64_t update_number, uint64_t data_json,
               uint64_t provider_signature, uint64_t request_id) {
-  data_service_provision_log logtable(_self, _self.value);
+  data_service_provision_logs logtable(_self, _self.value);
   logtable.emplace(_self, [&](auto &l) {
     l.log_id = logtable.available_primary_key();
-    l.service_id = new_service_id;
+    l.service_id = service_id;
     l.update_number = update_number;
     l.data_json = data_json;
     l.status = 0;
-    l.provider_sig = provider_signature;
+    // l.provider_sig = provider_signature;
     l.request_id = request_id;
-    l.update_time = now();
+    l.update_time = time_point_sec(now());
   });
 }
 
-void addfeetype(uint64_t service_id, asset service_price, uint8_t fee_type) {
+void bos_oracle::addfeetype(uint64_t service_id, asset service_price, uint8_t fee_type) {
   data_service_fees feetable(_self, _self.value);
-  auto fee_itr = feetable.find(account.value);
-  if (fee_itr == feetable.end()) {
+  // auto fee_itr = feetable.find(service_id);
+  // if (fee_itr == feetable.end()) {
     feetable.emplace(_self, [&](auto &f) {
+      f.id = feetable.available_primary_key();
       f.service_id = service_id;
       f.service_price = service_price;
       f.fee_type = fee_type;
     });
-  } else {
-    feetable.modify(fee_itr, same_payer, [&](auto &f) {
-      f.service_id = service_id;
-      f.service_price = service_price;
-      f.fee_type = fee_type;
-    });
-  }
+  // } else {
+  //   feetable.modify(fee_itr, same_payer, [&](auto &f) {
+  //     f.service_id = service_id;
+  //     f.service_price = service_price;
+  //     f.fee_type = fee_type;
+  //   });
+  // }
 }
 // } // namespace bosoracle
