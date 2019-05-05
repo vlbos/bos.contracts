@@ -1,13 +1,12 @@
 
+#include "bos.oracle/bos.oracle.hpp"
+#include <eosiolib/action.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/print.h>
 #include <eosiolib/time.hpp>
 #include <eosiolib/transaction.hpp>
-#include <eosiolib/action.hpp>
 #include <string>
-#include "bos.oracle/bos.oracle.hpp"
-
 
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   check(from != to, "cannot transfer to self");
@@ -30,33 +29,31 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   //          transfer_act.send( account, consumer_account, amount, memo );
 
   //  auto payer = has_auth( to ) ? to : from;
-   action(permission_level{from, "active"_n},
-           token_account, "transfer"_n,
-           std::make_tuple(from, to, quantity, memo))
-        .send();
+  action(permission_level{from, "active"_n}, token_account, "transfer"_n,
+         std::make_tuple(from, to, quantity, memo))
+      .send();
   // INLINE_ACTION_SENDER(eosio::token, transfer)
   // (token_account, {{from, active_permission}, {to, active_permission}},
   //  {from, to, quantity, memo});
 }
 
 /// from dapp user to dapp
-void bos_oracle::deposit(name from, name to, asset quantity,
-                         string memo,bool is_notify) {
+void bos_oracle::deposit(name from, name to, asset quantity, string memo,
+                         bool is_notify) {
   transfer(from, to, quantity, memo);
 
-  auto payer = has_auth( to ) ? to : from;
+  auto payer = has_auth(to) ? to : from;
   add_balance(from, quantity, payer);
 
   if (is_notify) {
     // notify dapp
   }
 }
-  enum transfer_type : uint8_t { freeze = 0, delay = 1 };
+enum transfer_type : uint8_t { freeze = 0, delay = 1 };
 /// from dapp to dapp user
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
-  sub_balance(from,  quantity);
-
+  sub_balance(from, quantity);
 
   // find service
   data_service_subscriptions svcsubstable(_self, _self.value);
@@ -70,17 +67,17 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
-   uint64_t time_length = 1;
+  uint64_t time_length = 1;
   if (svcstake_itr->total_stake_amount - svcstake_itr->freeze_amount >=
       quantity) {
-    svcstaketable.modify(svcstake_itr, same_payer, [&](auto &ss) {
-      ss.freeze_amount += quantity;
-    });
+    svcstaketable.modify(svcstake_itr, same_payer,
+                         [&](auto &ss) { ss.freeze_amount += quantity; });
 
-   transfer(from, to, quantity, memo);
-      add_freeze_delay(svcsubs_itr->service_id,from,time_point_sec(now()),time_point_sec(time_length),quantity,0,transfer_type::freeze);
-  }
-   else {
+    transfer(from, to, quantity, memo);
+    add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
+                     time_point_sec(time_length), quantity, 0,
+                     transfer_type::freeze);
+  } else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
     //    auto svc_itr=datasvctable.find(svcsubs_itr->service_id);
@@ -90,12 +87,12 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
     //    //risk delay
     // }
 
-  
-
     /// delay time length
-   
-    add_freeze_delay(svcsubs_itr->service_id,from,time_point_sec(now()),time_point_sec(time_length),quantity,0,transfer_type::delay);
-    
+
+    add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
+                     time_point_sec(time_length), quantity, 0,
+                     transfer_type::delay);
+
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,
                            "transfer"_n,
@@ -107,14 +104,16 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
   }
 }
 
-void bos_oracle::add_freeze_delay(uint64_t service_id, name account,time_point_sec start_time,
-                            time_point_sec duration,asset amount, uint64_t status, uint64_t type) {
+void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
+                                  time_point_sec start_time,
+                                  time_point_sec duration, asset amount,
+                                  uint64_t status, uint64_t type) {
   transfer_freeze_delays transfertable(_self, _self.value);
 
   transfertable.emplace(_self, [&](auto &t) {
     t.transfer_id = transfertable.available_primary_key();
     t.service_id = service_id;
-    t.account =  account;
+    t.account = account;
     t.start_time = start_time;
     t.duration = duration;
     t.amount = amount;
@@ -123,24 +122,25 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account,time_point_s
   });
 }
 
-uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,time_point_sec start_time,
-                            time_point_sec duration,
-                            asset amount, uint64_t status) {
+uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
+                                   time_point_sec start_time,
+                                   time_point_sec duration, asset amount,
+                                   uint64_t status) {
   risk_guarantees guaranteetable(_self, _self.value);
 
-   uint64_t risk_id = 0;
+  uint64_t risk_id = 0;
   guaranteetable.emplace(_self, [&](auto &g) {
     g.risk_id = guaranteetable.available_primary_key();
-    g.account =  account;
+    g.account = account;
     g.amount = amount;
     g.start_time = start_time;
     g.duration = duration;
     g.status = status;
-   //  g.sig = sig;
+    //  g.sig = sig;
     risk_id = g.risk_id;
   });
 
-     return risk_id;
+  return risk_id;
 }
 
 void bos_oracle::sub_balance(name owner, asset value) {
@@ -153,8 +153,7 @@ void bos_oracle::sub_balance(name owner, asset value) {
   dapp_acnts.modify(dapp, owner, [&](auto &a) { a.balance -= value; });
 }
 
-void bos_oracle::add_balance(name owner, asset value,
-                             name ram_payer) {
+void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
   accounts dapp_acnts(_self, owner.value);
   auto dapp = dapp_acnts.find(value.symbol.code().raw());
   if (dapp == dapp_acnts.end()) {

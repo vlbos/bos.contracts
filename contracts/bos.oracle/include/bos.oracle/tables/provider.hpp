@@ -3,8 +3,20 @@
 #include "bos.oracle/bos.types.hpp"
 
 
-// using namespace eosio;
+using namespace eosio;
 // using std::string;
+enum data_service_fee_type : uint8_t { fee_count = 0, fee_month = 1 };
+
+enum data_service_data_type : uint8_t {
+  data_deterministic = 0,
+  data_non_deterministic = 1
+};
+
+enum data_service_injection_method : uint8_t {
+  chain_direct = 0,
+  chain_indirect = 1,
+  outside_chain = 2
+};
 
  struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
             uint64_t          service_id;
