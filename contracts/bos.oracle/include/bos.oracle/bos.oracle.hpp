@@ -189,6 +189,31 @@ public:
   ///
   ///
   /// bos.riskctrl end
+
+  /// bos.arbitration begin
+  ///
+  ///
+    [[eosio::action]]
+    void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
+
+    [[eosio::action]]
+    void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
+
+    [[eosio::action]]
+    void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+
+    [[eosio::action]]
+    void resparbitrat( name arbitrator, uint64_t arbitration_id, signature sig );
+
+    [[eosio::action]]
+    void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
+
+    [[eosio::action]]
+    void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+  /// 
+  ///
+  /// bos.arbitration end
+
 private:
   symbol core_symbol() const { return _core_symbol; };
   void transfer(name from, name to, asset quantity, string memo);

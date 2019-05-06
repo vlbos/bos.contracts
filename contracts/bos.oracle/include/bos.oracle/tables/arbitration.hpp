@@ -12,8 +12,10 @@
 #include <string>
 
 // namespace eosio {
-
+using namespace eosio;
 using eosio::asset;
+using eosio::name;
+using eosio::time_point_sec;
 using eosio::public_key;
 using std::string;
 
@@ -108,6 +110,9 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t arbitration_method;
 
    uint64_t primary_key() const { return process_id; }
+   void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
+   void add_responder ( name responder ) { responders.push_back( responder ); }
+   void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_result
@@ -154,7 +159,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_delay
 
    uint64_t primary_key() const { return delay_id; }
 };
-
 
 
 typedef eosio::multi_index<"complainants"_n, complainant,
