@@ -34,3 +34,6 @@
 build/*
 .DS_Store
 .vscode
+*.abi
+*.wasm
+*.wast
