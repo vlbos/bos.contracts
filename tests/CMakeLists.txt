@@ -1,8 +1,8 @@
 cmake_minimum_required( VERSION 3.5 )
 
 
-set(EOSIO_VERSION_MIN "2.0")
-set(EOSIO_VERSION_SOFT_MAX "2.0")
+set(EOSIO_VERSION_MIN "3.0")
+set(EOSIO_VERSION_SOFT_MAX "3.0")
 
 #set(EOSIO_VERSION_HARD_MAX "")
 
