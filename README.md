@@ -1,7 +1,7 @@
 # bos.contracts
 
 
-## BOSCore Version : v2.0.3
+## BOSCore Version : v3.0.0
 ### EOSIO Contracts Version: v1.6.0
 
 The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
@@ -17,8 +17,8 @@ The following unprivileged contract(s) are also part of the system.
 
 Dependencies:
 
-* [bos v2.0.x](https://github.com/boscore/bos/releases/tag/v2.0.3)
-* [bos.cdt v2.0.x](https://github.com/boscore/bos.cdt/releases/tag/v2.0.2)
+* [bos v3.0.x](https://github.com/boscore/bos/releases)
+* [bos.cdt v3.0.x](https://github.com/boscore/bos.cdt/releases)
 
 The ibc contracts had moved to a independent repository [ibc_contracts](https://github.com/boscore/ibc_contracts).
 
