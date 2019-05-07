@@ -131,6 +131,15 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
+   struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
+//      std::string  active_proposal = "none";
+      uint32_t     target_block_num;
+//      uint16_t     status;
+
+      EOSLIB_SERIALIZE( upgrade_state, (target_block_num) )
+   };
+
+
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
       double                total_votes = 0;
@@ -223,6 +232,9 @@ namespace eosiosystem {
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
    typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;      // *bos*
 
+   typedef eosio::singleton< "upgrade"_n, upgrade_state > upgrade_singleton;
+
+   //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_pool {
@@ -329,6 +341,8 @@ namespace eosiosystem {
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
+         upgrade_singleton       _upgrade;
+         upgrade_state           _ustate;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -605,6 +619,15 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
+
+         struct upgrade_proposal {
+//             std::string      proposal_name;
+             uint32_t    target_block_num;
+         };
+
+         //functions defined in upgrade.cpp
+         [[eosio::action]]
+         void setupgrade( const upgrade_proposal& up);
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
