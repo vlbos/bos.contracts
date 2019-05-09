@@ -193,7 +193,7 @@ public:
   /// bos.arbitration begin
   ///
   ///
-    // [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
+    [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
 
     // [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
 
