@@ -10,6 +10,11 @@
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/time.hpp>
 #include <string>
+#include "bos.oracle/bos.types.hpp"
+#include "bos.oracle/bos.constants.hpp"
+#include "bos.oracle/bos.functions.hpp"
+
+using namespace eosio;
 
 // namespace eosio {
 
@@ -24,10 +29,15 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_subscripti
    name contract_account;
    name action_name;
    name account;
+   asset balance;
    asset payment;
    asset consumption;
-
-   uint64_t primary_key() const { return contract_account.value; }
+   asset month_consumption;
+   uint8_t payment_method;
+   time_point_sec last_payment_time;
+   time_point_sec subscription_time;
+   uint64_t status; /// unsubscribe 0 subscribe 1
+   uint64_t primary_key() const { return subscription_id; }
    uint64_t by_account()const { return account.value; }
 };
 
@@ -45,7 +55,9 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_request
 {
    uint64_t request_id;
    uint64_t service_id;
-   name request;
+   name contract_account;
+   name action_name;
+   name requester;
    time_point_sec request_time;
    std::string request_content;
 
@@ -55,9 +67,9 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_request
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_record
 {
    uint64_t usage_id;
-   uint64_t update_number;
-   signature user_sig;
    uint64_t request_id;
+   asset fee;
+   uint8_t usage_type;/// request once  0,subscribe 1
    time_point_sec usage_time;
 
    uint64_t primary_key() const { return usage_id; }

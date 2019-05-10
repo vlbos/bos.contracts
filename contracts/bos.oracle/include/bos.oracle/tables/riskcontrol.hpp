@@ -11,6 +11,11 @@
 #include <eosiolib/time.hpp>
 #include <string>
 
+#include "bos.oracle/bos.types.hpp"
+#include "bos.oracle/bos.constants.hpp"
+#include "bos.oracle/bos.functions.hpp"
+
+using namespace eosio;
 // namespace eosio {
 
 using eosio::asset;

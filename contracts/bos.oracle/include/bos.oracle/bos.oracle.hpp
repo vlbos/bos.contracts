@@ -125,11 +125,12 @@ public:
                                      name account, std::string signature,
                                      asset stake_amount);
 
-  [[eosio::action]] void pushdata(
-      uint64_t service_id, uint64_t update_number, uint64_t data_json,
-      uint64_t provider_signature, uint64_t request_id);
-
-  void addfeetype(uint64_t service_id, asset service_price, uint8_t fee_type);
+  [[eosio::action]] void pushdata(name provider,uint64_t service_id,  name contract_account,
+                             name action_name, uint64_t data_json,
+               uint64_t request_id) ;
+    void multipush(name provider, uint64_t service_id,
+                          uint64_t data_json);
+  void addfeetype(uint64_t service_id,  std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
   using regiservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
@@ -156,14 +157,15 @@ public:
       uint64_t service_id, name contract_account, name action_name,
       std::string publickey, name account, asset amount, std::string memo);
 
-  [[eosio::action]] void requestdata(uint64_t update_number,
-                                     uint64_t service_id, name request,
-                                     std::string request_content);
+  [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,
+                             name action_name, name requester,
+                             std::string request_content);
 
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account,
-                                    name account, asset amount,
-                                    std::string memo);
-
+                                    name action_name, name account,
+                                    asset amount, std::string memo);
+  void confirmpay(uint64_t service_id, name contract_account,
+                            name action_name, asset amount);
   using subscribe_action =
       eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action =
@@ -190,6 +192,16 @@ public:
   ///
   /// bos.riskctrl end
 private:
+time_point_sec get_payment_time(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) ;
+uint8_t get_subscription_status(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) ;
+                                            uint8_t get_service_status(uint64_t service_id);
+  void fee_service(uint64_t service_id, name contract_account, name action_name,
+                   uint8_t fee_type);
+  asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
   symbol core_symbol() const { return _core_symbol; };
   void transfer(name from, name to, asset quantity, string memo);
   void add_freeze_delay(uint64_t service_id, name account,

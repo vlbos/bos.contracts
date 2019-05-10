@@ -3,20 +3,24 @@
  *  @copyright defined in eos/LICENSE
  */
 
+#include "bos.oracle/bos.oracle.hpp"
 #include <eosiolib/asset.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/time.hpp>
+#include <eosiolib/transaction.hpp>
 #include <string>
-#include "bos.oracle/bos.oracle.hpp"
+using namespace eosio;
 // namespace eosio {
 
 using eosio::asset;
 using eosio::public_key;
 using std::string;
 
-void bos_oracle::subscribe(uint64_t service_id, name contract_account, name action_name,std::string publickey, name account, asset amount,std::string memo) {
+void bos_oracle::subscribe(uint64_t service_id, name contract_account,
+                           name action_name, std::string publickey,
+                           name account, asset amount, std::string memo) {
 
   // //   token::transfer_action transfer_act{ token_account, { account,
   // active_permission } };
@@ -28,6 +32,12 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acti
   //       );
   require_auth(account);
   require_auth(contract_account);
+
+  asset price_by_month =
+      get_price_by_fee_type(service_id, data_service_fee_type::fee_month);
+  check(price_by_month.amount > 0 && amount >= price_by_month,
+        "amount must greater than price by month");
+
   transfer(account, consumer_account, amount, memo);
 
   // add consumer
@@ -37,7 +47,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acti
     consumertable.emplace(_self, [&](auto &c) {
       c.account = account;
       // c.pubkey = publickey;
-      c.status = 1;
+      c.status = data_consumer_status::consumer_normal;
       c.create_time = time_point_sec(now());
     });
   }
@@ -45,21 +55,71 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acti
   // add consumer service subscription relation
   data_service_subscriptions substable(_self, _self.value);
 
-  auto subs_itr = substable.find(contract_account.value);
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
   check(subs_itr == substable.end(), "contract_account exist");
 
   substable.emplace(_self, [&](auto &subs) {
+    subs.subscription_id = id;
     subs.service_id = service_id;
     subs.contract_account = contract_account;
     subs.action_name = action_name;
     subs.payment = amount;
-    subs.consumption = asset(0,core_symbol());
+    subs.consumption = asset(0, core_symbol());
+    subs.subscription_time = time_point_sec(now());
   });
 }
 
-void bos_oracle::payservice(uint64_t service_id, name contract_account, name account,
-                asset amount, std::string memo) {
+void bos_oracle::payservice(uint64_t service_id, name contract_account,
+                            name action_name, name account, asset amount,
+                            std::string memo) {
 
+  require_auth(account);
+  require_auth(contract_account);
+  check(amount.amount > 0, "amount must be greater than zero");
+  transfer(account, consumer_account, amount, memo);
+
+  data_service_subscriptions substable(_self, _self.value);
+
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
+  check(subs_itr != substable.end(), "contract_account does not exist");
+
+  substable.modify(subs_itr, _self,
+                   [&](auto &subs) { subs.payment += amount; });
+
+  transaction t;
+  t.actions.emplace_back(
+      permission_level{_self, active_permission}, _self, "confirmpay"_n,
+      std::make_tuple(service_id, contract_account, action_name, amount));
+  t.delay_sec = 120;//seconds
+  uint128_t deferred_id =
+      (uint128_t(contract_account.value) << 64) | action_name.value;
+  cancel_deferred(deferred_id);
+  t.send(deferred_id, _self);
+}
+
+void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
+                            name action_name, asset amount) {
+  check(amount.amount > 0, "amount must be greater than zero");
+  data_service_subscriptions substable(_self, _self.value);
+
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
+  check(subs_itr != substable.end(), "contract_account does not exist");
+  check(subs_itr->payment > amount, "payment must be greater than amount");
+  substable.modify(subs_itr, _self, [&](auto &subs) {
+    subs.payment -= amount;
+    subs.balance += amount;
+  });
+}
+
+void bos_oracle::fee_service(uint64_t service_id, name contract_account,
+                             name action_name, uint8_t fee_type) {
+  static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
   // //   token::transfer_action transfer_act{ token_account, { account,
   // active_permission } };
   // //          transfer_act.send( account, consumer_account, amount, memo );
@@ -68,29 +128,83 @@ void bos_oracle::payservice(uint64_t service_id, name contract_account, name acc
   //          token_account, { {account, active_permission} },
   //          { account, consumer_account, amount, memo }
   //       );
-  require_auth(account);
+  // require_auth(account);
   require_auth(contract_account);
-  transfer(account, consumer_account, amount, memo);
+  // transfer(account, consumer_account, amount, memo);
+  asset price_by_times = get_price_by_fee_type(service_id, fee_type);
 
   data_service_subscriptions substable(_self, _self.value);
-
-  auto subs_itr = substable.find(contract_account.value);
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
-  substable.modify(subs_itr, _self,
-                   [&](auto &subs) { subs.payment += amount; });
+  check(price_by_times.amount > 0 and subs_itr->balance >= price_by_times,
+        "amount must greater than price by times");
+
+  substable.modify(subs_itr, _self, [&](auto &subs) {
+    subs.balance -= price_by_times;
+    if (data_service_fee_type::fee_times == fee_type) {
+      subs.consumption += price_by_times;
+    } else {
+
+      subs.month_consumption += price_by_times;
+      subs.last_payment_time += month_seconds;
+    }
+  });
 }
 
-void bos_oracle::requestdata(uint64_t update_number, uint64_t service_id, name request,
-                 std::string request_content) {
-  require_auth(request);
+uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) {
+
+  data_service_subscriptions substable(_self, _self.value);
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
+  check(subs_itr != substable.end(), "contract_account does not exist");
+
+  return subs_itr->status;
+}
+
+time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) {
+
+  data_service_subscriptions substable(_self, _self.value);
+  auto id =
+      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(id);
+  check(subs_itr != substable.end(), "contract_account does not exist");
+
+  return subs_itr->last_payment_time;
+}
+
+void bos_oracle::requestdata(uint64_t service_id, name contract_account,
+                             name action_name, name requester,
+                             std::string request_content) {
+  require_auth(requester);
+
+  /// check service available subsrciption status subscribe
+  check(data_service_status::service_normal == get_service_status(service_id) &&
+            data_service_subscription_status::service_subscribe ==
+                get_subscription_status(service_id, contract_account,
+                                        action_name),
+        "service and subscription must be normal");
+
+  fee_service(service_id, contract_account, action_name,
+              data_service_fee_type::fee_times);
+
   data_service_requests reqtable(_self, _self.value);
 
   reqtable.emplace(_self, [&](auto &r) {
     r.request_id = reqtable.available_primary_key();
     r.service_id = service_id;
-    r.request = request;
+    r.contract_account = contract_account;
+    r.action_name = action_name;
+    r.requester = requester;
     r.request_time = time_point_sec(now());
+    r.request_content = request_content;
   });
 }
 
