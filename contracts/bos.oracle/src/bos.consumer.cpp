@@ -47,7 +47,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     consumertable.emplace(_self, [&](auto &c) {
       c.account = account;
       // c.pubkey = publickey;
-      c.status = data_consumer_status::consumer_normal;
+      c.status = data_consumer_status::consumer_on;
       c.create_time = time_point_sec(now());
     });
   }
@@ -140,7 +140,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
   check(subs_itr != substable.end(), "contract_account does not exist");
 
   check(price_by_times.amount > 0 and subs_itr->balance >= price_by_times,
-        "amount must greater than price by times");
+        "balance must greater than price by times");
 
   substable.modify(subs_itr, _self, [&](auto &subs) {
     subs.balance -= price_by_times;
@@ -180,17 +180,65 @@ time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
   return subs_itr->last_payment_time;
 }
 
+std::vector<std::tuple<name,name>> bos_oracle::get_subscription_list(uint64_t service_id) {
+
+  static constexpr uint64_t subscribe_time_deadline = 2*60*60;//2 hours
+  data_service_subscriptions substable(_self, service_id);
+ auto subscription_time_idx = substable.get_index<"bytime"_n>();
+std::vector<std::tuple<name,name>> receive_contracts;
+
+for(const auto& s :subscription_time_idx)
+{
+   if (s.status == data_service_subscription_status::service_subscribe ) {
+        receive_contracts.push_back(
+            std::make_tuple(s.contract_account, s.action_name));
+      }
+}
+
+  return receive_contracts;
+}
+
+
+std::vector<std::tuple<name,name,uint64_t>> bos_oracle::get_request_list(uint64_t service_id,
+                                            uint64_t request_id) {
+
+  static constexpr int64_t request_time_deadline_us = 2 * 3600 * int64_t(1000000); // 2 hours
+  std::vector<std::tuple<name, name, uint64_t>> receive_contracts;
+  data_service_requests reqtable(_self, service_id);
+  auto request_time_idx = reqtable.get_index<"bytime"_n>();
+  auto lower = request_time_idx.begin();
+  auto upper = request_time_idx.end();
+  if (0 != request_id) {
+    auto req_itr = reqtable.find(request_id);
+    check(req_itr != reqtable.end(), "request id could not be found");
+
+    lower = request_time_idx.lower_bound(static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
+  }
+
+  while (lower != upper) {
+    auto req = lower++;
+    if (req->status == data_request_status::reqeust_valid &&
+        time_point_sec(now()) - req->request_time < microseconds(request_time_deadline_us)) {
+      receive_contracts.push_back(std::make_tuple(
+          req->contract_account, req->action_name, req->request_id));
+    }
+  }
+
+  return receive_contracts;
+}
+
+
 void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              name action_name, name requester,
                              std::string request_content) {
   require_auth(requester);
 
   /// check service available subsrciption status subscribe
-  check(data_service_status::service_normal == get_service_status(service_id) &&
+  check(data_service_status::service_in == get_service_status(service_id) &&
             data_service_subscription_status::service_subscribe ==
                 get_subscription_status(service_id, contract_account,
                                         action_name),
-        "service and subscription must be normal");
+        "service and subscription must be available");
 
   fee_service(service_id, contract_account, action_name,
               data_service_fee_type::fee_times);

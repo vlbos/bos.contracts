@@ -27,6 +27,32 @@ checksum256 get_uuu_hash(const uint64_t& service_id, const name& contract_name, 
   return result;
 }
 
+checksum256 get_nnn_hash(const name& account, const name& contract_name, const name& action_name)
+{
+  checksum256 result;
+  size_t len =  sizeof(uint64_t);
+  size_t total_len = len*3;
+  char *buffer = (char *)malloc( total_len);
+  memcpy(buffer, &account, len);
+  memcpy(buffer + len, &contract_name, len);
+  memcpy(buffer + len*2, &action_name, len);
+  result = sha256(buffer, total_len);
+  return result;
+}
+
+
+checksum256 get_nn_hash( const name& contract_name, const name& action_name)
+{
+  checksum256 result;
+  size_t len =  sizeof(uint64_t);
+  size_t total_len = len*2;
+  char *buffer = (char *)malloc( total_len);
+  memcpy(buffer , &contract_name, len);
+  memcpy(buffer + len, &action_name, len);
+  result = sha256(buffer, total_len);
+  return result;
+}
+
 checksum256 get_sn_hash(const string& task, const name& contract)
 {
   checksum256 result;

@@ -172,15 +172,15 @@ void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
   }
 }
 
-void bos_oracle::pushdata(name provider, uint64_t service_id,
+void bos_oracle::pushdata(uint64_t service_id,name provider, 
                           name contract_account, name action_name,
                           uint64_t data_json, uint64_t request_id) {
   require_auth(provider);
-  check(data_service_status::service_normal == get_service_status(service_id) &&
+  check(data_service_status::service_in == get_service_status(service_id) &&
             data_service_subscription_status::service_subscribe ==
                 get_subscription_status(service_id, contract_account,
                                         action_name),
-        "service and subscription must be normal");
+        "service and subscription must be available");
 
   if (0 == request_id) {
     time_point_sec pay_time =
@@ -200,39 +200,167 @@ void bos_oracle::pushdata(name provider, uint64_t service_id,
     l.data_json = data_json;
     l.status = 0;
     // l.provider_sig = provider_signature;
+    l.contract_account = contract_account;
+    l.action_name = action_name;
     l.request_id = request_id;
     l.update_time = time_point_sec(now());
   });
+
+  addtimes(service_id,provider,contract_account,  action_name);
 }
 
 
-void bos_oracle::multipush(name provider, uint64_t service_id,
-                          uint64_t data_json) {
+void bos_oracle::multipush(uint64_t service_id,name provider, 
+                          uint64_t data_json,bool is_request) {
   require_auth(provider);
-  check(data_service_status::service_normal == get_service_status(service_id),
-        "service and subscription must be normal");
+  check(data_service_status::service_in == get_service_status(service_id),
+        "service and subscription must be available");
 
-  // if (0 == request_id) {
-  //   time_point_sec pay_time =
-  //       get_payment_time(service_id, contract_account, action_name);
+  if (is_request) {
+    // request
+    uint64_t request_id = get_request_by_last_push( service_id,provider);
+    std::vector<std::tuple<name, name,uint64_t>> receive_contracts =
+        get_request_list(service_id, request_id);
 
-  //   if (pay_time < time_point_sec(now())) {
-  //     fee_service(service_id, contract_account, action_name,
-  //                 data_service_fee_type::fee_month);
-  //   }
-  // }
+    for (const auto &rc : receive_contracts) {
+      pushdata( service_id,provider, std::get<0>(rc), std::get<1>(rc),
+               data_json, std::get<2>(rc));
+    }
+  } 
+  else {
 
-  data_service_provision_logs logtable(_self, _self.value);
-  logtable.emplace(_self, [&](auto &l) {
-    // l.log_id = logtable.available_primary_key();
-    // l.service_id = service_id;
-    // // l.update_number = update_number;
-    // l.data_json = data_json;
-    // l.status = 0;
-    // // l.provider_sig = provider_signature;
-    // l.request_id = request_id;
-    // l.update_time = time_point_sec(now());
-  });
+    // subscription
+    std::vector<std::tuple<name, name>> subscription_receive_contracts =
+        get_subscription_list(service_id);
+
+    for (const auto &src : subscription_receive_contracts) {
+      pushdata( service_id, provider,std::get<0>(src), std::get<1>(src),
+               data_json, 0);
+    }
+  }
+}
+
+
+
+uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,name provider ) {
+
+  data_service_provision_logs logtable(_self, service_id);
+  auto update_time_idx = logtable.get_index<"bytime"_n>();
+
+  uint64_t request_id = 0;
+  for (const auto &u : update_time_idx) {
+    if (provider==u.account && 0 != u.request_id) {
+      request_id = u.request_id;
+      break;
+    }
+  }
+
+  return request_id;
+}
+
+
+// std::map<name,uint64_t> bos_oracle::get_push_times_by_action(uint64_t service_id,
+//                           name contract_account, name action_name,bool is_request) {
+
+//   data_service_provision_logs logtable(_self, service_id);
+
+//  std::map<name,uint64_t> provider2pushtimes;
+//   auto action_idx = data_service_provision_logs.get_index<"byaction"_n>();
+//  auto id = get_hash_key(get_nn_hash(contract_account,action_name));
+// auto lower =action_idx.lower_bound(id);
+// auto upper =action_idx.upper_bound(id);
+//   for (;lower != upper;++lower) {
+//      name account = lower->account;
+//      bool flag = is_request?(0==lower->request_id):(0!=lower->request_id);
+     
+//      if(flag){
+//           continue;
+//      }
+
+//    std::map<name,uint64_t>::iterator it = provider2pushtimes.find(account);
+//    if(it == provider2pushtimes.end()){
+//      provider2pushtimes[account] = 1;
+//    }
+//    else{
+//      provider2pushtimes[account]++;
+//    }
+//   }
+
+//   return provider2pushtimes;
+// }
+
+
+void bos_oracle::addtimes(uint64_t service_id, name account,
+                          name contract_account, name action_name) {
+ 
+  push_records pushtable(_self, service_id);
+   provider_push_records providertable(_self, service_id);
+    action_push_records actiontable(_self, service_id);
+ provider_action_push_records provideractiontable(_self, service_id);
+
+
+    auto push_itr = pushtable.find(service_id);
+    if (push_itr == pushtable.end()) {
+      providertable.emplace(_self, [&](auto &p) {
+        p.service_id = service_id;
+        p.times =1;
+      });
+    } 
+    else {
+      pushtable.modify(push_itr, same_payer, [&](auto &p) {
+          p.times +=1;
+      });
+    }
+
+    auto provider_itr = providertable.find(account.value);
+    if (provider_itr == providertable.end()) {
+      providertable.emplace(_self, [&](auto &p) {
+        p.service_id = service_id;
+        p.account = account;
+        p.times =1;
+      });
+    } 
+    else {
+      providertable.modify(provider_itr, same_payer, [&](auto &p) {
+          p.times +=1;
+      });
+    }
+
+   uint64_t a_id = get_hash_key(get_nn_hash(contract_account, action_name));
+    auto action_itr = actiontable.find(a_id);
+    if (action_itr == actiontable.end()) {
+      actiontable.emplace(_self, [&](auto &a) {
+        a.service_id = service_id;
+        a.contract_account = contract_account;
+        a.action_name = action_name;
+        a.times =1;
+      });
+    } 
+    else {
+      actiontable.modify(action_itr, same_payer, [&](auto &a) {
+          a.times +=1;
+      });
+    }
+
+    
+    uint64_t pa_id = get_hash_key(get_nnn_hash(account,contract_account, action_name));
+    auto provider_action_itr = provideractiontable.find(pa_id);
+    if (provider_action_itr == provideractiontable.end()) {
+      provideractiontable.emplace(_self, [&](auto &pa) {
+        pa.service_id = service_id;
+        pa.account = account;
+        pa.contract_account = contract_account;
+        pa.action_name = action_name;
+        pa.times =1;
+      });
+    } 
+    else {
+      provideractiontable.modify(provider_action_itr, same_payer, [&](auto &pa) {
+          pa.times +=1;
+      });
+    }
+  
+
 }
 
 

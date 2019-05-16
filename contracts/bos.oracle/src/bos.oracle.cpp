@@ -241,7 +241,7 @@ using namespace eosio;
 
 
 EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-(regservice)(unregservice)(execaction)(stakeamount)(pushdata)
-(subscribe)(requestdata)
+(regservice)(unregservice)(execaction)(stakeamount)(pushdata)(multipush)(addfeetype)
+(subscribe)(requestdata)(payservice)(confirmpay)
 (deposit)(withdraw)
 )

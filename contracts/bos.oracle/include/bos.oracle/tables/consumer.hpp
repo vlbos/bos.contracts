@@ -39,6 +39,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_subscripti
    uint64_t status; /// unsubscribe 0 subscribe 1
    uint64_t primary_key() const { return subscription_id; }
    uint64_t by_account()const { return account.value; }
+   uint64_t by_time()const { return static_cast<uint64_t>(-subscription_time.sec_since_epoch()); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_consumer
@@ -57,11 +58,14 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_request
    uint64_t service_id;
    name contract_account;
    name action_name;
+   uint8_t status;   //in 0  cancel 1
    name requester;
    time_point_sec request_time;
    std::string request_content;
 
    uint64_t primary_key() const { return request_id; }
+   uint64_t by_time() const { return static_cast<uint64_t>(request_time.sec_since_epoch()); }
+   
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_record
@@ -78,9 +82,10 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_reco
 
 
 typedef eosio::multi_index<"dataconsumer"_n, data_consumer> data_consumers;
-typedef eosio::multi_index<"subscription"_n, data_service_subscription,indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>> > data_service_subscriptions;
+typedef eosio::multi_index<"subscription"_n, data_service_subscription,indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>>,
+indexed_by<"bytime"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_time>> > data_service_subscriptions;
 
-typedef eosio::multi_index<"request"_n, data_service_request> data_service_requests;
+typedef eosio::multi_index<"request"_n, data_service_request,indexed_by<"bytime"_n, const_mem_fun<data_service_request, uint64_t, &data_service_request::by_time>>> data_service_requests;
 
 typedef eosio::multi_index<"usagerecords"_n, data_service_usage_record> data_service_usage_records;
 
