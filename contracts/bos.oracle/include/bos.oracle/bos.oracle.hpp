@@ -20,6 +20,7 @@
 #include "bos.oracle/tables/oraclize.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
+#include "bos.oracle/tables/singletons.hpp"
 #include <eosiolib/chain.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/fixedpoint.hpp>
@@ -37,8 +38,11 @@ public:
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)
       : contract(receiver, code, ds), requests(_self, _self.value),
-        token("boracletoken"_n), oraclizes_table(_self, _self.value) {}
-
+        token("boracletoken"_n), oraclizes_table(_self, _self.value),
+        _oracle_fee(_self, _self.value) {
+    _fee_state = _oracle_fee.exists() ? _oracle_fee.get() : bos_oracle_fee{};
+  }
+  ~bos_oracle() { _oracle_fee.set(_fee_state, _self); }
   // Check if calling account is a qualified oracle
   bool check_oracle(const name owner);
   // Ensure account cannot push data more often than every 60 seconds
@@ -102,7 +106,7 @@ public:
   ///
   ///
   /// bos.oraclize end
-  /// bos.provideer begin
+  /// bos.provider begin
   ///
   ///
   //
@@ -125,11 +129,12 @@ public:
                                      name account, std::string signature,
                                      asset stake_amount);
 
-  [[eosio::action]] void pushdata(
-      uint64_t service_id, uint64_t update_number, uint64_t data_json,
-      uint64_t provider_signature, uint64_t request_id);
-
-  void addfeetype(uint64_t service_id, asset service_price, uint8_t fee_type);
+  [[eosio::action]] void pushdata(uint64_t service_id, name provider,name contract_account,
+                             name action_name, uint64_t data_json,
+               uint64_t request_id) ;
+   [[eosio::action]]  void multipush( uint64_t service_id,name provider,
+                          uint64_t data_json,bool is_request);
+  [[eosio::action]] void addfeetype(uint64_t service_id,  std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
   using regiservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
@@ -142,12 +147,15 @@ public:
   using pushdata_action =
       eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
 
+ using multipush_action =
+      eosio::action_wrapper<"multipush"_n, &bos_oracle::multipush>;
+
   using addfeetype_action =
       eosio::action_wrapper<"addfeetype"_n, &bos_oracle::addfeetype>;
 
   ///
   ///
-  /// bos.provideer end
+  /// bos.provider end
   /// bos.consumer begin
   ///
   ///
@@ -156,20 +164,24 @@ public:
       uint64_t service_id, name contract_account, name action_name,
       std::string publickey, name account, asset amount, std::string memo);
 
-  [[eosio::action]] void requestdata(uint64_t update_number,
-                                     uint64_t service_id, name request,
-                                     std::string request_content);
+  [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,
+                             name action_name, name requester,
+                             std::string request_content);
 
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account,
-                                    name account, asset amount,
-                                    std::string memo);
-
+                                    name action_name, name account,
+                                    asset amount, std::string memo);
+  [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
+                            name action_name, asset amount);
   using subscribe_action =
       eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action =
       eosio::action_wrapper<"requestdata"_n, &bos_oracle::requestdata>;
   using payservice_action =
       eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
+
+        using confirmpay_action =
+      eosio::action_wrapper<"confirmpay"_n, &bos_oracle::confirmpay>;
   ///
   ///
   /// bos.consumer end
@@ -193,7 +205,7 @@ public:
   /// bos.arbitration begin
   ///
   ///
-    [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
+    // [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
 
     // [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
 
@@ -209,8 +221,34 @@ public:
   /// bos.arbitration end
 
 private:
+
+oracle_fee_singleton _oracle_fee;
+bos_oracle_fee     _fee_state;
+
+//provider
+void addtimes(uint64_t service_id, name account,
+                          name contract_account, name action_name);
+time_point_sec get_payment_time(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) ;
+uint8_t get_subscription_status(uint64_t service_id,
+                                            name contract_account,
+                                            name action_name) ;
+                                            uint8_t get_service_status(uint64_t service_id);
+  void fee_service(uint64_t service_id, name contract_account, name action_name,
+                   uint8_t fee_type);
+  asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
+  uint64_t get_request_by_last_push(uint64_t service_id,name provider);
+
   symbol core_symbol() const { return _core_symbol; };
   void transfer(name from, name to, asset quantity, string memo);
+
+
+/// consumer
+std::vector<std::tuple<name,name>> get_subscription_list(uint64_t service_id);
+std::vector<std::tuple<name,name,uint64_t>> get_request_list(uint64_t service_id,
+                                            uint64_t request_id) ;
+  ///risk control
   void add_freeze_delay(uint64_t service_id, name account,
                         time_point_sec start_time, time_point_sec duration,
                         asset amount, uint64_t status, uint64_t type);

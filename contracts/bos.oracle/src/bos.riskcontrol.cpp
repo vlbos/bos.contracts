@@ -49,7 +49,7 @@ void bos_oracle::deposit(name from, name to, asset quantity, string memo,
     // notify dapp
   }
 }
-enum transfer_type : uint8_t { freeze = 0, delay = 1 };
+
 /// from dapp to dapp user
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
@@ -76,7 +76,7 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
     transfer(from, to, quantity, memo);
     add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
                      time_point_sec(time_length), quantity, 0,
-                     transfer_type::freeze);
+                     transfer_type::transfer_freeze);
   } else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
@@ -91,7 +91,7 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
     add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
                      time_point_sec(time_length), quantity, 0,
-                     transfer_type::delay);
+                     transfer_type::transfer_delay);
 
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,

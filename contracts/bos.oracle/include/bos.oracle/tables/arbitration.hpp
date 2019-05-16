@@ -11,6 +11,9 @@
 #include <eosiolib/time.hpp>
 #include <string>
 
+using namespace eosio;
+using std::string;
+
 // namespace eosio {
 using namespace eosio;
 using eosio::asset;
