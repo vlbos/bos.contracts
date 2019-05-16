@@ -11,9 +11,6 @@
 #include <eosiolib/time.hpp>
 #include <string>
 
-using namespace eosio;
-using std::string;
-
 // namespace eosio {
 using namespace eosio;
 using eosio::asset;
@@ -109,7 +106,8 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    std::vector<name> arbitrators;
    asset stake_amount;
    std::string arbitrator_arbitration_results;
-   uint64_t arbitration_results;
+   std::string evidence_info;
+   uint64_t arbitration_result;
    uint64_t arbitration_method;
 
    uint64_t primary_key() const { return process_id; }
@@ -165,8 +163,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_delay
 
 
 typedef eosio::multi_index<"complainants"_n, complainant,
-                           indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>>
-    complainants;
+   indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
 typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp> arbicaseapps;
 typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_processs;
