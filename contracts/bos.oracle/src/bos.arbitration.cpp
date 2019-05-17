@@ -22,6 +22,7 @@ void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, ass
     auto abr_table = arbitrators( get_self(), get_self().value );
     auto iter = abr_table.find( account.value );
     eosio_assert( iter == abr_table.end(), "Arbitrator already registered" );
+    transfer(account, arbitrat_account, stake_amount, "regarbitrat deposit.");
 
     abr_table.emplace( get_self(), [&]( auto& p ) {
         p.account = account;
@@ -35,6 +36,13 @@ void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, ass
 void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method ) {
     require_auth( applicant );
     eosio_assert( arbi_method == arbi_method_type::crowd_arbitration || arbi_method_type::multiple_rounds, "`arbi_method` can only be 1 or 2." );
+
+    data_services svctable(_self, _self.value);
+    auto svc_iter = svctable.find(service_id);
+    eosio_assert(svc_iter != svctable.end(), "service does not exist");
+    eosio_assert(svc_iter->status == data_service_status::service_in, "service status shoule be service_in");
+    transfer(applicant, arbitrat_account, amount, "complain deposit.");
+
     auto complainant_tb = complainants( get_self(), get_self().value );
     auto complainant_by_svc = complainant_tb.template get_index<"svc"_n>();
     auto iter_compt = complainant_by_svc.find( service_id );
@@ -60,13 +68,28 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
 
     // Arbitration case application
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbi_id = arbicaseapp_tb.available_primary_key();
     arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
-        p.arbitration_id = arbicaseapp_tb.available_primary_key();
+        p.arbitration_id = arbi_id;
         p.appeal_id = appeal_id;
         p.service_id = service_id;
+        p.evidence_info = reason;
         // p.update_number = 
         p.arbi_step = 1;
     } );
+
+    // Data provider
+    auto svcprovider_tb = data_service_provisions( get_self(), get_self().value );
+    auto svcprovider_tb_by_svc = svcprovider_tb.template get_index<"bysvcid"_n>();
+    auto svcprovider_iter = svcprovider_tb_by_svc.find( service_id );
+    eosio_assert(svcprovider_iter->stop_service == false, "service stopped.");
+    
+    auto notify_amount = eosio::asset(1, _bos_symbol);
+    // Transfer to provider
+    auto memo = "arbitration_id: " + std::to_string(arbi_id) 
+        + ", service_id: " + std::to_string(service_id) 
+        + ", state_amount: " + amount.to_string();
+    transfer(get_self(), svcprovider_iter->account, notify_amount, memo);
 }
 
 void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string evidence ) {

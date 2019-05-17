@@ -65,6 +65,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
 
   uint64_t primary_key() const { return provision_id; }
   uint64_t by_account() const { return account.value; }
+  uint64_t by_svcid() const { return service_id; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_apply {
@@ -139,7 +140,10 @@ typedef eosio::multi_index<
     "svcprovision"_n, data_service_provision,
     indexed_by<"byaccount"_n,
                const_mem_fun<data_service_provision, uint64_t,
-                             &data_service_provision::by_account>>>
+                             &data_service_provision::by_account>>, 
+    indexed_by<"bysvcid"_n,
+               const_mem_fun<data_service_provision, uint64_t,
+                             &data_service_provision::by_svcid>>>
     data_service_provisions;
 
 typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply>

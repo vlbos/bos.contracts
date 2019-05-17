@@ -37,3 +37,4 @@ build/*
 *.abi
 *.wasm
 *.wast
+*.tmp
