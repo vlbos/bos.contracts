@@ -21,6 +21,8 @@
 #include "bos.provider.cpp"
 #include "bos.consumer.cpp"
 #include "bos.riskcontrol.cpp"
+#include "bos.fee.cpp"
+#include "bos.stat.cpp"
 
 using namespace eosio;
 
