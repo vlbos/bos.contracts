@@ -7,6 +7,25 @@
 using namespace eosio;
 using std::string;
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param account 
+ * @param stake_amount 
+ * @param service_price 
+ * @param fee_type 
+ * @param data_format 
+ * @param data_type 
+ * @param criteria 
+ * @param acceptance 
+ * @param declaration 
+ * @param injection_method 
+ * @param duration 
+ * @param provider_limit 
+ * @param update_cycle 
+ * @param update_start_time 
+ */
 void bos_oracle::regservice(uint64_t service_id, name account,
                             asset stake_amount, asset service_price,
                             uint64_t fee_type, std::string data_format,
@@ -98,6 +117,14 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   //  }
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param signature 
+ * @param account 
+ * @param status 
+ */
 void bos_oracle::unregservice(uint64_t service_id, std::string signature,
                               name account, uint64_t status) {
 
@@ -141,6 +168,12 @@ void bos_oracle::unregservice(uint64_t service_id, std::string signature,
   }
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param action_type 
+ */
 void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
   data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
@@ -154,6 +187,15 @@ void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
   });
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param provider_id 
+ * @param account 
+ * @param signature 
+ * @param stake_amount 
+ */
 void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
                              name account, std::string signature,
                              asset stake_amount) {
@@ -193,6 +235,12 @@ void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
   }
 }
 
+/**
+ * @brief 
+ * 
+ * @param account 
+ * @param receive_account 
+ */
 void bos_oracle::claim(name account, name receive_account) {
 
   provider_services proviservicestable(_self, account.value);
@@ -245,6 +293,16 @@ void bos_oracle::claim(name account, name receive_account) {
   transfer(consumer_account, account, new_income, "claim");
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param provider 
+ * @param contract_account 
+ * @param action_name 
+ * @param data_json 
+ * @param request_id 
+ */
 void bos_oracle::pushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
                           uint64_t data_json, uint64_t request_id) {
@@ -283,6 +341,14 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
             0 != request_id);
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param provider 
+ * @param data_json 
+ * @param is_request 
+ */
 void bos_oracle::multipush(uint64_t service_id, name provider,
                            uint64_t data_json, bool is_request) {
   require_auth(provider);
@@ -312,6 +378,13 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   }
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param fee_types 
+ * @param service_prices 
+ */
 void bos_oracle::addfeetype(uint64_t service_id, std::vector<uint8_t> fee_types,
                             std::vector<asset> service_prices) {
   check(fee_types.size() > 0 && fee_types.size() == service_prices.size(),

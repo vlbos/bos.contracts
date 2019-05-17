@@ -8,6 +8,14 @@
 #include <eosiolib/transaction.hpp>
 #include <string>
 
+/**
+ * @brief 
+ * 
+ * @param from 
+ * @param to 
+ * @param quantity 
+ * @param memo 
+ */
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   check(from != to, "cannot transfer to self");
   //  require_auth( from );
@@ -50,7 +58,19 @@ void bos_oracle::deposit(name from, name to, asset quantity, string memo,
   }
 }
 
+
 /// from dapp to dapp user
+
+
+
+/**
+ * @brief 
+ * 
+ * @param from 
+ * @param to 
+ * @param quantity 
+ * @param memo 
+ */
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
   sub_balance(from, quantity);
@@ -104,6 +124,17 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
   }
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param account 
+ * @param start_time 
+ * @param duration 
+ * @param amount 
+ * @param status 
+ * @param type 
+ */
 void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
                                   time_point_sec start_time,
                                   time_point_sec duration, asset amount,
@@ -122,6 +153,17 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
   });
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param account 
+ * @param start_time 
+ * @param duration 
+ * @param amount 
+ * @param status 
+ * @return uint64_t 
+ */
 uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
                                    time_point_sec start_time,
                                    time_point_sec duration, asset amount,
@@ -143,6 +185,12 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
   return risk_id;
 }
 
+/**
+ * @brief 
+ * 
+ * @param owner 
+ * @param value 
+ */
 void bos_oracle::sub_balance(name owner, asset value) {
   accounts dapp_acnts(_self, owner.value);
 

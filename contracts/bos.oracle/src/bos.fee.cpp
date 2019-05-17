@@ -7,7 +7,12 @@
 using namespace eosio;
 using std::string;
 
-
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @return uint8_t 
+ */
 uint8_t bos_oracle::get_service_status(uint64_t service_id) {
   data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
@@ -16,6 +21,13 @@ uint8_t bos_oracle::get_service_status(uint64_t service_id) {
   return service_itr->status;
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param provider 
+ * @return uint64_t 
+ */
 uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
                                               name provider) {
 
@@ -65,6 +77,15 @@ uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
 //   return provider2pushtimes;
 // }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param account 
+ * @param contract_account 
+ * @param action_name 
+ * @param is_request 
+ */
 void bos_oracle::add_times(uint64_t service_id, name account,
                            name contract_account, name action_name,
                            bool is_request) {
@@ -170,6 +191,13 @@ bos_oracle::get_times(uint64_t service_id, name account) {
 }
 
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param fee_type 
+ * @return asset 
+ */
 asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
   //  check(fee_types.size() > 0 && fee_types.size() ==
   //  service_prices.size(),"fee_types size have to equal service prices size");
@@ -188,11 +216,14 @@ asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
   return fee_itr->service_price;
 }
 
-
-
-
-
-
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param fee_type 
+ */
 void bos_oracle::fee_service(uint64_t service_id, name contract_account,
                              name action_name, uint8_t fee_type) {
   static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
@@ -229,10 +260,16 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
     }
   });
 
-
-  
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @return uint8_t 
+ */
 uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
                                             name contract_account,
                                             name action_name) {
@@ -246,6 +283,14 @@ uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
   return subs_itr->status;
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @return time_point_sec 
+ */
 time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
                                             name contract_account,
                                             name action_name) {
@@ -259,10 +304,15 @@ time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
   return subs_itr->last_payment_time;
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @return std::vector<std::tuple<name, name>> 
+ */
 std::vector<std::tuple<name, name>>
 bos_oracle::get_subscription_list(uint64_t service_id) {
 
-  static constexpr uint64_t subscribe_time_deadline = 2 * 60 * 60; // 2 hours
   data_service_subscriptions substable(_self, service_id);
   auto subscription_time_idx = substable.get_index<"bytime"_n>();
   std::vector<std::tuple<name, name>> receive_contracts;
@@ -277,11 +327,18 @@ bos_oracle::get_subscription_list(uint64_t service_id) {
   return receive_contracts;
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param request_id 
+ * @return std::vector<std::tuple<name, name, uint64_t>> 
+ */
 std::vector<std::tuple<name, name, uint64_t>>
 bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
 
-  static constexpr int64_t request_time_deadline_us =
-      2 * 3600 * int64_t(1000000); // 2 hours
+  static constexpr int64_t request_time_deadline =
+      2 ; // 2 hours
   std::vector<std::tuple<name, name, uint64_t>> receive_contracts;
   data_service_requests reqtable(_self, service_id);
   auto request_time_idx = reqtable.get_index<"bytime"_n>();
@@ -299,7 +356,7 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
     auto req = lower++;
     if (req->status == data_request_status::reqeust_valid &&
         time_point_sec(now()) - req->request_time <
-            microseconds(request_time_deadline_us)) {
+            eosio::hours(request_time_deadline)) {
       receive_contracts.push_back(std::make_tuple(
           req->contract_account, req->action_name, req->request_id));
     }
@@ -308,6 +365,12 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
   return receive_contracts;
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @return std::tuple<uint64_t, uint64_t> 
+ */
 std::tuple<uint64_t, uint64_t>
 bos_oracle::get_consumption(uint64_t service_id) {
 

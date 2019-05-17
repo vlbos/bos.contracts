@@ -18,6 +18,17 @@ using eosio::asset;
 using eosio::public_key;
 using std::string;
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param publickey 
+ * @param account 
+ * @param amount 
+ * @param memo 
+ */
 void bos_oracle::subscribe(uint64_t service_id, name contract_account,
                            name action_name, std::string publickey,
                            name account, asset amount, std::string memo) {
@@ -71,6 +82,16 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   });
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param account 
+ * @param amount 
+ * @param memo 
+ */
 void bos_oracle::payservice(uint64_t service_id, name contract_account,
                             name action_name, name account, asset amount,
                             std::string memo) {
@@ -101,6 +122,14 @@ void bos_oracle::payservice(uint64_t service_id, name contract_account,
   t.send(deferred_id, _self);
 }
 
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param amount 
+ */
 void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
                             name action_name, asset amount) {
   check(amount.amount > 0, "amount must be greater than zero");
@@ -117,7 +146,15 @@ void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
   });
 }
 
-
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param requester 
+ * @param request_content 
+ */
 void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              name action_name, name requester,
                              std::string request_content) {
