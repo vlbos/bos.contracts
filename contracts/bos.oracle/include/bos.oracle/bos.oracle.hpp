@@ -218,7 +218,7 @@ public:
 
     [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
-    [[eosio::action]] void resparbitrat( name arbitrator, uint64_t arbitration_id, signature sig );
+    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id, signature sig );
 
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 

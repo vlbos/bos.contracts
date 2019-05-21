@@ -116,8 +116,10 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
     } );
 }
 
-void bos_oracle::resparbitrat( name arbitrator, uint64_t arbitration_id, signature sig ) {
+void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id, signature sig ) {
     require_auth( arbitrator );
+    transfer(arbitrator, arbitrat_account, amount, "resparbitrat deposit.");
+
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
 
