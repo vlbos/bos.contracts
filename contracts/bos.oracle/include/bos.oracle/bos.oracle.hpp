@@ -28,7 +28,7 @@
 
 using namespace eosio;
 
-class[[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
+class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 public:
   static constexpr eosio::name provider_account{"provider.bos"_n};
   static constexpr eosio::name consumer_account{"consumer.bos"_n};
@@ -133,12 +133,16 @@ public:
                                      name account, std::string signature,
                                      asset stake_amount);
 
-  [[eosio::action]] void pushdata(uint64_t service_id, name provider,name contract_account,
-                             name action_name, uint64_t data_json,
-               uint64_t request_id) ;
-   [[eosio::action]]  void multipush( uint64_t service_id,name provider,
-                          uint64_t data_json,bool is_request);
-  [[eosio::action]] void addfeetype(uint64_t service_id,  std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
+  [[eosio::action]] void pushdata(uint64_t service_id, name provider,
+                                  name contract_account, name action_name,
+                                  uint64_t data_json, uint64_t request_id);
+  [[eosio::action]] void multipush(uint64_t service_id, name provider,
+                                   uint64_t data_json, bool is_request);
+  [[eosio::action]] void addfeetype(uint64_t service_id,
+                                    std::vector<uint8_t> fee_types,
+                                    std::vector<asset> service_prices);
+
+  [[eosio::action]] void claim(name account, name receive_account);
 
   using regiservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
@@ -151,7 +155,7 @@ public:
   using pushdata_action =
       eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
 
- using multipush_action =
+  using multipush_action =
       eosio::action_wrapper<"multipush"_n, &bos_oracle::multipush>;
 
   using addfeetype_action =
@@ -169,14 +173,14 @@ public:
       std::string publickey, name account, asset amount, std::string memo);
 
   [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,
-                             name action_name, name requester,
-                             std::string request_content);
+                                     name action_name, name requester,
+                                     std::string request_content);
 
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account,
                                     name action_name, name account,
                                     asset amount, std::string memo);
   [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
-                            name action_name, asset amount);
+                                    name action_name, asset amount);
   using subscribe_action =
       eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action =
@@ -184,7 +188,7 @@ public:
   using payservice_action =
       eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
 
-        using confirmpay_action =
+  using confirmpay_action =
       eosio::action_wrapper<"confirmpay"_n, &bos_oracle::confirmpay>;
   ///
   ///
@@ -201,7 +205,6 @@ public:
       eosio::action_wrapper<"deposit"_n, &bos_oracle::deposit>;
   using withdraw_action =
       eosio::action_wrapper<"withdraw"_n, &bos_oracle::withdraw>;
-
   ///
   ///
   /// bos.riskctrl end
@@ -225,34 +228,33 @@ public:
   /// bos.arbitration end
 
 private:
+  oracle_fee_singleton _oracle_fee;
+  bos_oracle_fee _fee_state;
 
-oracle_fee_singleton _oracle_fee;
-bos_oracle_fee     _fee_state;
-
-//provider
-void addtimes(uint64_t service_id, name account,
-                          name contract_account, name action_name);
-time_point_sec get_payment_time(uint64_t service_id,
-                                            name contract_account,
-                                            name action_name) ;
-uint8_t get_subscription_status(uint64_t service_id,
-                                            name contract_account,
-                                            name action_name) ;
-                                            uint8_t get_service_status(uint64_t service_id);
+  // provider
+  void add_times(uint64_t service_id, name account, name contract_account,
+                 name action_name, bool is_request);
+  std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> get_times(
+      uint64_t service_id, name account);
+  time_point_sec get_payment_time(uint64_t service_id, name contract_account,
+                                  name action_name);
+  uint8_t get_subscription_status(uint64_t service_id, name contract_account,
+                                  name action_name);
+  uint8_t get_service_status(uint64_t service_id);
   void fee_service(uint64_t service_id, name contract_account, name action_name,
                    uint8_t fee_type);
   asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
-  uint64_t get_request_by_last_push(uint64_t service_id,name provider);
+  uint64_t get_request_by_last_push(uint64_t service_id, name provider);
 
-  symbol core_symbol() const { return _core_symbol; };
+  /// consumer
+  std::vector<std::tuple<name, name>> get_subscription_list(
+      uint64_t service_id);
+  std::vector<std::tuple<name, name, uint64_t>> get_request_list(
+      uint64_t service_id, uint64_t request_id);
+  std::tuple<uint64_t, uint64_t> get_consumption(
+      uint64_t service_id);
+  /// risk control
   void transfer(name from, name to, asset quantity, string memo);
-
-
-/// consumer
-std::vector<std::tuple<name,name>> get_subscription_list(uint64_t service_id);
-std::vector<std::tuple<name,name,uint64_t>> get_request_list(uint64_t service_id,
-                                            uint64_t request_id) ;
-  ///risk control
   void add_freeze_delay(uint64_t service_id, name account,
                         time_point_sec start_time, time_point_sec duration,
                         asset amount, uint64_t status, uint64_t type);
@@ -261,4 +263,7 @@ std::vector<std::tuple<name,name,uint64_t>> get_request_list(uint64_t service_id
                          asset amount, uint64_t status);
   void sub_balance(name owner, asset value);
   void add_balance(name owner, asset value, name ram_payer);
+
+  /// common
+  symbol core_symbol() const { return _core_symbol; };
 };

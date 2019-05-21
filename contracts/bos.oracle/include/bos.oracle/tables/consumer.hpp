@@ -80,6 +80,16 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_reco
 };
 
 
+struct [[ eosio::table, eosio::contract("bos.oracle") ]] service_consumption
+{
+   uint64_t service_id;
+   asset consumption;
+   asset month_consumption;
+   time_point_sec update_time;
+   uint64_t primary_key() const { return service_id; }
+
+};
+
 
 typedef eosio::multi_index<"dataconsumer"_n, data_consumer> data_consumers;
 typedef eosio::multi_index<"subscription"_n, data_service_subscription,indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>>,
@@ -88,7 +98,7 @@ indexed_by<"bytime"_n, const_mem_fun<data_service_subscription, uint64_t, &data_
 typedef eosio::multi_index<"request"_n, data_service_request,indexed_by<"bytime"_n, const_mem_fun<data_service_request, uint64_t, &data_service_request::by_time>>> data_service_requests;
 
 typedef eosio::multi_index<"usagerecords"_n, data_service_usage_record> data_service_usage_records;
-
+typedef eosio::multi_index<"consumptions"_n, service_consumption> service_consumptions;
 // };
 
 // } /// namespace eosio
