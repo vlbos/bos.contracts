@@ -31,7 +31,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t fee_type, std::string data_format,
                             uint64_t data_type, std::string criteria,
                             uint64_t acceptance, std::string declaration,
-                            uint64_t injection_method, time_point_sec duration,
+                            uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
   uint64_t new_service_id = service_id;
@@ -233,6 +233,8 @@ void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
     transfer(provider_account, account,
              asset(fabs(stake_amount.amount), core_symbol()), "");
   }
+
+  
 }
 
 /**

@@ -9,6 +9,9 @@ enum data_consumer_status : uint8_t { consumer_on, consumer_stop };
 enum apply_status : uint8_t { apply_init, apply_cancel};
 
 enum data_service_subscription_status : uint8_t { service_unsubscribe,service_subscribe };
+enum data_service_provision_status : uint8_t { service_unreg,service_reg,service_suspend };
+
+enum freeze_delay_status : uint8_t { freeze_delay_start,freeze_delay_finish,freeze_delay_faileds };
 
 enum data_service_usage_type : uint8_t { usage_request,usage_subscribe };
 

@@ -14,7 +14,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint8_t status;
   uint8_t injection_method;
   uint64_t acceptance;
-  time_point_sec duration;
+  uint64_t duration;
   uint64_t provider_limit;
   uint64_t update_cycle;
   time_point_sec update_start_time;
@@ -47,6 +47,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
   name account;
   public_key pubkey;
   asset total_stake_amount;
+  asset total_freeze_amount;
   asset unconfirmed_amount;
   asset claim_amount;
   time_point_sec last_claim_time;
@@ -63,6 +64,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
   uint64_t service_id;
   name account;
   asset stake_amount;
+  asset freeze_amount;
   asset service_income;
   uint64_t status;
   std::string public_information;
