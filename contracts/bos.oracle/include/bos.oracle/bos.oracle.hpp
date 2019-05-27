@@ -256,7 +256,7 @@ private:
 
   void add_freeze_log(uint64_t service_id, name account, asset amount);
   void add_freeze_stat(uint64_t service_id, name account, asset amount);
-  void add_sevice_freeze_stat(uint64_t service_id, asset amount);
+  std::tuple<asset,asset> get_freeze_stat(uint64_t service_id, name account);
 
   std::tuple<asset, asset> stat_freeze_amounts(uint64_t service_id,
                                                name account);

@@ -187,6 +187,9 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   unfreeze_amount =
       freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount,core_symbol()));
 
+  add_freeze_delay(service_id, account, time_point_sec(now()),
+                     duration, amount-asset(unfreeze_amount,core_symbol()), transfer_type::transfer_freeze);
+
   // delay
   add_delay(service_id, account, time_point_sec(now()), duration, amount);
 }
@@ -248,6 +251,7 @@ void bos_oracle::freeze_asset(uint64_t service_id,
                              name account, 
                              asset amount) {
 
+
  
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
@@ -259,20 +263,19 @@ void bos_oracle::freeze_asset(uint64_t service_id,
   check(provision_itr != provisionstable.end(),
         "account does not subscribe the service");
 
-
   providertable.modify(provider_itr, same_payer,
                        [&](auto &p) { p.total_freeze_amount += amount; });
 
   provisionstable.modify(provision_itr, same_payer,
                          [&](auto &p) { p.freeze_amount += amount; });
 
-  
+
+  add_freeze_log( service_id,  account,amount) ;
 }
 
 void bos_oracle::add_freeze_log(uint64_t service_id, name account,
-                                 asset amount) {
- 
- account_freeze_logs freezelogtable(_self, service_id);
+                                asset amount) {
+  account_freeze_logs freezelogtable(_self, service_id);
 
   freezelogtable.emplace(_self, [&](auto &t) {
     t.log_id = freezelogtable.available_primary_key();
@@ -280,7 +283,8 @@ void bos_oracle::add_freeze_log(uint64_t service_id, name account,
     t.account = account;
     t.amount = amount;
   });
-  
+
+  add_freeze_stat(service_id, account, amount);
 }
 
 void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
@@ -292,20 +296,34 @@ void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
     freezestatstable.emplace(_self, [&](auto &f) { f.amount = amount; });
   } else {
     freezestatstable.modify(freeze_stats, same_payer,
-                            [&](auto &f) { f.amount = amount; });
+                            [&](auto &f) { f.amount += amount; });
   }
-}
 
-void bos_oracle::add_sevice_freeze_stat(uint64_t service_id, asset amount) {
 
-  service_freeze_stats svcfreezestatstable(_self, service_id);
-  auto freeze_stats = svcfreezestatstable.find(service_id);
-  if (freeze_stats == svcfreezestatstable.end()) {
+    service_freeze_stats svcfreezestatstable(_self, service_id);
+  auto svcfreeze_stats = svcfreezestatstable.find(service_id);
+  if (svcfreeze_stats == svcfreezestatstable.end()) {
     svcfreezestatstable.emplace(_self, [&](auto &s) { s.amount = amount; });
   } else {
-    svcfreezestatstable.modify(freeze_stats, same_payer,
-                               [&](auto &s) { s.amount = amount; });
+    svcfreezestatstable.modify(svcfreeze_stats, same_payer,
+                               [&](auto &s) { s.amount += amount; });
   }
+
+}
+
+std::tuple<asset,asset> bos_oracle::get_freeze_stat(uint64_t service_id, name account) {
+
+ account_freeze_stats freezestatstable(_self, service_id);
+  auto freeze_stats = freezestatstable.find(account.value);
+  check(freeze_stats != freezestatstable.end(), "");
+
+  service_freeze_stats svcfreezestatstable(_self, service_id);
+  auto svcfreeze_stats = svcfreezestatstable.find(service_id);
+  check(svcfreeze_stats != svcfreezestatstable.end(), "");
+
+  
+  return std::make_tuple(freeze_stats->amount,svcfreeze_stats->amount);
+
 }
 
 
