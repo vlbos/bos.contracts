@@ -45,37 +45,7 @@ uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
   return request_id;
 }
 
-// std::map<name,uint64_t> bos_oracle::get_push_times_by_action(uint64_t
-// service_id,
-//                           name contract_account, name action_name,bool
-//                           is_request) {
 
-//   data_service_provision_logs logtable(_self, service_id);
-
-//  std::map<name,uint64_t> provider2pushtimes;
-//   auto action_idx = data_service_provision_logs.get_index<"byaction"_n>();
-//  auto id = get_hash_key(get_nn_hash(contract_account,action_name));
-// auto lower =action_idx.lower_bound(id);
-// auto upper =action_idx.upper_bound(id);
-//   for (;lower != upper;++lower) {
-//      name account = lower->account;
-//      bool flag = is_request?(0==lower->request_id):(0!=lower->request_id);
-
-//      if(flag){
-//           continue;
-//      }
-
-//    std::map<name,uint64_t>::iterator it = provider2pushtimes.find(account);
-//    if(it == provider2pushtimes.end()){
-//      provider2pushtimes[account] = 1;
-//    }
-//    else{
-//      provider2pushtimes[account]++;
-//    }
-//   }
-
-//   return provider2pushtimes;
-// }
 
 /**
  * @brief 
@@ -402,6 +372,54 @@ bos_oracle::get_consumption(uint64_t service_id) {
 
   return std::make_tuple(consumptions, month_consumptions);
 }
+
+std::vector<std::tuple<name,asset>>
+bos_oracle::get_provider_list(uint64_t service_id) {
+
+  data_service_provisions provisionstable(_self, service_id);
+
+  std::vector<std::tuple<name,asset>> providers;
+
+  for (const auto &p : provisionstable) {
+    if (p.status == data_service_provision_status::service_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
+      providers.push_back(std::make_tuple(p.account,p.stake_amount-p.freeze_amount));
+    }
+  }
+
+  return providers;
+}
+
+
+
+// std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
+// bos_oracle::stat_freeze_amounts(uint64_t service_id, name account) {
+// }
+
+std::tuple<asset,asset> bos_oracle::stat_freeze_amounts(uint64_t
+service_id,name account) {
+
+  account_freeze_logs freezelogtable(_self, service_id);
+
+//  std::map<name,uint64_t> provider2pushtimes;
+//   auto account_idx = account_freeze_logs.get_index<"byaccount"_n>();
+// asset total_amount(0,core_symbole());
+// auto lower =action_idx.lower_bound(account.value);
+// auto upper =action_idx.upper_bound(account.value);
+asset total_amount(0,core_symbol());
+asset account_total_amount(0,core_symbol());
+  for (const auto&f : freezelogtable) {
+    
+     if(f.account==account)
+     {
+account_total_amount += f.amount;
+     }
+     total_amount += f.amount;
+
+  }
+
+  return std::make_tuple(total_amount,account_total_amount);
+}
+
 
 
 

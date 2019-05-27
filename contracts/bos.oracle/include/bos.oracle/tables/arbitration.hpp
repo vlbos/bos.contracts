@@ -154,7 +154,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_delay
    uint64_t service_id;
    time_point_sec start_time;
    name account;
-   time_point_sec duration;
+   uint64_t duration;
    asset amount;
    uint64_t status;
 

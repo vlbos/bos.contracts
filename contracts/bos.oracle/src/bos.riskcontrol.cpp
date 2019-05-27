@@ -94,10 +94,10 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
                          [&](auto &ss) { ss.freeze_amount += quantity; });
 
     transfer(from, to, quantity, memo);
-    add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
-                     time_point_sec(time_length), quantity, 0,
-                     transfer_type::transfer_freeze);
-  } else {
+    add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
+                     time_length, quantity);
+  } 
+  else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
     //    auto svc_itr=datasvctable.find(svcsubs_itr->service_id);
@@ -109,9 +109,8 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
 
     /// delay time length
 
-    add_freeze_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
-                     time_point_sec(time_length), quantity, 0,
-                     transfer_type::transfer_delay);
+    add_delay(svcsubs_itr->service_id, from, time_point_sec(now()),
+                     time_length, quantity);
 
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,
@@ -137,9 +136,10 @@ void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
  */
 void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
                                   time_point_sec start_time,
-                                  time_point_sec duration, asset amount,
-                                  uint64_t status, uint64_t type) {
-  transfer_freeze_delays transfertable(_self, _self.value);
+                                  uint64_t duration, asset amount,
+                                 uint64_t type) {
+ 
+ transfer_freeze_delays transfertable(_self, service_id);
 
   transfertable.emplace(_self, [&](auto &t) {
     t.transfer_id = transfertable.available_primary_key();
@@ -148,10 +148,184 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
     t.start_time = start_time;
     t.duration = duration;
     t.amount = amount;
-    t.status = status;
+    t.status = freeze_delay_status::freeze_delay_start;
     t.type = type;
   });
+  
 }
+
+void bos_oracle::add_freeze(uint64_t service_id, name account,
+                                  time_point_sec start_time,
+                                  uint64_t duration, asset amount) {
+ 
+  std::vector<std::tuple<name, asset>> providers =
+      get_provider_list(service_id);
+
+  check(providers.size() > 0, " no provider found");
+
+  uint64_t average_amount = amount.amount / providers.size();
+  uint64_t unfreeze_amount = 0;
+  uint64_t real_freeze_amount = 0;
+  uint64_t finish_freeze_provider;
+
+  std::set<name> finish_providers;
+  for (const auto &p : providers) {
+    real_freeze_amount = std::get<1>(p).amount;
+    if (real_freeze_amount >= average_amount) {
+      real_freeze_amount = average_amount;
+      finish_providers.insert(std::get<0>(p));
+    } else {
+      unfreeze_amount += average_amount - real_freeze_amount;
+    }
+
+    freeze_asset(service_id, std::get<0>(p),
+                  asset(real_freeze_amount, core_symbol()));
+  }
+
+  // unfreeze_amount  freeze amount from provider who stake amount greater than
+  // base stake amount.
+  unfreeze_amount =
+      freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount,core_symbol()));
+
+  add_freeze_delay(service_id, account, time_point_sec(now()),
+                     duration, amount-asset(unfreeze_amount,core_symbol()), transfer_type::transfer_freeze);
+
+  // delay
+  add_delay(service_id, account, time_point_sec(now()), duration, amount);
+}
+
+void bos_oracle::add_delay(uint64_t service_id, name account,
+                                  time_point_sec start_time,
+                                  uint64_t duration, asset amount) {
+ 
+
+   add_freeze_delay(service_id, account, time_point_sec(now()),
+                     duration, amount, transfer_type::transfer_delay);
+
+}
+
+uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, 
+                             const std::set<name>& available_providers, 
+                             asset freeze_amount) {
+
+  std::vector<std::tuple<name, asset>> providers =
+      get_provider_list(service_id);
+
+  check(providers.size() > 0, " no provider found");
+
+  uint64_t average_amount = freeze_amount.amount / providers.size();
+  uint64_t unfreeze_amount = 0;
+  uint64_t real_freeze_amount = 0;
+  uint64_t finish_freeze_provider;
+
+  std::set<name> finish_providers;
+  for (const auto &p : providers) {
+    name account = std::get<0>(p);
+    if(available_providers.find(account)==available_providers.end())
+    {
+      continue;
+    }
+
+    real_freeze_amount = std::get<1>(p).amount;
+    if (real_freeze_amount >= average_amount) {
+      real_freeze_amount = average_amount;
+      finish_providers.insert(account);
+    } else {
+      unfreeze_amount += average_amount - real_freeze_amount;
+    }
+
+    freeze_asset(service_id, account,asset(real_freeze_amount,core_symbol()));
+  }
+
+  if (unfreeze_amount > 0 && finish_providers.size() > 0) {
+      freeze_providers_amount(service_id,finish_providers,asset(unfreeze_amount,core_symbol()));
+  }
+
+  return unfreeze_amount;
+}
+
+
+
+
+void bos_oracle::freeze_asset(uint64_t service_id, 
+                             name account, 
+                             asset amount) {
+
+
+ 
+  data_providers providertable(_self, _self.value);
+  auto provider_itr = providertable.find(account.value);
+  check(provider_itr != providertable.end(), "no provider found");
+
+  data_service_provisions provisionstable(_self, service_id);
+
+  auto provision_itr = provisionstable.find(account.value);
+  check(provision_itr != provisionstable.end(),
+        "account does not subscribe the service");
+
+  providertable.modify(provider_itr, same_payer,
+                       [&](auto &p) { p.total_freeze_amount += amount; });
+
+  provisionstable.modify(provision_itr, same_payer,
+                         [&](auto &p) { p.freeze_amount += amount; });
+
+
+  add_freeze_log( service_id,  account,amount) ;
+}
+
+void bos_oracle::add_freeze_log(uint64_t service_id, name account,
+                                asset amount) {
+  account_freeze_logs freezelogtable(_self, service_id);
+
+  freezelogtable.emplace(_self, [&](auto &t) {
+    t.log_id = freezelogtable.available_primary_key();
+    t.service_id = service_id;
+    t.account = account;
+    t.amount = amount;
+  });
+
+  add_freeze_stat(service_id, account, amount);
+}
+
+void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
+                                 asset amount) {
+
+  account_freeze_stats freezestatstable(_self, service_id);
+  auto freeze_stats = freezestatstable.find(account.value);
+  if (freeze_stats == freezestatstable.end()) {
+    freezestatstable.emplace(_self, [&](auto &f) { f.amount = amount; });
+  } else {
+    freezestatstable.modify(freeze_stats, same_payer,
+                            [&](auto &f) { f.amount += amount; });
+  }
+
+
+    service_freeze_stats svcfreezestatstable(_self, service_id);
+  auto svcfreeze_stats = svcfreezestatstable.find(service_id);
+  if (svcfreeze_stats == svcfreezestatstable.end()) {
+    svcfreezestatstable.emplace(_self, [&](auto &s) { s.amount = amount; });
+  } else {
+    svcfreezestatstable.modify(svcfreeze_stats, same_payer,
+                               [&](auto &s) { s.amount += amount; });
+  }
+
+}
+
+std::tuple<asset,asset> bos_oracle::get_freeze_stat(uint64_t service_id, name account) {
+
+ account_freeze_stats freezestatstable(_self, service_id);
+  auto freeze_stats = freezestatstable.find(account.value);
+  check(freeze_stats != freezestatstable.end(), "");
+
+  service_freeze_stats svcfreezestatstable(_self, service_id);
+  auto svcfreeze_stats = svcfreezestatstable.find(service_id);
+  check(svcfreeze_stats != svcfreezestatstable.end(), "");
+
+  
+  return std::make_tuple(freeze_stats->amount,svcfreeze_stats->amount);
+
+}
+
 
 /**
  * @brief 
@@ -166,7 +340,7 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
  */
 uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
                                    time_point_sec start_time,
-                                   time_point_sec duration, asset amount,
+                                   uint64_t duration, asset amount,
                                    uint64_t status) {
   risk_guarantees guaranteetable(_self, _self.value);
 

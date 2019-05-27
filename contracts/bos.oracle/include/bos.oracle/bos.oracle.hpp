@@ -120,7 +120,7 @@ public:
       asset service_price, uint64_t fee_type, std::string data_format,
       uint64_t data_type, std::string criteria, uint64_t acceptance,
       std::string declaration, uint64_t injection_method,
-      time_point_sec duration, uint64_t provider_limit, uint64_t update_cycle,
+      uint64_t duration, uint64_t provider_limit, uint64_t update_cycle,
       time_point_sec update_start_time);
 
   [[eosio::action]] void unregservice(uint64_t service_id,
@@ -232,6 +232,7 @@ private:
   bos_oracle_fee _fee_state;
 
   // provider
+
   void add_times(uint64_t service_id, name account, name contract_account,
                  name action_name, bool is_request);
   std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> get_times(
@@ -246,6 +247,12 @@ private:
   asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
   uint64_t get_request_by_last_push(uint64_t service_id, name provider);
 
+  std::vector<std::tuple<name, asset>> get_provider_list(uint64_t service_id);
+
+  void freeze_asset(uint64_t service_id, name account, asset amount);
+  uint64_t freeze_providers_amount(uint64_t service_id, 
+                             const std::set<name>& available_providers, 
+                             asset freeze_amount) ;
   /// consumer
   std::vector<std::tuple<name, name>> get_subscription_list(
       uint64_t service_id);
@@ -253,17 +260,29 @@ private:
       uint64_t service_id, uint64_t request_id);
   std::tuple<uint64_t, uint64_t> get_consumption(
       uint64_t service_id);
+
   /// risk control
   void transfer(name from, name to, asset quantity, string memo);
   void add_freeze_delay(uint64_t service_id, name account,
-                        time_point_sec start_time, time_point_sec duration,
-                        asset amount, uint64_t status, uint64_t type);
+                        time_point_sec start_time, uint64_t duration,
+                        asset amount, uint64_t type);
+  void add_freeze(uint64_t service_id, name account, time_point_sec start_time,
+                  uint64_t duration, asset amount);
+  void add_delay(uint64_t service_id, name account, time_point_sec start_time,
+                 uint64_t duration, asset amount);
+
   uint64_t add_guarantee(uint64_t service_id, name account,
-                         time_point_sec start_time, time_point_sec duration,
+                         time_point_sec start_time, uint64_t duration,
                          asset amount, uint64_t status);
   void sub_balance(name owner, asset value);
   void add_balance(name owner, asset value, name ram_payer);
 
+  void add_freeze_log(uint64_t service_id, name account, asset amount);
+  void add_freeze_stat(uint64_t service_id, name account, asset amount);
+  std::tuple<asset,asset> get_freeze_stat(uint64_t service_id, name account);
+
+  std::tuple<asset, asset> stat_freeze_amounts(uint64_t service_id,
+                                               name account);
   /// common
   symbol core_symbol() const { return _core_symbol; };
 };

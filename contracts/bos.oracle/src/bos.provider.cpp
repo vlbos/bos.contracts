@@ -31,7 +31,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t fee_type, std::string data_format,
                             uint64_t data_type, std::string criteria,
                             uint64_t acceptance, std::string declaration,
-                            uint64_t injection_method, time_point_sec duration,
+                            uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
   uint64_t new_service_id = service_id;
@@ -233,6 +233,8 @@ void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
     transfer(provider_account, account,
              asset(fabs(stake_amount.amount), core_symbol()), "");
   }
+
+  
 }
 
 /**
@@ -253,6 +255,11 @@ void bos_oracle::claim(name account, name receive_account) {
   uint64_t claimreward = 0;
   uint64_t income = 0;
   uint64_t month_income = 0;
+ 
+  asset stake_freeze_amount = asset(0,core_symbol());
+  asset service_stake_freeze_amount = asset(0,core_symbol());
+  asset total_stake_freeze_amount = asset(0,core_symbol());
+  uint64_t stake_freeze_income = 0;
 
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
@@ -263,10 +270,11 @@ void bos_oracle::claim(name account, name receive_account) {
 
   auto calc_income = [](uint64_t service_times, uint64_t provide_times,
                         uint64_t consumption) -> uint64_t {
+    check(provide_times > 0 && service_times > provide_times, "provider times and service_times must greater than zero");
     uint64_t income = 0;
-    if (provide_times > 0 && service_times > provide_times) {
+    // if (provide_times > 0 && service_times > provide_times) {
       income = consumption * provide_times / static_cast<double>(service_times);
-    }
+    // }
 
     return income;
   };
@@ -277,13 +285,23 @@ void bos_oracle::claim(name account, name receive_account) {
     std::tie(service_times, service_month_times, provide_times,
              provide_month_times) = get_times(p.service_id, account);
 
-    income += calc_income(service_times, provide_times, consumption);
+    std::tie(stake_freeze_amount,service_stake_freeze_amount) =       get_freeze_stat(p.service_id,account);
+
+    income += calc_income(service_times, provide_times, consumption*0.8);
 
     month_income += calc_income(service_month_times, provide_month_times,
-                                month_consumption);
+                                month_consumption*0.8);
+
+
+    uint64_t stake_income = (consumption+month_consumption)*0.8;
+    check(stake_freeze_amount.amount > 0 && service_stake_freeze_amount.amount > stake_freeze_amount.amount, "provider freeze_amount and service_times must greater than zero");
+     
+    stake_freeze_income = stake_income * stake_freeze_amount.amount / static_cast<double>(service_stake_freeze_amount.amount);
+ 
+    
   }
   asset new_income =
-      asset(income + month_income, core_symbol()) - provider_itr->claim_amount;
+      asset(income + month_income+stake_freeze_income, core_symbol()) - provider_itr->claim_amount;
 
   check(new_income.amount > 0, "no income ");
 
