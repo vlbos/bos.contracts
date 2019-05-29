@@ -223,6 +223,10 @@ public:
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+
+    void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id);
+    name random_arbitrator(uint64_t arbitration_id);
+
   /// 
   ///
   /// bos.arbitration end

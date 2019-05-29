@@ -66,6 +66,9 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         appeal_id = p.appeal_id;
     } );
 
+    // add_freeze
+    add_delay(service_id, applicant, time_point_sec(now()), 1, amount);
+
     // Arbitration case application
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_id = arbicaseapp_tb.available_primary_key();
@@ -74,8 +77,8 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         p.appeal_id = appeal_id;
         p.service_id = service_id;
         p.evidence_info = reason;
-        // p.update_number = 
         p.arbi_step = 1;
+        p.add_applicant(applicant);
     } );
 
     // Data provider
@@ -126,6 +129,11 @@ void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitrati
     arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
         p.arbi_step = arbi_step_type::arbi_end;
     } );
+
+    // start arbitration
+    if (arbi_iter->applicants.size() > 0) {
+        start_arbitration(arbitrator_type::profession, arbitration_id);
+    }
 }
 
 void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
@@ -147,13 +155,31 @@ void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t re
             p.process_id = arbiprocess_tb.available_primary_key();
             p.arbitration_id = arbitration_id;
             p.num_id = 1;
-            p.add_applicant(complainant_iter->applicant);
         } );
     } else {
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
             p.arbitration_id = arbitration_id;
             p.num_id += 1;
-            p.add_applicant(complainant_iter->applicant);
         } );
     }
+}
+
+void bos_oracle::start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id) {
+    auto arbitrator = random_arbitrator(arbitration_id);
+
+}
+
+name bos_oracle::random_arbitrator(uint64_t arbitration_id) {
+    auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
+    auto arbiprocess_by_arbi = arbiprocess_tb.template get_index<"arbi"_n>();
+    auto iter_arbiprocess = arbiprocess_by_arbi.find( arbitration_id );
+    auto chosen_arbitrators = iter_arbiprocess->arbitrators;
+    //TODO
+    auto arb_table = arbitrators( get_self(), get_self().value );
+    auto total_arbi = std::count(arb_table.cbegin(), arb_table.cend());
+    auto tmp = tapos_block_prefix();
+    auto arbi_id = random((void*)&tmp, sizeof(tmp));
+    arbi_id %= total_arbi;
+    return token_account;
+    // return arb_table.find(arbi_id);
 }

@@ -92,8 +92,10 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbicaseapp
    uint64_t arbi_step;
    uint64_t final_results;
    std::string evidence_info;
+   std::vector<name> applicants;
 
    uint64_t primary_key() const { return arbitration_id; }
+   void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
@@ -101,7 +103,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t process_id;
    uint64_t arbitration_id;
    uint64_t num_id;
-   std::vector<name> applicants;
    std::vector<name> responders;
    std::vector<name> arbitrators;
    asset stake_amount;
@@ -111,7 +112,8 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t arbitration_method;
 
    uint64_t primary_key() const { return process_id; }
-   void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
+   uint64_t by_arbi() const { return arbitration_id; }
+   
    void add_responder ( name responder ) { responders.push_back( responder ); }
    void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
 };
@@ -166,7 +168,8 @@ typedef eosio::multi_index<"complainants"_n, complainant,
    indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
 typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp> arbicaseapps;
-typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_processs;
+typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,
+   indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t, &arbitration_process::by_arbi>>> arbitration_processs;
 typedef eosio::multi_index<"arbiresults"_n, arbitration_result> arbitration_results;
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
 
