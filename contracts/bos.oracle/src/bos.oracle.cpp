@@ -214,7 +214,6 @@ using namespace eosio;
   }
 
   //Clear all data
-
   void bos_oracle::clear() {
     require_auth(titan_account);
     statstable lstore(_self,_self.value);
@@ -244,8 +243,7 @@ using namespace eosio;
 
 
 EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-
-(regservice)(unregservice)(execaction)(stakeamount)(pushdata)(multipush)(addfeetype)
+(regservice)(unregservice)(execaction)(stakeamount)(pushdata)(multipush)(addfeetype)(claim)
 (regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 (subscribe)(requestdata)(payservice)(confirmpay)
 (deposit)(withdraw)

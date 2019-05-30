@@ -48,6 +48,7 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to, asset quantity, string memo,
                          bool is_notify) {
+                           require_auth(_self);
   transfer(from, to, quantity, memo);
 
   auto payer = has_auth(to) ? to : from;
@@ -72,7 +73,7 @@ void bos_oracle::deposit(name from, name to, asset quantity, string memo,
  * @param memo 
  */
 void bos_oracle::withdraw(name from, name to, asset quantity, string memo) {
-
+require_auth(_self);
   sub_balance(from, quantity);
 
   // find service
