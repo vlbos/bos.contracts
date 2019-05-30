@@ -72,7 +72,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   check(subs_itr == substable.end(), "contract_account exist");
 
   substable.emplace(_self, [&](auto &subs) {
-    subs.subscription_id = id;
+    // subs.subscription_id = id;
     subs.service_id = service_id;
     subs.contract_account = contract_account;
     subs.action_name = action_name;
@@ -132,6 +132,7 @@ void bos_oracle::payservice(uint64_t service_id, name contract_account,
  */
 void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
                             name action_name, asset amount) {
+                require_auth(_self);
   check(amount.amount > 0, "amount must be greater than zero");
   data_service_subscriptions substable(_self, _self.value);
 
@@ -160,7 +161,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              std::string request_content) {
   require_auth(requester);
 
-  /// check service available subsrciption status subscribe
+  /// check service available subscription status subscribe
   check(data_service_status::service_in == get_service_status(service_id) &&
             data_service_subscription_status::service_subscribe ==
                 get_subscription_status(service_id, contract_account,
