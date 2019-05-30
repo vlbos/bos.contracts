@@ -17,7 +17,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t duration;
   uint64_t provider_limit;
   uint64_t update_cycle;
-  time_point_sec update_start_time;
   uint64_t appeal_freeze_period;
   uint64_t exceeded_risk_control_freeze_period;
   uint64_t guarantee_id;
@@ -25,12 +24,12 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   asset stake_amount;
   asset risk_control_amount;
   asset pause_service_stake_amount;
-  bool freeze_flag;
-  bool emergency_flag;
   std::string data_format;
   std::string criteria;
   std::string declaration;
-
+  bool freeze_flag;
+  bool emergency_flag;
+  time_point_sec update_start_time;
   uint64_t primary_key() const { return service_id; }
 };
 
@@ -56,8 +55,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_service {
   uint64_t service_id;
-
-  uint64_t primary_key() const { return service_id; }
+  time_point_sec create_time;
+  uint64_t primary_key() const { return static_cast<uint64_t>(create_time.sec_since_epoch()); }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
@@ -79,10 +78,11 @@ struct [
   uint64_t service_id;
   name provider;
   uint64_t status;
+  time_point_sec apply_time;
   time_point_sec cancel_time;
   time_point_sec finish_time;
 
-  uint64_t primary_key() const { return apply_id; }
+  uint64_t primary_key() const { return provider.value; }
 };
 
 struct [
@@ -130,8 +130,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
   }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
+struct [[eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
   uint64_t service_id;
   name account;
   name contract_account;

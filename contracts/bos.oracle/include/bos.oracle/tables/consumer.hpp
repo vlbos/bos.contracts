@@ -22,9 +22,19 @@ using eosio::asset;
 using eosio::public_key;
 using std::string;
 
+struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_consumer
+{
+   name account;
+   public_key pubkey;
+   uint8_t status;
+   time_point_sec create_time;
+
+   uint64_t primary_key() const { return account.value; }
+};
+
+
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_subscription
 {
-   uint64_t subscription_id;
    uint64_t service_id;
    name contract_account;
    name action_name;
@@ -37,20 +47,11 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_subscripti
    time_point_sec last_payment_time;
    time_point_sec subscription_time;
    uint64_t status; /// unsubscribe 0 subscribe 1
-   uint64_t primary_key() const { return subscription_id; }
+   uint64_t primary_key() const { return get_hash_key(get_nn_hash( contract_account, action_name)); }
    uint64_t by_account()const { return account.value; }
    uint64_t by_time()const { return static_cast<uint64_t>(-subscription_time.sec_since_epoch()); }
 };
 
-struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_consumer
-{
-   name account;
-   public_key pubkey;
-   uint8_t status;
-   time_point_sec create_time;
-
-   uint64_t primary_key() const { return account.value; }
-};
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_request
 {
@@ -72,6 +73,10 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] data_service_usage_reco
 {
    uint64_t usage_id;
    uint64_t request_id;
+   name contract_account;
+   name action_name;
+   name provider;
+   name consumer;
    asset fee;
    uint8_t usage_type;/// request once  0,subscribe 1
    time_point_sec usage_time;
@@ -89,7 +94,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] service_consumption
    uint64_t primary_key() const { return service_id; }
 
 };
-
 
 typedef eosio::multi_index<"dataconsumer"_n, data_consumer> data_consumers;
 typedef eosio::multi_index<"subscription"_n, data_service_subscription,indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>>,

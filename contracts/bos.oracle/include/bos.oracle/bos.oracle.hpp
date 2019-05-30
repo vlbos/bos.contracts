@@ -120,20 +120,20 @@ public:
       time_point_sec update_start_time);
 
   [[eosio::action]] void unregservice(uint64_t service_id,
-                                      std::string signature, name account,
+                                       name account,
                                       uint64_t is_suspense);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
 
-  [[eosio::action]] void stakeamount(uint64_t service_id, uint64_t provider_id,
-                                     name account, std::string signature,
+  [[eosio::action]] void stakeamount(uint64_t service_id, 
+                                     name account, 
                                      asset stake_amount);
 
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
-                                  uint64_t data_json, uint64_t request_id);
+                                  uint64_t request_id,const string& data_json);
   [[eosio::action]] void multipush(uint64_t service_id, name provider,
-                                   uint64_t data_json, bool is_request);
+                                   const string& data_json, bool is_request);
   [[eosio::action]] void addfeetype(uint64_t service_id,
                                     std::vector<uint8_t> fee_types,
                                     std::vector<asset> service_prices);
@@ -156,6 +156,9 @@ public:
 
   using addfeetype_action =
       eosio::action_wrapper<"addfeetype"_n, &bos_oracle::addfeetype>;
+
+  using claim_action =
+      eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
 
   ///
   ///

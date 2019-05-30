@@ -34,11 +34,11 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
+  require_auth(_self);
   uint64_t new_service_id = service_id;
   data_services svctable(_self, _self.value);
   if (0 == service_id) {
     // add service
-
     svctable.emplace(_self, [&](auto &s) {
       s.service_id = svctable.available_primary_key();
       s.service_price = service_price;
@@ -74,7 +74,6 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   if (provider_itr == providertable.end()) {
     providertable.emplace(_self, [&](auto &p) {
       p.account = account;
-      // p.pubkey = publickey;
       p.total_stake_amount = stake_amount;
     });
   } else {
@@ -84,39 +83,27 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   }
 
   data_service_provisions provisionstable(_self, new_service_id);
+  
   auto provision_itr = provisionstable.find(account.value);
   check(provision_itr == provisionstable.end(), "service already  exist");
-  //  if (provision_itr == provisionstable.end()) {
+
   provisionstable.emplace(_self, [&](auto &p) {
-    // p.provision_id = provisionstable.available_primary_key();
     p.service_id = new_service_id;
     p.account = account;
     p.stake_amount = stake_amount;
   });
-  //  }
-  //  else{
-  //     // provisionstable.modify(provision_itr, same_payer, [&](auto &p) {
-  //     //   p.total_stake_amount += stake_amount;
-  //     // });
-  //  }
 
   provider_services provservicestable(_self, account.value);
-
-  auto provservice_itr = provservicestable.find(new_service_id);
-  check(provservice_itr == provservicestable.end(), "service already  exist");
-  //  if (provision_itr == provservicestable.end()) {
+  uint64_t create_time_sec =
+      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+  auto provservice_itr = provservicestable.find(create_time_sec);
+  check(provservice_itr == provservicestable.end(),
+        "same account register service interval too short ");
   provservicestable.emplace(_self, [&](auto &p) {
-    // p.provision_id = provisionstable.available_primary_key();
     p.service_id = new_service_id;
+    p.create_time = update_start_time;
   });
-  //  }
-  //  else{
-  //     // provisionstable.modify(provision_itr, same_payer, [&](auto &p) {
-  //     //   p.total_stake_amount += stake_amount;
-  //     // });
-  //  }
 }
-
 /**
  * @brief 
  * 
@@ -125,9 +112,9 @@ void bos_oracle::regservice(uint64_t service_id, name account,
  * @param account 
  * @param status 
  */
-void bos_oracle::unregservice(uint64_t service_id, std::string signature,
+void bos_oracle::unregservice(uint64_t service_id, 
                               name account, uint64_t status) {
-
+require_auth(_self);
   // data_services svctable(_self, _self.value);
   // auto service_itr = svctable.find(service_id);
   // check(service_itr != svctable.end(), "service does not exist");
@@ -175,6 +162,7 @@ void bos_oracle::unregservice(uint64_t service_id, std::string signature,
  * @param action_type 
  */
 void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
+  require_auth(_self);
   data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
   check(service_itr != svctable.end(), "service does not exist");
@@ -191,15 +179,13 @@ void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
  * @brief 
  * 
  * @param service_id 
- * @param provider_id 
  * @param account 
- * @param signature 
  * @param stake_amount 
  */
-void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
-                             name account, std::string signature,
+void bos_oracle::stakeamount(uint64_t service_id, 
+                             name account,
                              asset stake_amount) {
-
+require_auth(_self);
   if (stake_amount.amount > 0) {
     transfer(account, provider_account, stake_amount, "");
   }
@@ -244,7 +230,7 @@ void bos_oracle::stakeamount(uint64_t service_id, uint64_t provider_id,
  * @param receive_account 
  */
 void bos_oracle::claim(name account, name receive_account) {
-
+require_auth(_self);
   provider_services proviservicestable(_self, account.value);
   uint64_t consumption = 0;
   uint64_t month_consumption = 0;
@@ -323,7 +309,7 @@ void bos_oracle::claim(name account, name receive_account) {
  */
 void bos_oracle::pushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
-                          uint64_t data_json, uint64_t request_id) {
+                          uint64_t request_id,const string& data_json) {
   require_auth(provider);
   check(data_service_status::service_in == get_service_status(service_id) &&
             data_service_subscription_status::service_subscribe ==
@@ -357,6 +343,8 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
 
   add_times(service_id, provider, contract_account, action_name,
             0 != request_id);
+
+  require_recipient(contract_account);
 }
 
 /**
@@ -368,8 +356,8 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
  * @param is_request 
  */
 void bos_oracle::multipush(uint64_t service_id, name provider,
-                           uint64_t data_json, bool is_request) {
-  require_auth(provider);
+                           const string& data_json, bool is_request) {
+require_auth(_self);
   check(data_service_status::service_in == get_service_status(service_id),
         "service and subscription must be available");
 
@@ -381,7 +369,7 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 
     for (const auto &rc : receive_contracts) {
       pushdata(service_id, provider, std::get<0>(rc), std::get<1>(rc),
-               data_json, std::get<2>(rc));
+                std::get<2>(rc),data_json);
     }
   } else {
 
@@ -391,7 +379,7 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 
     for (const auto &src : subscription_receive_contracts) {
       pushdata(service_id, provider, std::get<0>(src), std::get<1>(src),
-               data_json, 0);
+               0,data_json);
     }
   }
 }
@@ -405,6 +393,7 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
  */
 void bos_oracle::addfeetype(uint64_t service_id, std::vector<uint8_t> fee_types,
                             std::vector<asset> service_prices) {
+                              require_auth(_self);
   check(fee_types.size() > 0 && fee_types.size() == service_prices.size(),
         "fee_types size have to equal service prices size");
   data_service_fees feetable(_self, _self.value);
