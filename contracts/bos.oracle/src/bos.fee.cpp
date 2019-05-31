@@ -171,16 +171,16 @@ bos_oracle::get_times(uint64_t service_id, name account) {
 asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
   //  check(fee_types.size() > 0 && fee_types.size() ==
   //  service_prices.size(),"fee_types size have to equal service prices size");
-  data_service_fees feetable(_self, _self.value);
+  data_service_fees feetable(_self, service_id);
   // for(int i = 0;i < fee_types.size();i++)
   // {
-  auto type = fee_type; // s[i];
+  // auto type = fee_type; // s[i];
   // auto price = service_prices[i];
-  check(type >= data_service_fee_type::fee_times &&
-            type < data_service_fee_type::fee_type_count,
+  check(fee_type >= fee_type::fee_times &&
+            fee_type < fee_type::fee_type_count,
         "unknown fee type");
 
-  auto fee_itr = feetable.find(get_hash_key(get_uu_hash(service_id, type)));
+  auto fee_itr = feetable.find(fee_type);
   check(fee_itr != feetable.end(), " service's fee type does not found");
 
   return fee_itr->service_price;
@@ -206,14 +206,14 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
   //          { account, consumer_account, amount, memo }
   //       );
   // require_auth(account);
-  require_auth(contract_account);
-  // transfer(account, consumer_account, amount, memo);
+  // require_auth(contract_account);
+  transfer(account, consumer_account, amount, memo);
   asset price_by_times = get_price_by_fee_type(service_id, fee_type);
 
-  data_service_subscriptions substable(_self, _self.value);
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  data_service_subscriptions substable(_self, service_id);
+  // auto id =
+  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
   check(price_by_times.amount > 0 and subs_itr->balance >= price_by_times,
@@ -221,7 +221,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
 
   substable.modify(subs_itr, _self, [&](auto &subs) {
     subs.balance -= price_by_times;
-    if (data_service_fee_type::fee_times == fee_type) {
+    if (fee_type::fee_times == fee_type) {
       subs.consumption += price_by_times;
     } else {
 
@@ -244,10 +244,10 @@ uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
                                             name contract_account,
                                             name action_name) {
 
-  data_service_subscriptions substable(_self, _self.value);
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  data_service_subscriptions substable(_self, service_id);
+  // auto id =
+  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
   return subs_itr->status;
@@ -265,10 +265,10 @@ time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
                                             name contract_account,
                                             name action_name) {
 
-  data_service_subscriptions substable(_self, _self.value);
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  data_service_subscriptions substable(_self, service_id);
+  // auto id =
+  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
   return subs_itr->last_payment_time;
@@ -288,7 +288,7 @@ bos_oracle::get_subscription_list(uint64_t service_id) {
   std::vector<std::tuple<name, name>> receive_contracts;
 
   for (const auto &s : subscription_time_idx) {
-    if (s.status == data_service_subscription_status::service_subscribe) {
+    if (s.status == subscription_status::subscription_subscribe) {
       receive_contracts.push_back(
           std::make_tuple(s.contract_account, s.action_name));
     }
@@ -324,7 +324,7 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
 
   while (lower != upper) {
     auto req = lower++;
-    if (req->status == data_request_status::reqeust_valid &&
+    if (req->status == request_status::reqeust_valid &&
         time_point_sec(now()) - req->request_time <
             eosio::hours(request_time_deadline)) {
       receive_contracts.push_back(std::make_tuple(
@@ -381,7 +381,7 @@ bos_oracle::get_provider_list(uint64_t service_id) {
   std::vector<std::tuple<name,asset>> providers;
 
   for (const auto &p : provisionstable) {
-    if (p.status == data_service_provision_status::service_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
+    if (p.status == provision_status::provision_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
       providers.push_back(std::make_tuple(p.account,p.stake_amount-p.freeze_amount));
     }
   }

@@ -133,31 +133,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] fair_award
    uint64_t primary_key() const { return service_id; }
 };
 
-struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_freeze
-{
-   uint64_t freeze_id;
-   uint64_t service_id;
-   time_point_sec start_time;
-   time_point_sec freezing_duration;
-   asset freeze_amount;
-   uint64_t status;
-
-   uint64_t primary_key() const { return freeze_id; }
-};
-
-struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_delay
-{
-   uint64_t delay_id;
-   uint64_t service_id;
-   time_point_sec start_time;
-   name account;
-   uint64_t duration;
-   asset amount;
-   uint64_t status;
-
-   uint64_t primary_key() const { return delay_id; }
-};
-
 
 
 typedef eosio::multi_index<"complainants"_n, complainant,
