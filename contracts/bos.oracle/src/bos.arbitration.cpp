@@ -174,9 +174,9 @@ name bos_oracle::random_arbitrator(uint64_t arbitration_id) {
     auto arbiprocess_by_arbi = arbiprocess_tb.template get_index<"arbi"_n>();
     auto iter_arbiprocess = arbiprocess_by_arbi.find( arbitration_id );
     auto chosen_arbitrators = iter_arbiprocess->arbitrators;
-    //TODO
+    std::vector<name> arbitrators;
+
     auto arb_table = arbitrators( get_self(), get_self().value );
-    auto total_arbi = std::count(arb_table.cbegin(), arb_table.cend());
     auto tmp = tapos_block_prefix();
     auto arbi_id = random((void*)&tmp, sizeof(tmp));
     arbi_id %= total_arbi;
