@@ -484,7 +484,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
   produce_blocks(1);
 }
 
-//   /// subscribe service
+  // subscribe service
   {
     service_id = new_service_id;
     name contract_account = N(dappuser.bos);
@@ -493,19 +493,17 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
     name account = N(bob);
     asset amount = asset::from_string("10.0000 EOS");
     std::string memo = "";
-    auto subs = subscribe(service_id, contract_account, action_name,
-                              publickey, account, amount, memo);
+    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+                          account, amount, memo);
 
-auto consumer = get_data_consumer(account);
- auto time = consumer["create_time"];
-//  BOOST_TEST("" == "1221ss");
-    BOOST_REQUIRE(
-        0 ==
-        consumer["status"].as<uint8_t>());
-   //  BOOST_TEST("" == "11ss");
+    auto consumer = get_data_consumer(account);
+    auto time = consumer["create_time"];
+    //  BOOST_TEST("" == "1221ss");
+    BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
+    //  BOOST_TEST("" == "11ss");
     auto subscription =
         get_data_service_subscription(service_id, contract_account);
-   //  BOOST_TEST("" == "ss");
+    //  BOOST_TEST("" == "ss");
     BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
     BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
    }
@@ -542,12 +540,12 @@ auto consumer = get_data_consumer(account);
 
    /// request data
    {
-    service_id = new_service_id;
-   name contract_account = N(dappuser.bos);
-   name action_name = N(alice);
-   name account = N(bob);
-   std::string request_content = "request once";
-   auto req = requestdata(service_id, contract_account, action_name, account,
+     service_id = new_service_id;
+     name contract_account = N(dappuser.bos);
+     name action_name = N(alice);
+     name account = N(bob);
+     std::string request_content = "request once";
+     auto req = requestdata(service_id, contract_account, action_name, account,
                             request_content);
    }
    produce_blocks(1);

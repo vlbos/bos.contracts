@@ -4,6 +4,7 @@
 #include <cmath>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/transaction.hpp>
 using namespace eosio;
 using std::string;
 
@@ -212,6 +213,21 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   check(service_status::service_in == get_service_status(service_id),
         "service and subscription must be available");
 
+  auto push_data = [](uint64_t service_id, name provider, name contract_account,
+                      name action_name, uint64_t request_id,
+                      const string &data_json) {
+    transaction t;
+    t.actions.emplace_back(
+        permission_level{provider, active_permission}, provider, "pushdata"_n,
+        std::make_tuple(service_id, provider, contract_account, action_name,
+                        request_id, data_json));
+    t.delay_sec = 0;
+    uint128_t deferred_id =
+        (uint128_t(service_id) << 64) | contract_account.value;
+    cancel_deferred(deferred_id);
+    t.send(deferred_id, provider);
+  };
+
   if (is_request) {
     // request
     uint64_t request_id = get_request_by_last_push(service_id, provider);
@@ -219,7 +235,7 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
         get_request_list(service_id, request_id);
 
     for (const auto &rc : receive_contracts) {
-      pushdata(service_id, provider, std::get<0>(rc), std::get<1>(rc),
+      push_data(service_id, provider, std::get<0>(rc), std::get<1>(rc),
                std::get<2>(rc), data_json);
     }
   } else {
@@ -229,7 +245,7 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
         get_subscription_list(service_id);
 
     for (const auto &src : subscription_receive_contracts) {
-      pushdata(service_id, provider, std::get<0>(src), std::get<1>(src), 0,
+      push_data(service_id, provider, std::get<0>(src), std::get<1>(src), 0,
                data_json);
     }
   }

@@ -207,7 +207,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
   //       );
   // require_auth(account);
   // require_auth(contract_account);
-  transfer(account, consumer_account, amount, memo);
+  // transfer(account, consumer_account, amount, memo);
   asset price_by_times = get_price_by_fee_type(service_id, fee_type);
 
   data_service_subscriptions substable(_self, service_id);
