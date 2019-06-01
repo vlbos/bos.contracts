@@ -174,12 +174,21 @@ name bos_oracle::random_arbitrator(uint64_t arbitration_id) {
     auto arbiprocess_by_arbi = arbiprocess_tb.template get_index<"arbi"_n>();
     auto iter_arbiprocess = arbiprocess_by_arbi.find( arbitration_id );
     auto chosen_arbitrators = iter_arbiprocess->arbitrators;
-    std::vector<name> arbitrators;
+    std::vector<name> chosen_from_arbitrators;
 
     auto arb_table = arbitrators( get_self(), get_self().value );
+    for (auto iter = arb_table.begin(); iter != arb_table.end(); iter++)
+    {
+        auto chosen = std::find(chosen_arbitrators.begin(), chosen_arbitrators.end(), iter->account);
+        if (chosen == chosen_arbitrators.end()) {
+            chosen_from_arbitrators.push_back(iter->account);
+        }
+    }
+
+    auto total_arbi = chosen_from_arbitrators.size();
     auto tmp = tapos_block_prefix();
     auto arbi_id = random((void*)&tmp, sizeof(tmp));
     arbi_id %= total_arbi;
-    return token_account;
-    // return arb_table.find(arbi_id);
+
+    return chosen_from_arbitrators.at(arbi_id);
 }
