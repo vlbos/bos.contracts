@@ -49,7 +49,8 @@ enum arbi_step_type : uint64_t
 {
    arbi_init = 1,
    arbi_responded = 2,
-   arbi_end = 3
+   arbi_started = 3,
+   arbi_end = 4
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] complainant
@@ -91,11 +92,14 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbicaseapp
    uint64_t update_number;
    uint64_t arbi_step;
    uint64_t final_results;
+   uint64_t required_arbitrator;
    std::string evidence_info;
    std::vector<name> applicants;
+   std::vector<name> arbitrators;
 
    uint64_t primary_key() const { return arbitration_id; }
    void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
+   void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
@@ -104,7 +108,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t arbitration_id;
    uint64_t num_id;
    std::vector<name> responders;
-   std::vector<name> arbitrators;
    asset stake_amount;
    std::string arbitrator_arbitration_results;
    std::string evidence_info;
@@ -115,7 +118,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t by_arbi() const { return arbitration_id; }
    
    void add_responder ( name responder ) { responders.push_back( responder ); }
-   void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_result

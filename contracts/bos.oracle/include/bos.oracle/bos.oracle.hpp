@@ -226,15 +226,15 @@ public:
 
     [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
-    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id, signature sig );
+    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id );
 
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
-    void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id);
+    void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
     name random_arbitrator(uint64_t arbitration_id);
-
+    void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id);
   /// 
   ///
   /// bos.arbitration end

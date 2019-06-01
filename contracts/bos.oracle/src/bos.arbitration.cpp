@@ -40,7 +40,7 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
     data_services svctable(_self, _self.value);
     auto svc_iter = svctable.find(service_id);
     eosio_assert(svc_iter != svctable.end(), "service does not exist");
-    eosio_assert(svc_iter->status == data_service_status::service_in, "service status shoule be service_in");
+    eosio_assert(svc_iter->status == service_status::service_in, "service status shoule be service_in");
     transfer(applicant, arbitrat_account, amount, "complain deposit.");
 
     auto complainant_tb = complainants( get_self(), get_self().value );
@@ -78,6 +78,7 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         p.service_id = service_id;
         p.evidence_info = reason;
         p.arbi_step = 1;
+        p.required_arbitrator = 5;
         p.add_applicant(applicant);
     } );
 
@@ -93,6 +94,8 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         + ", service_id: " + std::to_string(service_id) 
         + ", state_amount: " + amount.to_string();
     transfer(get_self(), svcprovider_iter->account, notify_amount, memo);
+
+    start_arbitration(arbitrator_type::profession, arbi_id, service_id);
 }
 
 void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string evidence ) {
@@ -119,7 +122,7 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
     } );
 }
 
-void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id, signature sig ) {
+void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id ) {
     require_auth( arbitrator );
     transfer(arbitrator, arbitrat_account, amount, "resparbitrat deposit.");
 
@@ -127,17 +130,24 @@ void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitrati
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
 
     arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
-        p.arbi_step = arbi_step_type::arbi_end;
+        p.arbi_step = arbi_step_type::arbi_responded;
+        p.add_arbitrator(arbitrator);
     } );
 
-    // start arbitration
-    if (arbi_iter->applicants.size() > 0) {
-        start_arbitration(arbitrator_type::profession, arbitration_id);
+    // Check arbitrator number requirements.
+    if (arbi_iter->arbitrators.size() >= arbi_iter->required_arbitrator) {
+        arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
+            p.arbi_step = arbi_step_type::arbi_started;
+        } );
+    } else {
+        random_chose_arbitrator(arbitration_id, arbi_iter->service_id);
     }
 }
 
 void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
     require_auth( arbitrator );
+    // TODO: Judge if all the arbitrators submit the result on time.
+
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
 
@@ -164,23 +174,30 @@ void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t re
     }
 }
 
-void bos_oracle::start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id) {
+void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) {
     auto arbitrator = random_arbitrator(arbitration_id);
+    auto notify_amount = eosio::asset(1, _bos_symbol);
+    // Transfer to arbitrator
+    auto memo = "arbitration_id: " + std::to_string(arbitration_id)
+        + ", service_id: " + std::to_string(service_id);
+    transfer(get_self(), arbitrator, notify_amount, memo);
+}
 
+void bos_oracle::start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id) {
+    random_chose_arbitrator(arbitration_id, service_id);
 }
 
 name bos_oracle::random_arbitrator(uint64_t arbitration_id) {
-    auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
-    auto arbiprocess_by_arbi = arbiprocess_tb.template get_index<"arbi"_n>();
-    auto iter_arbiprocess = arbiprocess_by_arbi.find( arbitration_id );
-    auto chosen_arbitrators = iter_arbiprocess->arbitrators;
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto iter_arbicaseapp = arbicaseapp_tb.find( arbitration_id );
+    auto chosen_arbitrators = iter_arbicaseapp->arbitrators;
     std::vector<name> chosen_from_arbitrators;
 
     auto arb_table = arbitrators( get_self(), get_self().value );
     for (auto iter = arb_table.begin(); iter != arb_table.end(); iter++)
     {
         auto chosen = std::find(chosen_arbitrators.begin(), chosen_arbitrators.end(), iter->account);
-        if (chosen == chosen_arbitrators.end()) {
+        if (chosen == chosen_arbitrators.end() && !iter->is_malicious) {
             chosen_from_arbitrators.push_back(iter->account);
         }
     }
