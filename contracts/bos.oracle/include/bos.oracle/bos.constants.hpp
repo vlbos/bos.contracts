@@ -2,32 +2,32 @@
 #include <eosiolib/eosio.hpp>
 
 /// provider
-enum data_service_status : uint8_t { service_in, service_cancel, service_pause };
+enum service_status : uint8_t { service_in, service_cancel, service_pause };
 
-enum data_consumer_status : uint8_t { consumer_on, consumer_stop };
+enum consumer_status : uint8_t { consumer_on, consumer_stop };
 
 enum apply_status : uint8_t { apply_init, apply_cancel};
 
-enum data_service_subscription_status : uint8_t { service_unsubscribe,service_subscribe };
-enum data_service_provision_status : uint8_t { service_unreg,service_reg,service_suspend };
+enum subscription_status : uint8_t { subscription_subscribe,subscription_unsubscribe };
+enum provision_status : uint8_t { provision_reg,provision_unreg,provision_suspend };
 
-enum freeze_delay_status : uint8_t { freeze_delay_start,freeze_delay_finish,freeze_delay_faileds };
+enum transfer_status : uint8_t { transfer_start,transfer_finish,transfer_failed };
 
-enum data_service_usage_type : uint8_t { usage_request,usage_subscribe };
+enum usage_type : uint8_t { usage_request,usage_subscribe };
 
-enum data_request_status : uint8_t { reqeust_valid, request_cancel };
+enum request_status : uint8_t { reqeust_valid, request_cancel };
 
-enum data_service_fee_type : uint8_t { fee_times, fee_month, fee_type_count };
+enum fee_type : uint8_t { fee_times, fee_month, fee_type_count };
 
-enum data_service_data_type : uint8_t {
+enum data_type : uint8_t {
   data_deterministic,
   data_non_deterministic
 };
 
-enum data_service_injection_method : uint8_t {
+enum injection_method : uint8_t {
   chain_direct,
   chain_indirect,
   chain_outside
 };
 
-enum transfer_type : uint8_t { transfer_freeze , transfer_delay };
+enum transfer_type : uint8_t { tt_freeze , tt_delay };

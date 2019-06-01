@@ -4,27 +4,28 @@
 #include <cmath>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/transaction.hpp>
 using namespace eosio;
 using std::string;
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param account 
- * @param stake_amount 
- * @param service_price 
- * @param fee_type 
- * @param data_format 
- * @param data_type 
- * @param criteria 
- * @param acceptance 
- * @param declaration 
- * @param injection_method 
- * @param duration 
- * @param provider_limit 
- * @param update_cycle 
- * @param update_start_time 
+ * @brief
+ *
+ * @param service_id
+ * @param account
+ * @param stake_amount
+ * @param service_price
+ * @param fee_type
+ * @param data_format
+ * @param data_type
+ * @param criteria
+ * @param acceptance
+ * @param declaration
+ * @param injection_method
+ * @param duration
+ * @param provider_limit
+ * @param update_cycle
+ * @param update_start_time
  */
 void bos_oracle::regservice(uint64_t service_id, name account,
                             asset stake_amount, asset service_price,
@@ -34,7 +35,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
-  require_auth(_self);
+  require_auth(account);
   uint64_t new_service_id = service_id;
   data_services svctable(_self, _self.value);
   if (0 == service_id) {
@@ -59,9 +60,9 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       s.guarantee_id = 0;
       s.risk_control_amount = asset(0, core_symbol());
       s.pause_service_stake_amount = asset(0, core_symbol());
-      s.freeze_flag = 0;
-      s.emergency_flag = 0;
-      s.status = 0;
+      s.freeze_flag = false;
+      s.emergency_flag = false;
+      s.status = service_status::service_in;
       new_service_id = s.service_id;
     });
   }
@@ -75,6 +76,10 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     providertable.emplace(_self, [&](auto &p) {
       p.account = account;
       p.total_stake_amount = stake_amount;
+      // p.pubkey = "";
+      p.total_freeze_amount = asset(0, core_symbol());
+      p.unconfirmed_amount = asset(0, core_symbol());
+      p.claim_amount = asset(0, core_symbol());
     });
   } else {
     providertable.modify(provider_itr, same_payer, [&](auto &p) {
@@ -83,7 +88,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   }
 
   data_service_provisions provisionstable(_self, new_service_id);
-  
+
   auto provision_itr = provisionstable.find(account.value);
   check(provision_itr == provisionstable.end(), "service already  exist");
 
@@ -104,88 +109,17 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.create_time = update_start_time;
   });
 }
-/**
- * @brief 
- * 
- * @param service_id 
- * @param signature 
- * @param account 
- * @param status 
- */
-void bos_oracle::unregservice(uint64_t service_id, 
-                              name account, uint64_t status) {
-require_auth(_self);
-  // data_services svctable(_self, _self.value);
-  // auto service_itr = svctable.find(service_id);
-  // check(service_itr != svctable.end(), "service does not exist");
-  // svctable.modify(service_itr, _self, [&](auto &s) { s.status = status; });
-
-  data_service_provisions provisionstable(_self, service_id);
-  auto provision_itr = provisionstable.find(account.value);
-  check(provision_itr != provisionstable.end(),
-        "provider does not subscribe service ");
-
-  provisionstable.modify(provision_itr, same_payer,
-                         [&](auto &p) { p.status = status; });
-
-  if (static_cast<uint64_t>(data_service_status::service_cancel) == status) {
-    svc_provision_cancel_applys applytable(_self, _self.value);
-    applytable.emplace(_self, [&](auto &a) {
-      a.apply_id = applytable.available_primary_key();
-      a.service_id = service_id;
-      a.provider = account;
-      a.status = apply_status::apply_init;
-      a.cancel_time = time_point_sec(now());
-      a.finish_time = time_point_sec(now());
-    });
-
-    provider_services provservicestable(_self, account.value);
-
-    auto provservice_itr = provservicestable.find(service_id);
-    check(provservice_itr != provservicestable.end(),
-          "provider does not subscribe service");
-    provservicestable.erase(provservice_itr);
-
-    asset freeze_amount = asset(0, core_symbol()); /// calculates  unfinish code
-    asset stake_amount = asset(0, core_symbol());
-    check(asset(0, core_symbol()) == freeze_amount,
-          "freeze amount must equal zero");
-
-    transfer(provider_account, account, stake_amount, "");
-  }
-}
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param action_type 
+ * @brief
+ *
+ * @param service_id
+ * @param account
+ * @param stake_amount
  */
-void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
-  require_auth(_self);
-  data_services svctable(_self, _self.value);
-  auto service_itr = svctable.find(service_id);
-  check(service_itr != svctable.end(), "service does not exist");
-  svctable.modify(service_itr, _self, [&](auto &s) {
-    if (0 == action_type) {
-      s.freeze_flag = true;
-    } else {
-      s.emergency_flag = true;
-    }
-  });
-}
-
-/**
- * @brief 
- * 
- * @param service_id 
- * @param account 
- * @param stake_amount 
- */
-void bos_oracle::stakeamount(uint64_t service_id, 
-                             name account,
+void bos_oracle::stakeamount(uint64_t service_id, name account,
                              asset stake_amount) {
-require_auth(_self);
+  require_auth(account);
   if (stake_amount.amount > 0) {
     transfer(account, provider_account, stake_amount, "");
   }
@@ -219,100 +153,120 @@ require_auth(_self);
     transfer(provider_account, account,
              asset(fabs(stake_amount.amount), core_symbol()), "");
   }
-
-  
 }
 
 /**
- * @brief 
- * 
- * @param account 
- * @param receive_account 
+ * @brief
+ *
+ * @param service_id
+ * @param fee_types
+ * @param service_prices
  */
-void bos_oracle::claim(name account, name receive_account) {
-require_auth(_self);
-  provider_services proviservicestable(_self, account.value);
-  uint64_t consumption = 0;
-  uint64_t month_consumption = 0;
-  uint64_t service_times = 0;
-  uint64_t provide_times = 0;
-  uint64_t service_month_times = 0;
-  uint64_t provide_month_times = 0;
-  uint64_t claimreward = 0;
-  uint64_t income = 0;
-  uint64_t month_income = 0;
- 
-  asset stake_freeze_amount = asset(0,core_symbol());
-  asset service_stake_freeze_amount = asset(0,core_symbol());
-  asset total_stake_freeze_amount = asset(0,core_symbol());
-  uint64_t stake_freeze_income = 0;
+void bos_oracle::addfeetypes(uint64_t service_id,
+                             std::vector<uint8_t> fee_types,
+                             std::vector<asset> service_prices) {
+  require_auth(_self);
+  check(fee_types.size() > 0 && fee_types.size() == service_prices.size(),
+        "fee_types size have to equal service prices size");
+  data_service_fees feetable(_self, service_id);
+  for (int i = 0; i < fee_types.size(); i++) {
+    auto fee_type = fee_types[i];
+    auto service_price = service_prices[i];
+    addfeetype(service_id, fee_type, service_price);
+  }
+}
 
-  data_providers providertable(_self, _self.value);
-  auto provider_itr = providertable.find(account.value);
-  check(provider_itr != providertable.end(), "");
+void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
+                            asset service_price) {
+  require_auth(_self);
+  data_service_fees feetable(_self, service_id);
+  check(fee_type >= fee_type::fee_times && fee_type < fee_type::fee_type_count,
+        "unknown fee type");
 
-  check(time_point_sec(now()) - provider_itr->last_claim_time >= eosio::days(1),
-        "claim span must be greater than one day");
+  auto fee_itr = feetable.find(static_cast<uint64_t>(fee_type));
+  if (fee_itr == feetable.end()) {
+    feetable.emplace(_self, [&](auto &f) {
+      f.service_id = service_id;
+      f.fee_type = fee_type;
+      f.service_price = service_price;
+    });
+  } else {
+    feetable.modify(fee_itr, same_payer, [&](auto &f) {
+      f.service_id = service_id;
+      f.fee_type = fee_type;
+      f.service_price = service_price;
+    });
+  }
+}
 
-  auto calc_income = [](uint64_t service_times, uint64_t provide_times,
-                        uint64_t consumption) -> uint64_t {
-    check(provide_times > 0 && service_times > provide_times, "provider times and service_times must greater than zero");
-    uint64_t income = 0;
-    // if (provide_times > 0 && service_times > provide_times) {
-      income = consumption * provide_times / static_cast<double>(service_times);
-    // }
+/**
+ * @brief
+ *
+ * @param service_id
+ * @param provider
+ * @param data_json
+ * @param is_request
+ */
+void bos_oracle::multipush(uint64_t service_id, name provider,
+                           const string &data_json, bool is_request) {
+  require_auth(provider);
+  check(service_status::service_in == get_service_status(service_id),
+        "service and subscription must be available");
 
-    return income;
+  auto push_data = [](uint64_t service_id, name provider, name contract_account,
+                      name action_name, uint64_t request_id,
+                      const string &data_json) {
+    transaction t;
+    t.actions.emplace_back(
+        permission_level{provider, active_permission}, provider, "pushdata"_n,
+        std::make_tuple(service_id, provider, contract_account, action_name,
+                        request_id, data_json));
+    t.delay_sec = 0;
+    uint128_t deferred_id =
+        (uint128_t(service_id) << 64) | contract_account.value;
+    cancel_deferred(deferred_id);
+    t.send(deferred_id, provider);
   };
 
-  for (const auto &p : proviservicestable) {
-    std::tie(consumption, month_consumption) =
-        get_consumption(p.service_id);
-    std::tie(service_times, service_month_times, provide_times,
-             provide_month_times) = get_times(p.service_id, account);
+  if (is_request) {
+    // request
+    uint64_t request_id = get_request_by_last_push(service_id, provider);
+    std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
+        get_request_list(service_id, request_id);
 
-    std::tie(stake_freeze_amount,service_stake_freeze_amount) =       get_freeze_stat(p.service_id,account);
+    for (const auto &rc : receive_contracts) {
+      push_data(service_id, provider, std::get<0>(rc), std::get<1>(rc),
+               std::get<2>(rc), data_json);
+    }
+  } else {
 
-    income += calc_income(service_times, provide_times, consumption*0.8);
+    // subscription
+    std::vector<std::tuple<name, name>> subscription_receive_contracts =
+        get_subscription_list(service_id);
 
-    month_income += calc_income(service_month_times, provide_month_times,
-                                month_consumption*0.8);
-
-
-    uint64_t stake_income = (consumption+month_consumption)*0.8;
-    check(stake_freeze_amount.amount > 0 && service_stake_freeze_amount.amount > stake_freeze_amount.amount, "provider freeze_amount and service_times must greater than zero");
-     
-    stake_freeze_income = stake_income * stake_freeze_amount.amount / static_cast<double>(service_stake_freeze_amount.amount);
- 
-    
+    for (const auto &src : subscription_receive_contracts) {
+      push_data(service_id, provider, std::get<0>(src), std::get<1>(src), 0,
+               data_json);
+    }
   }
-  asset new_income =
-      asset(income + month_income+stake_freeze_income, core_symbol()) - provider_itr->claim_amount;
-
-  check(new_income.amount > 0, "no income ");
-
-  providertable.modify(provider_itr, same_payer,
-                       [&](auto &p) { p.claim_amount += new_income; });
-
-  transfer(consumer_account, account, new_income, "claim");
 }
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param provider 
- * @param contract_account 
- * @param action_name 
- * @param data_json 
- * @param request_id 
+ * @brief
+ *
+ * @param service_id
+ * @param provider
+ * @param contract_account
+ * @param action_name
+ * @param data_json
+ * @param request_id
  */
 void bos_oracle::pushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
-                          uint64_t request_id,const string& data_json) {
+                          uint64_t request_id, const string &data_json) {
   require_auth(provider);
-  check(data_service_status::service_in == get_service_status(service_id) &&
-            data_service_subscription_status::service_subscribe ==
+  check(service_status::service_in == get_service_status(service_id) &&
+            subscription_status::subscription_subscribe ==
                 get_subscription_status(service_id, contract_account,
                                         action_name),
         "service and subscription must be available");
@@ -323,7 +277,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
 
     if (pay_time < time_point_sec(now())) {
       fee_service(service_id, contract_account, action_name,
-                  data_service_fee_type::fee_month);
+                  fee_type::fee_month);
     }
   }
 
@@ -348,78 +302,150 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
 }
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param provider 
- * @param data_json 
- * @param is_request 
+ * @brief
+ *
+ * @param account
+ * @param receive_account
  */
-void bos_oracle::multipush(uint64_t service_id, name provider,
-                           const string& data_json, bool is_request) {
-require_auth(_self);
-  check(data_service_status::service_in == get_service_status(service_id),
-        "service and subscription must be available");
+void bos_oracle::claim(name account, name receive_account) {
+  require_auth(account);
+  provider_services proviservicestable(_self, account.value);
+  uint64_t consumption = 0;
+  uint64_t month_consumption = 0;
+  uint64_t service_times = 0;
+  uint64_t provide_times = 0;
+  uint64_t service_month_times = 0;
+  uint64_t provide_month_times = 0;
+  uint64_t claimreward = 0;
+  uint64_t income = 0;
+  uint64_t month_income = 0;
 
-  if (is_request) {
-    // request
-    uint64_t request_id = get_request_by_last_push(service_id, provider);
-    std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
-        get_request_list(service_id, request_id);
+  asset stake_freeze_amount = asset(0, core_symbol());
+  asset service_stake_freeze_amount = asset(0, core_symbol());
+  asset total_stake_freeze_amount = asset(0, core_symbol());
+  uint64_t stake_freeze_income = 0;
 
-    for (const auto &rc : receive_contracts) {
-      pushdata(service_id, provider, std::get<0>(rc), std::get<1>(rc),
-                std::get<2>(rc),data_json);
-    }
-  } else {
+  data_providers providertable(_self, _self.value);
+  auto provider_itr = providertable.find(account.value);
+  check(provider_itr != providertable.end(), "");
 
-    // subscription
-    std::vector<std::tuple<name, name>> subscription_receive_contracts =
-        get_subscription_list(service_id);
+  check(time_point_sec(now()) - provider_itr->last_claim_time >= eosio::days(1),
+        "claim span must be greater than one day");
 
-    for (const auto &src : subscription_receive_contracts) {
-      pushdata(service_id, provider, std::get<0>(src), std::get<1>(src),
-               0,data_json);
-    }
+  auto calc_income = [](uint64_t service_times, uint64_t provide_times,
+                        uint64_t consumption) -> uint64_t {
+    check(provide_times > 0 && service_times > provide_times,
+          "provider times and service_times must greater than zero");
+    uint64_t income = 0;
+    // if (provide_times > 0 && service_times > provide_times) {
+    income = consumption * provide_times / static_cast<double>(service_times);
+    // }
+
+    return income;
+  };
+
+  for (const auto &p : proviservicestable) {
+    std::tie(consumption, month_consumption) = get_consumption(p.service_id);
+    std::tie(service_times, service_month_times, provide_times,
+             provide_month_times) = get_times(p.service_id, account);
+
+    std::tie(stake_freeze_amount, service_stake_freeze_amount) =
+        get_freeze_stat(p.service_id, account);
+
+    income += calc_income(service_times, provide_times, consumption * 0.8);
+
+    month_income += calc_income(service_month_times, provide_month_times,
+                                month_consumption * 0.8);
+
+    uint64_t stake_income = (consumption + month_consumption) * 0.8;
+    check(stake_freeze_amount.amount > 0 &&
+              service_stake_freeze_amount.amount > stake_freeze_amount.amount,
+          "provider freeze_amount and service_times must greater than zero");
+
+    stake_freeze_income =
+        stake_income * stake_freeze_amount.amount /
+        static_cast<double>(service_stake_freeze_amount.amount);
   }
+  asset new_income =
+      asset(income + month_income + stake_freeze_income, core_symbol()) -
+      provider_itr->claim_amount;
+
+  check(new_income.amount > 0, "no income ");
+
+  providertable.modify(provider_itr, same_payer,
+                       [&](auto &p) { p.claim_amount += new_income; });
+
+  transfer(consumer_account, account, new_income, "claim");
 }
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param fee_types 
- * @param service_prices 
+ * @brief
+ *
+ * @param service_id
+ * @param action_type
  */
-void bos_oracle::addfeetype(uint64_t service_id, std::vector<uint8_t> fee_types,
-                            std::vector<asset> service_prices) {
-                              require_auth(_self);
-  check(fee_types.size() > 0 && fee_types.size() == service_prices.size(),
-        "fee_types size have to equal service prices size");
-  data_service_fees feetable(_self, _self.value);
-  for (int i = 0; i < fee_types.size(); i++) {
-    auto type = fee_types[i];
-    auto price = service_prices[i];
-    check(type >= data_service_fee_type::fee_times &&
-              type < data_service_fee_type::fee_type_count,
-          "unknown fee type");
-
-    uint64_t id = get_hash_key(get_uu_hash(service_id, type));
-    auto fee_itr = feetable.find(id);
-    if (fee_itr == feetable.end()) {
-      feetable.emplace(_self, [&](auto &f) {
-        f.id = id;
-        f.service_id = service_id;
-        f.fee_type = type;
-        f.service_price = price;
-      });
+void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
+  require_auth(_self);
+  data_services svctable(_self, _self.value);
+  auto service_itr = svctable.find(service_id);
+  check(service_itr != svctable.end(), "service does not exist");
+  svctable.modify(service_itr, _self, [&](auto &s) {
+    if (0 == action_type) {
+      s.freeze_flag = true;
     } else {
-      feetable.modify(fee_itr, same_payer, [&](auto &f) {
-        f.service_id = service_id;
-        f.fee_type = type;
-        f.service_price = price;
-      });
+      s.emergency_flag = true;
     }
+  });
+}
+
+/**
+ * @brief
+ *
+ * @param service_id
+ * @param signature
+ * @param account
+ * @param status
+ */
+void bos_oracle::unregservice(uint64_t service_id, name account,
+                              uint64_t status) {
+  require_auth(account);
+  // data_services svctable(_self, _self.value);
+  // auto service_itr = svctable.find(service_id);
+  // check(service_itr != svctable.end(), "service does not exist");
+  // svctable.modify(service_itr, _self, [&](auto &s) { s.status = status; });
+
+  data_service_provisions provisionstable(_self, service_id);
+  auto provision_itr = provisionstable.find(account.value);
+  check(provision_itr != provisionstable.end(),
+        "provider does not subscribe service ");
+
+  provisionstable.modify(provision_itr, same_payer,
+                         [&](auto &p) { p.status = status; });
+
+  if (static_cast<uint64_t>(service_status::service_cancel) == status) {
+    svc_provision_cancel_applys applytable(_self, _self.value);
+    applytable.emplace(_self, [&](auto &a) {
+      a.apply_id = applytable.available_primary_key();
+      a.service_id = service_id;
+      a.provider = account;
+      a.status = apply_status::apply_init;
+      a.cancel_time = time_point_sec(now());
+      a.finish_time = time_point_sec(now());
+    });
+
+    provider_services provservicestable(_self, account.value);
+
+    auto provservice_itr = provservicestable.find(service_id);
+    check(provservice_itr != provservicestable.end(),
+          "provider does not subscribe service");
+    provservicestable.erase(provservice_itr);
+
+    asset freeze_amount = asset(0, core_symbol()); /// calculates  unfinish code
+    asset stake_amount = asset(0, core_symbol());
+    check(asset(0, core_symbol()) == freeze_amount,
+          "freeze amount must equal zero");
+
+    transfer(provider_account, account, stake_amount, "");
   }
 }
 

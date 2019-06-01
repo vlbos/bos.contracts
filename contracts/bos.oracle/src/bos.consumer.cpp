@@ -42,10 +42,11 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   //          { account, consumer_account, amount, memo }
   //       );
   require_auth(account);
-  require_auth(contract_account);
+  // require_auth(contract_account);
+
 
   asset price_by_month =
-      get_price_by_fee_type(service_id, data_service_fee_type::fee_month);
+      get_price_by_fee_type(service_id, fee_type::fee_month);
   check(price_by_month.amount > 0 && amount >= price_by_month,
         "amount must greater than price by month");
 
@@ -58,17 +59,17 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     consumertable.emplace(_self, [&](auto &c) {
       c.account = account;
       // c.pubkey = publickey;
-      c.status = data_consumer_status::consumer_on;
+      c.status = consumer_status::consumer_on;
       c.create_time = time_point_sec(now());
     });
   }
 
   // add consumer service subscription relation
-  data_service_subscriptions substable(_self, _self.value);
+  data_service_subscriptions substable(_self, service_id);
 
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  // auto id =
+  //     get_hash_key(get_nn_hash(contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr == substable.end(), "contract_account exist");
 
   substable.emplace(_self, [&](auto &subs) {
@@ -79,7 +80,46 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     subs.payment = amount;
     subs.consumption = asset(0, core_symbol());
     subs.subscription_time = time_point_sec(now());
+    subs.status = subscription_status::subscription_subscribe;
   });
+}
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param requester 
+ * @param request_content 
+ */
+void bos_oracle::requestdata(uint64_t service_id, name contract_account,
+                             name action_name, name requester,
+                             std::string request_content) {
+  require_auth(requester);
+
+  /// check service available subscription status subscribe
+  check(service_status::service_in == get_service_status(service_id) &&
+            subscription_status::subscription_subscribe ==
+                get_subscription_status(service_id, contract_account,
+                                        action_name),
+        "service and subscription must be available");
+
+  fee_service(service_id, contract_account, action_name,
+              fee_type::fee_times);
+
+  data_service_requests reqtable(_self, _self.value);
+
+  reqtable.emplace(_self, [&](auto &r) {
+    r.request_id = reqtable.available_primary_key();
+    r.service_id = service_id;
+    r.contract_account = contract_account;
+    r.action_name = action_name;
+    r.requester = requester;
+    r.request_time = time_point_sec(now());
+    r.request_content = request_content;
+  });
+  
+  
 }
 
 /**
@@ -97,15 +137,15 @@ void bos_oracle::payservice(uint64_t service_id, name contract_account,
                             std::string memo) {
 
   require_auth(account);
-  require_auth(contract_account);
+  // require_auth(contract_account);
   check(amount.amount > 0, "amount must be greater than zero");
   transfer(account, consumer_account, amount, memo);
 
-  data_service_subscriptions substable(_self, _self.value);
+  data_service_subscriptions substable(_self,service_id);
 
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  // auto id =
+  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
   substable.modify(subs_itr, _self,
@@ -134,11 +174,11 @@ void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
                             name action_name, asset amount) {
                 require_auth(_self);
   check(amount.amount > 0, "amount must be greater than zero");
-  data_service_subscriptions substable(_self, _self.value);
+  data_service_subscriptions substable(_self, service_id);
 
-  auto id =
-      get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(id);
+  // auto id =
+  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+  auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
   check(subs_itr->payment > amount, "payment must be greater than amount");
   substable.modify(subs_itr, _self, [&](auto &subs) {
@@ -147,41 +187,6 @@ void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
   });
 }
 
-/**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param requester 
- * @param request_content 
- */
-void bos_oracle::requestdata(uint64_t service_id, name contract_account,
-                             name action_name, name requester,
-                             std::string request_content) {
-  require_auth(requester);
 
-  /// check service available subscription status subscribe
-  check(data_service_status::service_in == get_service_status(service_id) &&
-            data_service_subscription_status::service_subscribe ==
-                get_subscription_status(service_id, contract_account,
-                                        action_name),
-        "service and subscription must be available");
-
-  fee_service(service_id, contract_account, action_name,
-              data_service_fee_type::fee_times);
-
-  data_service_requests reqtable(_self, _self.value);
-
-  reqtable.emplace(_self, [&](auto &r) {
-    r.request_id = reqtable.available_primary_key();
-    r.service_id = service_id;
-    r.contract_account = contract_account;
-    r.action_name = action_name;
-    r.requester = requester;
-    r.request_time = time_point_sec(now());
-    r.request_content = request_content;
-  });
-}
 
 // } /// namespace eosio

@@ -119,51 +119,56 @@ public:
       uint64_t service_id, name account, asset stake_amount,
       asset service_price, uint64_t fee_type, std::string data_format,
       uint64_t data_type, std::string criteria, uint64_t acceptance,
-      std::string declaration, uint64_t injection_method,
-      uint64_t duration, uint64_t provider_limit, uint64_t update_cycle,
+      std::string declaration, uint64_t injection_method, uint64_t duration,
+      uint64_t provider_limit, uint64_t update_cycle,
       time_point_sec update_start_time);
 
-  [[eosio::action]] void unregservice(uint64_t service_id,
-                                       name account,
-                                      uint64_t is_suspense);
-
-  [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
-
-  [[eosio::action]] void stakeamount(uint64_t service_id, 
-                                     name account, 
+  [[eosio::action]] void stakeamount(uint64_t service_id, name account,
                                      asset stake_amount);
+
+  [[eosio::action]] void addfeetypes(uint64_t service_id,
+                                     std::vector<uint8_t> fee_types,
+                                     std::vector<asset> service_prices);
+  [[eosio::action]] void addfeetype(uint64_t service_id, uint8_t fee_type,
+                                    asset service_price);
+
+  [[eosio::action]] void multipush(uint64_t service_id, name provider,
+                                   const string &data_json, bool is_request);
 
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
-                                  uint64_t request_id,const string& data_json);
-  [[eosio::action]] void multipush(uint64_t service_id, name provider,
-                                   const string& data_json, bool is_request);
-  [[eosio::action]] void addfeetype(uint64_t service_id,
-                                    std::vector<uint8_t> fee_types,
-                                    std::vector<asset> service_prices);
-
+                                  uint64_t request_id, const string &data_json);
   [[eosio::action]] void claim(name account, name receive_account);
 
+  [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
+
+  [[eosio::action]] void unregservice(uint64_t service_id, name account,
+                                      uint64_t is_suspense);
   using regiservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
-  using unregister_action =
-      eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
-  using execaction_action =
-      eosio::action_wrapper<"execaction"_n, &bos_oracle::execaction>;
+
   using stakeamount_action =
       eosio::action_wrapper<"stakeamount"_n, &bos_oracle::stakeamount>;
-  using pushdata_action =
-      eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
+
+  using addfeetypes_action =
+      eosio::action_wrapper<"addfeetypes"_n, &bos_oracle::addfeetypes>;
+  using addfeetype_action =
+      eosio::action_wrapper<"addfeetype"_n, &bos_oracle::addfeetype>;
 
   using multipush_action =
       eosio::action_wrapper<"multipush"_n, &bos_oracle::multipush>;
 
-  using addfeetype_action =
-      eosio::action_wrapper<"addfeetype"_n, &bos_oracle::addfeetype>;
+  using pushdata_action =
+      eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
 
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
 
+  using execaction_action =
+      eosio::action_wrapper<"execaction"_n, &bos_oracle::execaction>;
+
+  using unregister_action =
+      eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
   ///
   ///
   /// bos.provider end
@@ -199,10 +204,10 @@ public:
   /// bos.riskctrl begin
   ///
   ///
-  [[eosio::action]] void deposit(name from, name to, asset quantity,
-                                 string memo, bool is_notify);
-  [[eosio::action]] void withdraw(name from, name to, asset quantity,
-                                  string memo);
+  [[eosio::action]] void deposit(uint64_t service_id, name from, name to,
+                                 asset quantity, string memo, bool is_notify);
+  [[eosio::action]] void withdraw(uint64_t service_id, name from, name to,
+                                  asset quantity, string memo);
 
   using deposit_action =
       eosio::action_wrapper<"deposit"_n, &bos_oracle::deposit>;
@@ -257,16 +262,15 @@ private:
   std::vector<std::tuple<name, asset>> get_provider_list(uint64_t service_id);
 
   void freeze_asset(uint64_t service_id, name account, asset amount);
-  uint64_t freeze_providers_amount(uint64_t service_id, 
-                             const std::set<name>& available_providers, 
-                             asset freeze_amount) ;
+  uint64_t freeze_providers_amount(uint64_t service_id,
+                                   const std::set<name> &available_providers,
+                                   asset freeze_amount);
   /// consumer
   std::vector<std::tuple<name, name>> get_subscription_list(
       uint64_t service_id);
   std::vector<std::tuple<name, name, uint64_t>> get_request_list(
       uint64_t service_id, uint64_t request_id);
-  std::tuple<uint64_t, uint64_t> get_consumption(
-      uint64_t service_id);
+  std::tuple<uint64_t, uint64_t> get_consumption(uint64_t service_id);
 
   /// risk control
   void transfer(name from, name to, asset quantity, string memo);
@@ -286,7 +290,7 @@ private:
 
   void add_freeze_log(uint64_t service_id, name account, asset amount);
   void add_freeze_stat(uint64_t service_id, name account, asset amount);
-  std::tuple<asset,asset> get_freeze_stat(uint64_t service_id, name account);
+  std::tuple<asset, asset> get_freeze_stat(uint64_t service_id, name account);
 
   std::tuple<asset, asset> stat_freeze_amounts(uint64_t service_id,
                                                name account);

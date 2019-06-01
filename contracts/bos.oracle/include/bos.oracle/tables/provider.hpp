@@ -34,12 +34,11 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_fee {
-  uint64_t id;
   uint64_t service_id;
   uint8_t fee_type;
   asset service_price;
 
-  uint64_t primary_key() const { return id; }
+  uint64_t primary_key() const { return static_cast<uint64_t>(fee_type); }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
