@@ -79,6 +79,7 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         p.evidence_info = reason;
         p.arbi_step = 1;
         p.required_arbitrator = 5;
+        p.deadline = time_point_sec(now() + 3600);
         p.add_applicant(applicant);
     } );
 
@@ -111,6 +112,17 @@ void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string 
 
 void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
     require_auth( arbitrator );
+    check(result == 0 || result == 1, "`result` can only be 0 or 1.");
+
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
+    check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration case application.");
+
+    // Judge if all the arbitrators submit the result on time.
+    if (arbi_iter->deadline <= time_point_sec(now())) {
+        random_chose_arbitrator(arbitration_id, arbi_iter->service_id);
+        return;
+    }
 
     auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
     auto arbipro_iter = arbiprocess_tb.find( process_id );
@@ -118,8 +130,35 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
 
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
         p.num_id += 1;
-        p.arbitration_result = result;
+        p.add_result(result);
     } );
+
+    // Calculate results
+    if (arbipro_iter->result_size() >= arbi_iter->required_arbitrator) {
+        uint64_t arbi_result = 0;
+        if (arbipro_iter->total_result() >= arbi_iter->required_arbitrator / 2) {
+            arbi_result = 1;
+        } else {
+            arbi_result = 0;
+        }
+        arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
+            p.arbitration_result = arbi_result;
+        } );
+        arbicaseapp_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
+            p.final_result = arbi_result;
+        } );
+        auto notify_amount = eosio::asset(1, _bos_symbol);
+        auto memo = "arbitration_id: " + std::to_string(arbitration_id)
+            + ", service_id: " + std::to_string(service_id)
+            + ", result: success.";
+
+        for (auto iter = arbi_iter->arbitrators.begin(); iter != arbi_iter->arbitrators.end(); iter++) {
+            transfer(get_self(), *iter, notify_amount, memo);
+        }
+        for (auto iter = arbi_iter->applicants.begin(); iter != arbi_iter->applicants.end(); iter++) {
+            transfer(get_self(), *iter, notify_amount, memo);
+        }
+    }
 }
 
 void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id ) {
@@ -146,10 +185,9 @@ void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitrati
 
 void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
     require_auth( arbitrator );
-    // TODO: Judge if all the arbitrators submit the result on time.
-
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
+    check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration case application.");
 
     arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
         p.arbi_step = arbi_iter->arbi_step + 1;
@@ -164,11 +202,13 @@ void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t re
         arbiprocess_tb.emplace( get_self(), [&]( auto& p ) {
             p.process_id = arbiprocess_tb.available_primary_key();
             p.arbitration_id = arbitration_id;
+            p.add_responder(arbitrator);
             p.num_id = 1;
         } );
     } else {
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
             p.arbitration_id = arbitration_id;
+            p.add_responder(arbitrator);
             p.num_id += 1;
         } );
     }

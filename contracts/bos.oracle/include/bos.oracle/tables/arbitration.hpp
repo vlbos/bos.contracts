@@ -91,8 +91,9 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbicaseapp
    uint64_t service_id;
    uint64_t update_number;
    uint64_t arbi_step;
-   uint64_t final_results;
+   uint64_t final_result;
    uint64_t required_arbitrator;
+   time_point_sec deadline;
    std::string evidence_info;
    std::vector<name> applicants;
    std::vector<name> arbitrators;
@@ -109,15 +110,22 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t num_id;
    std::vector<name> responders;
    asset stake_amount;
-   std::string arbitrator_arbitration_results;
+   std::vector<uint64_t> arbitrator_arbitration_results;
    std::string evidence_info;
    uint64_t arbitration_result;
    uint64_t arbitration_method;
 
    uint64_t primary_key() const { return process_id; }
    uint64_t by_arbi() const { return arbitration_id; }
-   
    void add_responder ( name responder ) { responders.push_back( responder ); }
+   void add_result ( uint64_t result ) { arbitrator_arbitration_results.push_back( result ); }
+   uint64_t result_size () { return arbitrator_arbitration_results.size(); }
+   uint64_t total_result () {
+      uint64_t total = 0;
+      for (auto& n : arbitrator_arbitration_results)
+         total += n;
+      return total;
+   }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_result
