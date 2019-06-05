@@ -38,6 +38,7 @@ public:
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _bos_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
+  static constexpr uint64_t arbi_process_time_limit = 3600;
 
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)

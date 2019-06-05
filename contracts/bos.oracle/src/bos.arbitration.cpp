@@ -18,10 +18,10 @@ using std::string;
 
 void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info ) {
     require_auth( account );
-    eosio_assert( type == arbitrator_type::profession || type == arbitrator_type::amateur, "Arbitrator type can only be 1 or 2." );
+    check( type == arbitrator_type::profession || type == arbitrator_type::amateur, "Arbitrator type can only be 1 or 2." );
     auto abr_table = arbitrators( get_self(), get_self().value );
     auto iter = abr_table.find( account.value );
-    eosio_assert( iter == abr_table.end(), "Arbitrator already registered" );
+    check( iter == abr_table.end(), "Arbitrator already registered" );
     transfer(account, arbitrat_account, stake_amount, "regarbitrat deposit.");
 
     abr_table.emplace( get_self(), [&]( auto& p ) {
@@ -35,12 +35,12 @@ void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, ass
 
 void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method ) {
     require_auth( applicant );
-    eosio_assert( arbi_method == arbi_method_type::crowd_arbitration || arbi_method_type::multiple_rounds, "`arbi_method` can only be 1 or 2." );
+    check( arbi_method == arbi_method_type::crowd_arbitration || arbi_method_type::multiple_rounds, "`arbi_method` can only be 1 or 2." );
 
     data_services svctable(_self, _self.value);
     auto svc_iter = svctable.find(service_id);
-    eosio_assert(svc_iter != svctable.end(), "service does not exist");
-    eosio_assert(svc_iter->status == service_status::service_in, "service status shoule be service_in");
+    check(svc_iter != svctable.end(), "service does not exist");
+    check(svc_iter->status == service_status::service_in, "service status shoule be service_in");
     transfer(applicant, arbitrat_account, amount, "complain deposit.");
 
     auto complainant_tb = complainants( get_self(), get_self().value );
@@ -50,7 +50,7 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
     if ( iter_compt == complainant_by_svc.end() ) {
         is_sponsor = true;
     } else {
-        eosio_assert( iter_compt->status == complainant_status::wait_for_accept, "This complainant is not available." );
+        check( iter_compt->status == complainant_status::wait_for_accept, "This complainant is not available." );
     }
     
     auto appeal_id = 0;
@@ -71,23 +71,54 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
 
     // Arbitration case application
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
-    auto arbi_id = arbicaseapp_tb.available_primary_key();
-    arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
-        p.arbitration_id = arbi_id;
-        p.appeal_id = appeal_id;
-        p.service_id = service_id;
-        p.evidence_info = reason;
-        p.arbi_step = 1;
-        p.required_arbitrator = 5;
-        p.deadline = time_point_sec(now() + 3600);
-        p.add_applicant(applicant);
-    } );
+    auto arbicaseapp_tb_by_svc = arbicaseapp_tb.template get_index<"svc"_n>();
+    auto arbicaseapp_iter = arbicaseapp_tb_by_svc.find( service_id );
+    if (arbicaseapp_iter != arbicaseapp_tb_by_svc.end()) {
+        auto arbi_id = arbicaseapp_tb.available_primary_key();
+        arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
+            p.arbitration_id = arbi_id;
+            p.appeal_id = appeal_id;
+            p.service_id = service_id;
+            p.evidence_info = reason;
+            p.arbi_step = 1;
+            p.required_arbitrator = 5;
+            p.deadline = time_point_sec(now() + 3600);
+            p.add_applicant(applicant);
+        } );
+    } else {
+        // Check the last aribiration process time.
+        if (arbicaseapp_iter->last_process_update_time + time_point_sec(arbi_process_time_limit) > time_point_sec(now())) {
+            // Someone complains about this arbitration.
+            random_chose_arbitrator(arbicaseapp_iter->arbitration_id, arbicaseapp_iter->service_id);
+        } else {
+            arbicaseapp_tb.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
+                p.arbi_step = arbi_step_type::arbi_end;
+            } );
+            auto notify_amount = eosio::asset(1, _bos_symbol);
+            auto memo = "arbitration_id: " + std::to_string(arbicaseapp_iter->arbitration_id)
+                + ", service_id: " + std::to_string(arbicaseapp_iter->service_id)
+                + ", arbitration finished.";
 
+            auto arbitrator_tb = arbitrators( get_self(), get_self().value );
+            for (auto iter = arbicaseapp_iter->arbitrators.begin(); iter != arbicaseapp_iter->arbitrators.end(); iter++) {
+                transfer(get_self(), *iter, notify_amount, memo);
+                auto arbitrator_iter = arbitrator_tb.find(*iter.value);
+                transfer(get_self(), *iter, arbitrator_iter->stake_amount, memo);
+            }
+
+            for (auto iter = arbicaseapp_iter->applicants.begin(); iter != arbicaseapp_iter->applicants.end(); iter++) {
+                transfer(get_self(), *iter, notify_amount, memo);
+            }
+
+            // TODO: Update arbitration correction.
+        }
+    }
+    
     // Data provider
     auto svcprovider_tb = data_service_provisions( get_self(), get_self().value );
     auto svcprovider_tb_by_svc = svcprovider_tb.template get_index<"bysvcid"_n>();
     auto svcprovider_iter = svcprovider_tb_by_svc.find( service_id );
-    eosio_assert(svcprovider_iter->stop_service == false, "service stopped.");
+    check(svcprovider_iter->stop_service == false, "service stopped.");
     
     auto notify_amount = eosio::asset(1, _bos_symbol);
     // Transfer to provider
@@ -103,7 +134,7 @@ void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string 
     require_auth( applicant );
     auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
     auto arbipro_iter = arbiprocess_tb.find( process_id );
-    eosio_assert( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
+    check( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
 
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
         p.evidence_info = evidence;
@@ -118,7 +149,7 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
     check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration case application.");
 
-    // Judge if all the arbitrators submit the result on time.
+    // Check if all the arbitrators submit the result on time.
     if (arbi_iter->deadline <= time_point_sec(now())) {
         random_chose_arbitrator(arbitration_id, arbi_iter->service_id);
         return;
@@ -126,11 +157,12 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
 
     auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
     auto arbipro_iter = arbiprocess_tb.find( process_id );
-    eosio_assert( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
+    check( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
 
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
         p.num_id += 1;
         p.add_result(result);
+        p.update_time = time_point_sec(now());
     } );
 
     // Calculate results
@@ -141,6 +173,9 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
         } else {
             arbi_result = 0;
         }
+        arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p) {
+            p.last_process_update_time = time_point_sec(now());
+        } );
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
             p.arbitration_result = arbi_result;
         } );
