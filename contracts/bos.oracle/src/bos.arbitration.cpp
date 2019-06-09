@@ -141,7 +141,7 @@ void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string 
     } );
 }
 
-void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) const {
+void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
     require_auth( arbitrator );
     check(result == 0 || result == 1, "`result` can only be 0 or 1.");
 
@@ -181,7 +181,7 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
         } );
         auto notify_amount = eosio::asset(1, _bos_symbol);
         auto memo = "arbitration_id: " + std::to_string(arbitration_id)
-            + ", service_id: " + std::to_string(arbipro_iter->service_id)
+            + ", service_id: " + std::to_string(arbi_iter->service_id)
             + ", result: success.";
 
         for (auto arbitrator : arbi_iter->arbitrators) {
@@ -259,7 +259,7 @@ void bos_oracle::start_arbitration(arbitrator_type arbitype, uint64_t arbitratio
     random_chose_arbitrator(arbitration_id, service_id);
 }
 
-name bos_oracle::random_arbitrator(uint64_t arbitration_id) {
+name bos_oracle::random_arbitrator(uint64_t arbitration_id) const {
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto iter_arbicaseapp = arbicaseapp_tb.find( arbitration_id );
     auto chosen_arbitrators = iter_arbicaseapp->arbitrators;

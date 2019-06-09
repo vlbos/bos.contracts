@@ -231,10 +231,10 @@ public:
 
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 
-    [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) const;
+    [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
     void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
-    name random_arbitrator(uint64_t arbitration_id);
+    name random_arbitrator(uint64_t arbitration_id) const;
     void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) const;
   /// 
   ///
@@ -274,7 +274,7 @@ private:
   std::tuple<uint64_t, uint64_t> get_consumption(uint64_t service_id);
 
   /// risk control
-  void transfer(name from, name to, asset quantity, string memo);
+  void transfer(name from, name to, asset quantity, string memo) const;
   void add_freeze_delay(uint64_t service_id, name account,
                         time_point_sec start_time, uint64_t duration,
                         asset amount, uint64_t type);

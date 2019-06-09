@@ -16,7 +16,7 @@
  * @param quantity
  * @param memo
  */
-void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
+void bos_oracle::transfer(name from, name to, asset quantity, string memo) const {
   check(from != to, "cannot transfer to self");
   //  require_auth( from );
   check(is_account(to), "to account does not exist");
