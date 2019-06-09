@@ -121,8 +121,8 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t by_arbi() const { return arbitration_id; }
    void add_responder ( name responder ) { responders.push_back( responder ); }
    void add_result ( uint64_t result ) { arbitrator_arbitration_results.push_back( result ); }
-   uint64_t result_size () { return arbitrator_arbitration_results.size(); }
-   uint64_t total_result () {
+   const uint64_t result_size () { return arbitrator_arbitration_results.size(); }
+   const uint64_t total_result () {
       uint64_t total = 0;
       for (auto& n : arbitrator_arbitration_results)
          total += n;

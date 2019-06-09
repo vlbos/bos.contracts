@@ -73,8 +73,8 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbicaseapp_tb_by_svc = arbicaseapp_tb.template get_index<"svc"_n>();
     auto arbicaseapp_iter = arbicaseapp_tb_by_svc.find( service_id );
+    auto arbi_id = arbicaseapp_tb.available_primary_key();
     if (arbicaseapp_iter != arbicaseapp_tb_by_svc.end()) {
-        auto arbi_id = arbicaseapp_tb.available_primary_key();
         arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
             p.arbitration_id = arbi_id;
             p.appeal_id = appeal_id;
@@ -87,11 +87,11 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
         } );
     } else {
         // Check the last aribiration process time.
-        if (arbicaseapp_iter->last_process_update_time + time_point_sec(arbi_process_time_limit) > time_point_sec(now())) {
+        if (arbicaseapp_iter->last_process_update_time.sec_since_epoch() + arbi_process_time_limit > now()) {
             // Someone complains about this arbitration.
             random_chose_arbitrator(arbicaseapp_iter->arbitration_id, arbicaseapp_iter->service_id);
         } else {
-            arbicaseapp_tb.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
+            arbicaseapp_tb_by_svc.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
                 p.arbi_step = arbi_step_type::arbi_end;
             } );
             auto notify_amount = eosio::asset(1, _bos_symbol);
@@ -100,14 +100,14 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
                 + ", arbitration finished.";
 
             auto arbitrator_tb = arbitrators( get_self(), get_self().value );
-            for (auto iter = arbicaseapp_iter->arbitrators.begin(); iter != arbicaseapp_iter->arbitrators.end(); iter++) {
-                transfer(get_self(), *iter, notify_amount, memo);
-                auto arbitrator_iter = arbitrator_tb.find(*iter.value);
-                transfer(get_self(), *iter, arbitrator_iter->stake_amount, memo);
+            for (auto arbi : arbicaseapp_iter->arbitrators) {
+                transfer(get_self(), arbi, notify_amount, memo);
+                auto arbitrator_iter = arbitrator_tb.find(arbi.value);
+                transfer(get_self(), arbi, arbitrator_iter->stake_amount, memo);
             }
 
-            for (auto iter = arbicaseapp_iter->applicants.begin(); iter != arbicaseapp_iter->applicants.end(); iter++) {
-                transfer(get_self(), *iter, notify_amount, memo);
+            for (auto applicant : arbicaseapp_iter->applicants) {
+                transfer(get_self(), applicant, notify_amount, memo);
             }
 
             // TODO: Update arbitration correction.
@@ -141,7 +141,7 @@ void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string 
     } );
 }
 
-void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
+void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) const {
     require_auth( arbitrator );
     check(result == 0 || result == 1, "`result` can only be 0 or 1.");
 
@@ -162,7 +162,6 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
         p.num_id += 1;
         p.add_result(result);
-        p.update_time = time_point_sec(now());
     } );
 
     // Calculate results
@@ -173,25 +172,23 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
         } else {
             arbi_result = 0;
         }
-        arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p) {
-            p.last_process_update_time = time_point_sec(now());
-        } );
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
             p.arbitration_result = arbi_result;
         } );
-        arbicaseapp_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
+        arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
+            p.last_process_update_time = time_point_sec(now());
             p.final_result = arbi_result;
         } );
         auto notify_amount = eosio::asset(1, _bos_symbol);
         auto memo = "arbitration_id: " + std::to_string(arbitration_id)
-            + ", service_id: " + std::to_string(service_id)
+            + ", service_id: " + std::to_string(arbipro_iter->service_id)
             + ", result: success.";
 
-        for (auto iter = arbi_iter->arbitrators.begin(); iter != arbi_iter->arbitrators.end(); iter++) {
-            transfer(get_self(), *iter, notify_amount, memo);
+        for (auto arbitrator : arbi_iter->arbitrators) {
+            transfer(get_self(), arbitrator, notify_amount, memo);
         }
-        for (auto iter = arbi_iter->applicants.begin(); iter != arbi_iter->applicants.end(); iter++) {
-            transfer(get_self(), *iter, notify_amount, memo);
+        for (auto applicant : arbi_iter->applicants) {
+            transfer(get_self(), applicant, notify_amount, memo);
         }
     }
 }
@@ -249,7 +246,7 @@ void bos_oracle::respcase( name arbitrator, uint64_t arbitration_id, uint64_t re
     }
 }
 
-void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) {
+void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) const {
     auto arbitrator = random_arbitrator(arbitration_id);
     auto notify_amount = eosio::asset(1, _bos_symbol);
     // Transfer to arbitrator
