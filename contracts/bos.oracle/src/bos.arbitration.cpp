@@ -323,7 +323,7 @@ void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
         }
         double rate = correct > 0 ? 1.0 * correct / total : 0.0f;
         auto arbitrator_iter = arbitrator_tb.find(arbitrator.value);
-        bool malicious = rate > bos_oracle::default_arbitration_correct_rate;
+        bool malicious = rate < bos_oracle::default_arbitration_correct_rate;
 
         arbitrator_tb.modify(arbitrator_iter, get_self(), [&]( auto& p ) {
             p.correct_rate = rate;
