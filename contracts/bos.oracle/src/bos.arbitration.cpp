@@ -37,7 +37,7 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
     require_auth( applicant );
     check( arbi_method == arbi_method_type::crowd_arbitration || arbi_method_type::multiple_rounds, "`arbi_method` can only be 1 or 2." );
 
-    data_services svctable(_self, _self.value);
+    data_services svctable(get_self(), get_self().value);
     auto svc_iter = svctable.find(service_id);
     check(svc_iter != svctable.end(), "service does not exist");
     check(svc_iter->status == service_status::service_in, "service status shoule be service_in");
@@ -91,8 +91,13 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
             // Someone complains about this arbitration.
             random_chose_arbitrator(arbicaseapp_iter->arbitration_id, arbicaseapp_iter->service_id);
         } else {
+            // Find last process
+            auto arbiprocess_tb = arbitration_processs(get_self(), get_self().value);
+            auto arbiprocess_iter = arbiprocess_tb.find(arbicaseapp_iter->last_process_id);
+
             arbicaseapp_tb_by_svc.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
                 p.arbi_step = arbi_step_type::arbi_end;
+                p.final_result = arbiprocess_iter->arbitration_result;
             } );
             auto notify_amount = eosio::asset(1, _bos_symbol);
             auto memo = "arbitration_id: " + std::to_string(arbicaseapp_iter->arbitration_id)
@@ -110,7 +115,8 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
                 transfer(get_self(), applicant, notify_amount, memo);
             }
 
-            // TODO: Update arbitration correction.
+            // Calculate arbitration correction.
+            update_arbitration_correcction(arbi_id);
         }
     }
     
@@ -175,9 +181,12 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
             p.arbitration_result = arbi_result;
         } );
+        // Add result to arbitration_results
+        add_arbitration_result(arbitrator, arbitration_id, arbi_result, arbipro_iter->process_id);
+
         arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
             p.last_process_update_time = time_point_sec(now());
-            p.final_result = arbi_result;
+            p.last_process_id = arbipro_iter->process_id;
         } );
         auto notify_amount = eosio::asset(1, _bos_symbol);
         auto memo = "arbitration_id: " + std::to_string(arbitration_id)
@@ -280,4 +289,45 @@ name bos_oracle::random_arbitrator(uint64_t arbitration_id) const {
     arbi_id %= total_arbi;
 
     return chosen_from_arbitrators.at(arbi_id);
+}
+
+void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id) {
+    auto arbi_result_tb = arbitration_results( get_self(), get_self().value);
+    arbi_result_tb.emplace( get_self(), [&]( auto& p ) {
+        p.result_id = arbi_result_tb.available_primary_key();
+        p.arbitration_id = arbitration_id;
+        p.result = result;
+        p.process_id = process_id;
+        p.arbitrator = arbitrator;
+    } );
+}
+
+void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbicaseapp_iter = arbicaseapp_tb.find(arbitration_id);
+    check(arbicaseapp_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
+    auto arbiresults_tb = arbitration_results( get_self(), get_self().value );
+    auto arbitrator_tb = arbitrators( get_self(), get_self().value );
+
+    auto arbitrators = arbicaseapp_iter->arbitrators;
+    for (auto arbitrator : arbitrators) {
+        uint64_t correct = 0;
+        uint64_t total = 0;
+        for (auto iter = arbiresults_tb.begin(); iter != arbiresults_tb.end(); iter++) {
+            if (iter->arbitrator == arbitrator && iter->arbitration_id == arbitration_id) {
+                total += 1;
+                if (iter->result == arbicaseapp_iter->final_result) {
+                    correct += 1;
+                }
+            }
+        }
+        double rate = correct > 0 ? 1.0 * correct / total : 0.0f;
+        auto arbitrator_iter = arbitrator_tb.find(arbitrator.value);
+        bool malicious = rate > bos_oracle::default_arbitration_correct_rate;
+
+        arbitrator_tb.modify(arbitrator_iter, get_self(), [&]( auto& p ) {
+            p.correct_rate = rate;
+            p.is_malicious = malicious;
+        } );
+    }
 }

@@ -39,6 +39,7 @@ public:
   static constexpr symbol _bos_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
+  static constexpr double default_arbitration_correct_rate = 0.6f;
 
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)
@@ -236,6 +237,8 @@ public:
     void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
     name random_arbitrator(uint64_t arbitration_id) const;
     void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) const;
+    void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
+    void update_arbitration_correcction(uint64_t arbitration_id);
   /// 
   ///
   /// bos.arbitration end
