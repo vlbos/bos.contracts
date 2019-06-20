@@ -48,9 +48,10 @@ enum arbi_method_type : uint8_t
 enum arbi_step_type : uint64_t
 {
    arbi_init = 1,
-   arbi_responded = 2,
-   arbi_started = 3,
-   arbi_end = 4
+   arbi_responded,
+   arbi_started,
+   arbi_end,
+   arbi_timeout
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] complainant

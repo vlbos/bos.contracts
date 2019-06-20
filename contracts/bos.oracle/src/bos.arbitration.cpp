@@ -78,60 +78,48 @@ void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, st
     auto arbicaseapp_iter = arbicaseapp_tb_by_svc.find( service_id );
     auto arbi_id = arbicaseapp_tb.available_primary_key();
     ///lisheng 不为空 插入
-    if (arbicaseapp_iter == arbicaseapp_tb_by_svc.end()||（!=end()&&arbi_status==appealing)）) {
-        arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {///is insert?
+    if (arbicaseapp_iter == arbicaseapp_tb_by_svc.end() || 
+        (arbicaseapp_iter != arbicaseapp_tb_by_svc.end() && arbicaseapp_iter->arbi_step == arbi_step_type::arbi_started)) {
+        arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
             p.arbitration_id = arbi_id;
             p.appeal_id = appeal_id;
             p.service_id = service_id;
             p.evidence_info = reason;
-            p.arbi_step = 1;
+            p.arbi_step = arbi_step_type::arbi_init;
             p.required_arbitrator = 5;
             p.deadline = time_point_sec(now() + 3600);
             p.add_applicant(applicant);
         } );
     } else {
-        itpr = arbicaseapps.find(iter-arbitration_id);
-        check(itpr!=end())
-        modif itpr
-        {
+        auto arbi_iter = arbicaseapp_tb.find(arbicaseapp_iter->arbitration_id);
+        check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration.")
+        arbicaseapp_tb.modify(arbi_iter, get_self(), [&]( auto& p ) {
             p.add_applicant(applicant);
         }
     }
-    ///service data providers 
-    //  auto arbitrator_tb = dataprovider( get_self(), service_id);
-    //         for (auto arbi : arbicaseapp_iter->dataprovieer) {
-    //             if(provider_status == in)
-    //             transfer(get_self(), arbi, notify_amount, memo);
-    //             auto arbitrator_iter = arbitrator_tb.find(arbi.value);
-    //             ///lisheng check it ==end ?
-    //             //
-    //             transfer(get_self(), arbi, arbitrator_iter->stake_amount, memo);
-    //         }
 
-    
-
-//find service id
-// Data provider
+    // Data provider
     auto svcprovider_tb = data_service_provisions( get_self(), get_self().value );
     auto svcprovider_tb_by_svc = svcprovider_tb.template get_index<"bysvcid"_n>();
     auto svcprovider_iter = svcprovider_tb_by_svc.find( service_id );
-    ///lisheng check it ==end ?
-    bool flag =false;
-    for(providers )
-    {
-    if(!svcprovider_iter->stop_service )
-    
-    auto notify_amount = eosio::asset(1, _bos_symbol);
-    // Transfer to provider
-    auto memo = "arbitration_id: " + std::to_string(arbi_id) 
-        + ", service_id: " + std::to_string(service_id) 
-        + ", state_amount: " + amount.to_string();
-    transfer(get_self(), svcprovider_iter->account, notify_amount, memo);
-    }
-    check(flag),"no provier";
+    check(svcprovider_iter != svcprovider_tb_by_svc.end(), "Such service has no providers.");
 
-timeout_deferred(arbitration_id,resp_appeal_timeout,,eosio::hour(10));
-    // timer_defarred(arbitration_id,resp_appeal,eosio::hour(10));
+    // Service data providers
+    bool hasProvider = false;
+    for(auto iter = svcprovider_tb.begin(); iter != svcprovider_tb.end(); iter++)
+    {
+        if(!svcprovider_iter->stop_service) {
+            hasProvider = true;
+            auto notify_amount = eosio::asset(1, _bos_symbol);
+            // Transfer to provider
+            auto memo = "arbitration_id: " + std::to_string(arbi_id)
+                + ", service_id: " + std::to_string(service_id) 
+                + ", state_amount: " + amount.to_string();
+            transfer(get_self(), svcprovider_iter->account, notify_amount, memo);
+        }
+    }
+    check(hasProvider, "no provier");
+    timeout_deferred(arbi_id, arbitration_timer_type::resp_appeal_timeout, eosio::hour(10));
 
     //  auto notify_amount = eosio::asset(1, _bos_symbol);
     //         auto memo = "arbitration_id: " + std::to_string(arbicaseapp_iter->arbitration_id)
@@ -185,11 +173,6 @@ timeout_deferred(arbitration_id,resp_appeal_timeout,,eosio::hour(10));
             // update_arbitration_correcction(arbi_id);
         }
     }
-    
-    
-
-    // ///放到 应诉方法中
-    // start_arbitration(arbitrator_type::profession, arbi_id, service_id);
 }
 
 void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string evidence ) {
@@ -201,7 +184,6 @@ void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string 
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
         p.evidence_info = evidence;
     } );
-
 }
 
 void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id ) {
@@ -211,153 +193,93 @@ void bos_oracle::uploadresult( name arbitrator, uint64_t arbitration_id, uint64_
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
     check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration case application.");
+    check(arbi_iter->deadline >= time_point_sec(now()), "update result deadline.");
 
-check (arbi_iter->deadline <= time_point_sec(now()),"") ;
-    ///超时上传结果无效了， 有效时不只要判断时间，还要判断结果是否超过1/2 不够再 还得有定时器
-    // Check if all the arbitrators submit the result on time.
-    //  if (arbi_iter->deadline <= time_point_sec(now())) {
-    //     random_chose_arbitrator(arbitration_id, arbi_iter->service_id);
-    //     return;
-    // }
+    auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
+    auto arbipro_iter = arbiprocess_tb.find( process_id );
+    check( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
+    arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
+        p.add_result(result);
+    } );
+
+    // Calculate results
+    if (arbipro_iter->result_size() >= arbi_iter->required_arbitrator / 2) {
+       uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::upload_result_timeout);
+       cancel_deferred(deferred_id);
+       handle_upload_result(arbitrator, arbitration_id, process_id);
+    }
+}
+
+void bos_oracle::handle_upload_result(name arbitrator, uint64_t arbitration_id, uint64_t process_id)
+{
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
+    check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration case application.");
 
     auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
     auto arbipro_iter = arbiprocess_tb.find( process_id );
     check( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
 
-     ///lisheng check iter == end?    num_id 不应该加 轮次
+    uint64_t arbi_result = 0;
+    if (arbipro_iter->total_result() >= arbi_iter->required_arbitrator / 2) {
+        arbi_result = 1;
+    } else {
+        arbi_result = 0;
+    }
     arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
-        // p.num_id += 1;
-        p.add_result(result);
+        p.arbitration_result = arbi_result;
     } );
 
-    // Calculate results  ///lisheng  greater than 1/2  不一定大于required_arbitrator
-    if (arbipro_iter->result_size() >= arbi_iter->required_arbitrator) {
-       // status = arbitrat_result;
-       cancel_deferred(deferred_id);
-        handleunpdateresult();
-
-        // uint64_t arbi_result = 0;
-        // if (arbipro_iter->total_result() >= arbi_iter->required_arbitrator / 2) {
-        //     arbi_result = 1;
-        // } else {
-        //     arbi_result = 0;
-        // }
-        // arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
-        //     p.arbitration_result = arbi_result;
-        // } );
-
-        // // Add result to arbitration_results
-        // add_arbitration_result(arbitrator, arbitration_id, arbi_result, arbipro_iter->process_id);
-
-        // arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
-        //     p.last_process_update_time = time_point_sec(now()); ///lisheng  ?
-        //     p.last_process_id = arbipro_iter->process_id;
-        // } );
-        // auto notify_amount = eosio::asset(1, _bos_symbol);
-        // auto memo = "arbitration_id: " + std::to_string(arbitration_id)
-        //     + ", service_id: " + std::to_string(arbi_iter->service_id)
-        //     + ", result: success.";
-
-        
-        // for (auto arbitrator : arbi_iter->arbitrators) {
-        //     transfer(get_self(), arbitrator, notify_amount, memo);
-        // }
-        // for (auto applicant : arbi_iter->applicants) {
-        //     transfer(get_self(), applicant, notify_amount, memo);
-        // }
-    }
-}
-
-void handleunpdateresult()
-{
-    uint64_t arbi_result = 0;
-        if (arbipro_iter->total_result() >= arbi_iter->required_arbitrator / 2) {
-            arbi_result = 1;
-        } else {
-            arbi_result = 0;
-        }
-        arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
-            p.arbitration_result = arbi_result;
-        } );
-
-        // Add result to arbitration_results
-        add_arbitration_result(arbitrator, arbitration_id, arbi_result, arbipro_iter->process_id);
-
-       
-timeout_deferred(arbitration_id,appeal_timeout,,eosio::hour(10));
-
-
-        // auto notify_amount = eosio::asset(1, _bos_symbol);
-        // auto memo = "arbitration_id: " + std::to_string(arbitration_id)
-        //     + ", service_id: " + std::to_string(arbi_iter->service_id)
-        //     + ", result: success.";
-
-        
-        // for (auto arbitrator : arbi_iter->arbitrators) {
-        //     transfer(get_self(), arbitrator, notify_amount, memo);
-        // }
-        // for (auto applicant : arbi_iter->applicants) {
-        //     transfer(get_self(), applicant, notify_amount, memo);
-        // }
+    // Add result to arbitration_results
+    add_arbitration_result(arbitrator, arbitration_id, arbi_result, arbipro_iter->process_id);  
+    timeout_deferred(arbitration_id, arbitration_timer_type::appeal_timeout, eosio::hour(10));
 }
 
 void bos_oracle::resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id ) {
     require_auth( arbitrator );
-    
     transfer(arbitrator, arbitrat_account, amount, "resparbitrat deposit.");
 
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
-    ///lisheng check iter ==end?
+    check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
     arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
         p.arbi_step = arbi_step_type::arbi_responded;
         p.add_arbitrator(arbitrator);
     } );
 
-    // chose 
     // Check arbitrator number requirements.
     if (arbi_iter->arbitrators.size() >= arbi_iter->required_arbitrator) {
         arbicaseapp_tb.modify( arbi_iter, get_self(), [&]( auto& p ) {
             p.arbi_step = arbi_step_type::arbi_started;///还设置超时时间  上传结果 超时时间
         } );
 
-        timeout_deferred(arbitration_id,upload_result_timeout,timelength);
+        timeout_deferred(arbitration_id, arbitration_timer_type::upload_result_timeout, eosio::hour(10));
     } else {
-        ///for i < n
-        // for(arbi_iter->required_arbitrator -arbi_iter->arbitrators.size() >= )
-        {
-        vector chose_arbits = random_chose_arbitrator(arbitration_id, arbi_iter->service_id,chose_arbits,chose_arbits,arbi_iter->required_arbitrator -arbi_iter->arbitrators.size());
-        
-        }
-        
+        auto chose_arbi = arbi_iter->required_arbitrator - arbi_iter->arbitrators.size();
+        random_chose_arbitrator(arbitration_id, arbi_iter->service_id, chose_arbi);
     }
-
-    
 }
 
-
-void reappeal(name account, uint64_t arbitration_id, uint64_t result, uint64_t process_id ,bool provider)
+void bos_oracle::reappeal(name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t result, uint64_t process_id, bool provider, asset amount)
 {
   require_auth( applicant );
-
-    data_services svctable(get_self(), get_self().value);
-    auto svc_iter = svctable.find(service_id);
-    check(svc_iter != svctable.end(), "service does not exist");
-    check(svc_iter->status == service_status::service_in, "service status shoule be service_in");
-    transfer(applicant, arbitrat_account, amount, "complain deposit.");
-if(provider)
-
-find compaint process_id  
-notify
+  
+  data_services svctable(get_self(), get_self().value);
+  auto svc_iter = svctable.find(service_id);
+  check(svc_iter != svctable.end(), "service does not exist");
+  check(svc_iter->status == service_status::service_in, "service status shoule be service_in");
+  transfer(applicant, arbitrat_account, amount, "complain deposit.");
+  if(provider) {
+    // TODO
+    // find compaint process_id
+    // notify
+  } else {
+    // TODO
+    // commplain(,bool isreappeal);
+  }
+  timeout_deferred(arbitration_id, arbitration_timer_type::resp_appeal_timeout, eosio::hour(10));
 }
-else
-{
-    commplain(,bool isreappeal);
-}
 
-timeout_deferred(arbitration_id,resp_appeal_timeout,,eosio::hour(10),appeal_type);
-
-}
 void rerespcase(name account.bool provider)
 {
 respcase()
@@ -386,6 +308,8 @@ void bos_oracle::respcase( name provider, uint64_t arbitration_id, uint64_t resu
             p.add_responder(arbitrator);
             p.num_id = 1; ///lisheng  不是在这加
         } );
+        // ///放到 应诉方法中
+    // start_arbitration(arbitrator_type::profession, arbi_id, service_id);
         start_arbitration();
     } else {
         arbiprocess_tb.modify( arbipro_iter, get_self(), [&]( auto& p ) {
@@ -408,8 +332,7 @@ void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint64_t servi
         p.add_arbitrator(arbitrator);
     } );
 
-    timeout_deferred(arbitration_id,resp_arbitrate_timeout,,eosio::hour(10));
-
+    timeout_deferred(arbitration_id, arbitration_timer_type::resp_arbitrate_timeout, eosio::hour(10));
 }
 
 void bos_oracle::start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id) {
@@ -493,8 +416,7 @@ void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
             }
         }
 
-        //divid zero error if total equal zeros
-        double rate = correct > 0 ? 1.0 * correct / total : 0.0f;
+        double rate = correct > 0 && total > 0 ? 1.0 * correct / total : 0.0f;
         auto arbitrator_iter = arbitrator_tb.find(arbitrator.value);
         bool malicious = rate < bos_oracle::default_arbitration_correct_rate;
 
@@ -505,51 +427,61 @@ void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
     }
 }
 
-///lisheng 
-void bos_oracle::timeout_deferred(uint64_t arbitration_id,uint64_t timer_type,uint64_t timer_id,uint64_t time_length)
+uint128_t bos_oracle::make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type)
+{
+    return (uint128_t(arbitration_id) << 64) | timer_type;
+}
+
+void bos_oracle::timeout_deferred(uint64_t arbitration_id, arbitration_timer_type timer_type, uint64_t time_length)
 {
     transaction t;
     t.actions.emplace_back(permission_level{_self, active_permission}, _self,
                            "timertimeout"_n,
-                           std::make_tuple(arbitration_id, timer_id));
+                           std::make_tuple(arbitration_id, timer_type));
     t.delay_sec = time_length;
-    uint128_t deferred_id = (uint128_t(from.value) << 64) | to.value;
+    uint128_t deferred_id = make_deferred_id(arbitration_id, timer_type);
     cancel_deferred(deferred_id);
-    t.send(deferred_id, from);
+    t.send(deferred_id, get_self());
 }
 
-///lisheng 
-void bos_oracle::timertimeout(uint64_t arbitration_id,uint64_t timer_type,uint64_t timer_id)
+void bos_oracle::timertimeout(uint64_t arbitration_id, arbitration_timer_type timer_type)
 {
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbicaseapp_iter = arbicaseapp_tb.find(arbitration_id);
+    check(arbicaseapp_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
+
     switch(timer_type)
     {
-        //appeal against timeout 
-        case appeal_timeout:
-        if(status ==wait for appeal against)
-        {
-                handlearbitration();
-                handlearbitrationresult();
+        case arbitration_timer_type::appeal_timeout: {
+            if(status ==wait for appeal against)
+            {
+                    handle_arbitration();
+                    handle_arbitration_result();
+            }
+            break;
         }
-        break;
-        case  resp_appeal_timeout:
-        //find if arbiration'status is 'wait for response'  set it's staus to timeout
-        //appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,
-        if(status ==wait for response)
-        {
-                handlearbitrationresult();
+        case arbitration_timer_type::resp_appeal_timeout: {
+            //find if arbiration'status is 'wait for response'  set it's staus to timeout
+            //appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,
+            if(arbicaseapp_iter->arbi_step == arbi_step_type::arbi_init) {
+                handle_arbitration_result();
+            }
+            break;
         }
-        break;
-        case resp_arbitrate_timeout:
-  random chose  arbitrators 
-        break;
-        case upload_result_timeout:
-         handleunpdateresult();
-        break;
+
+        case arbitration_timer_type::resp_arbitrate_timeout: {
+            random chose  arbitrators 
+            break;
+        }
+
+        case arbitration_timer_type::upload_result_timeout: {
+            handle_upload_result();
+            break;
+        }
     }
-    
 }
 
-void handlearbitration()
+void handle_arbitration()
 {
     // Find last process
             auto arbiprocess_tb = arbitration_processs(get_self(), get_self().value);
@@ -591,7 +523,7 @@ void handlearbitration()
 
 }
 
-void handlearbitrationresult
+void handle_arbitration_result
 {
 //appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,
        

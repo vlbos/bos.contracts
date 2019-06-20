@@ -239,6 +239,7 @@ public:
     void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) const;
     void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
     void update_arbitration_correcction(uint64_t arbitration_id);
+    uint128_t make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type);
   /// 
   ///
   /// bos.arbitration end
