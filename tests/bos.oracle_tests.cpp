@@ -23,7 +23,7 @@ public:
    bos_oracle_tester() {
       produce_blocks( 2 );
 
-      create_accounts( { N(alice), N(bob), N(carol), N(eosio.token),N(oracle.bos),N(dappuser.bos),N(provider.bos),N(consumer.bos),N(riskctrl.bos)} );
+      create_accounts( { N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(eosio.token),N(oracle.bos),N(dappuser.bos),N(provider.bos),N(consumer.bos),N(riskctrl.bos)} );
       produce_blocks( 2 );
 
       set_code( N(oracle.bos), contracts::oracle_wasm() );
@@ -161,7 +161,12 @@ public:
    {
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
-      vector<char> data = get_row_by_account( N(oracle.bos), acc, N(accounts), symbol_code );
+      ilog("============code:${s}:acc:${a};c${o}",("s",symbol_code)("a",acc.value)("o",N(oracle.bos)) );
+      vector<char> data = get_row_by_account( N(oracle.bos), acc, N(riskaccounts), symbol_code );
+      if(data.empty())
+      {
+          ilog("=====empty=======code:${s}:acc:${a}",("s",symbol_code)("a",acc.value) );
+      }
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "riskcontrol_account", data, abi_serializer_max_time );
    }
 
@@ -503,9 +508,10 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
     //  BOOST_TEST("" == "11ss");
     auto subscription =
         get_data_service_subscription(service_id, contract_account);
-    //  BOOST_TEST("" == "ss");
+     BOOST_TEST("" == "ss");
     BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
     BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
+   BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
    }
 
    produce_blocks(1);
@@ -523,6 +529,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
                          request_id, data_json);
    }
 
+BOOST_TEST("" == "====pushdata");
   produce_blocks(1);
    /// multipush
    {
@@ -537,7 +544,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
 
    produce_blocks(1);
 
-
+BOOST_TEST("" == "====multipush false");
    /// request data
    {
      service_id = new_service_id;
@@ -550,6 +557,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
    }
    produce_blocks(1);
 
+BOOST_TEST("" == "====requestdata");
    /// multipush
    {
      uint64_t service_id = new_service_id;
@@ -561,6 +569,38 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
    }
 
    produce_blocks(1);
+BOOST_TEST("" == "====multipush true");
+   /// deposit
+   {
+     uint64_t service_id = new_service_id;
+     name from = N(dappuser);
+     name to = N(bob);
+     asset quantity = asset::from_string("1.0000 EOS");
+     std::string memo = "";
+     bool is_notify = false;
+     auto token = deposit(service_id, from, to, quantity, memo, is_notify);
+
+      auto app_balance = get_riskcontrol_account(to, "4,EOS");
+   REQUIRE_MATCHING_OBJECT( app_balance, mvo()
+      ("balance", "1.0000 EOS")
+   );
+
+
+   }
+
+BOOST_TEST("" == "====deposit ");
+   /// withdraw
+   {
+     uint64_t service_id = new_service_id;
+     name from = N(bob);
+     name to = N(dappuser);
+     asset quantity = asset::from_string("0.1000 EOS");
+     std::string memo = "";
+     auto token = withdraw(service_id, from, to, quantity, memo);
+
+     auto app_balance = get_riskcontrol_account(from, "4,EOS");
+     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 EOS"));
+   }
 
    //   status = 2;
 
@@ -713,7 +753,6 @@ BOOST_FIXTURE_TEST_CASE( payservice_test, bos_oracle_tester ) try {
   auto token = payservice(service_id, contract_account, action_name, account,
                           amount, memo);
 } FC_LOG_AND_RETHROW()
-
 
 BOOST_FIXTURE_TEST_CASE( confirmpay_test, bos_oracle_tester ) try {
   uint64_t service_id = 0;

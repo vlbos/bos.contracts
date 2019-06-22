@@ -224,7 +224,6 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
     if (fee_type::fee_times == fee_type) {
       subs.consumption += price_by_times;
     } else {
-
       subs.month_consumption += price_by_times;
       subs.last_payment_time += month_seconds;
     }

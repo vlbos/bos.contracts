@@ -24,7 +24,7 @@ using std::string;
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_stake{
   uint64_t          service_id;
-  asset total_stake_amount;
+  asset stake_amount;
   asset freeze_amount;
   asset unconfirmed_amount;
 
@@ -45,7 +45,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] transfer_freeze_delay
    uint64_t primary_key() const { return transfer_id; }
 };
 
-struct [[eosio::table]] risk_guarantee
+struct [[eosio::table, eosio::contract("bos.oracle")]] risk_guarantee
 {
    uint64_t risk_id;
    name account;
@@ -71,7 +71,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] account_freeze_log
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] account_freeze_stat
 {
-   uint64_t service_id;
    name account;
    asset amount;
 
@@ -87,16 +86,14 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] service_freeze_stat
 };
 
 
-
-struct [[eosio::table]] riskcontrol_account {
+struct [[eosio::table, eosio::contract("bos.oracle")]] riskcontrol_account {
 
   asset balance;
-  asset unconfirmed_balance;
 
-  uint64_t primary_key() const { return balance.symbol.code().raw(); }
+  uint64_t primary_key() const { return  balance.symbol.code().raw(); }
 };
 
-typedef eosio::multi_index<"accounts"_n, riskcontrol_account> accounts;
+typedef eosio::multi_index<"riskaccounts"_n, riskcontrol_account> riskcontrol_accounts;
 
 
 typedef eosio::multi_index<"servicestake"_n, data_service_stake> data_service_stakes;
