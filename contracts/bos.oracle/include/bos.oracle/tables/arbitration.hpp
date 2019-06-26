@@ -48,8 +48,11 @@ enum arbi_method_type : uint8_t
 enum arbi_step_type : uint64_t
 {
    arbi_init = 1,
-   arbi_responded = 2,
-   arbi_end = 3
+   arbi_responded,
+   arbi_choosing_arbitrator,
+   arbi_started,
+   arbi_end,
+   arbi_timeout
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] complainant
@@ -73,7 +76,7 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitrator
    public_key pubkey;
    uint8_t type;
    uint8_t status;
-   uint64_t correct_rate;
+   double correct_rate;
    uint64_t invitations;
    uint64_t responses;
    asset stake_amount;
@@ -90,10 +93,19 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbicaseapp
    uint64_t service_id;
    uint64_t update_number;
    uint64_t arbi_step;
-   uint64_t final_results;
+   uint64_t final_result;
+   uint64_t required_arbitrator;
+   uint64_t last_process_id;
+   time_point_sec deadline;
+   time_point_sec last_process_update_time;
    std::string evidence_info;
+   std::vector<name> applicants;
+   std::vector<name> arbitrators;
 
    uint64_t primary_key() const { return arbitration_id; }
+   uint64_t by_svc() const { return service_id; }
+   void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
+   void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
@@ -101,30 +113,36 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_process
    uint64_t process_id;
    uint64_t arbitration_id;
    uint64_t num_id;
-   std::vector<name> applicants;
    std::vector<name> responders;
-   std::vector<name> arbitrators;
    asset stake_amount;
-   std::string arbitrator_arbitration_results;
+   std::vector<uint64_t> arbitrator_arbitration_results;
    std::string evidence_info;
    uint64_t arbitration_result;
    uint64_t arbitration_method;
 
    uint64_t primary_key() const { return process_id; }
-   void add_applicant ( name applicant ) { applicants.push_back( applicant ); }
+   uint64_t by_arbi() const { return arbitration_id; }
    void add_responder ( name responder ) { responders.push_back( responder ); }
-   void add_arbitrator ( name arbitrator ) { arbitrators.push_back( arbitrator ); }
+   void add_result ( uint64_t result ) { arbitrator_arbitration_results.push_back( result ); }
+   uint64_t result_size () const { return arbitrator_arbitration_results.size(); }
+   uint64_t total_result () const {
+      uint64_t total = 0;
+      for (auto& n : arbitrator_arbitration_results)
+         total += n;
+      return total;
+   }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitration_result
 {
    uint64_t result_id;
-   uint64_t arbitrator_id;
    uint64_t arbitration_id;
-   uint64_t arbitrator_arbitration_result;
+   uint64_t result;
    uint64_t process_id;
+   name arbitrator;
 
    uint64_t primary_key() const { return result_id; }
+   uint64_t by_arbi() const { return arbitration_id; }
 };
 
 struct [[ eosio::table, eosio::contract("bos.oracle") ]] fair_award
@@ -140,9 +158,12 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] fair_award
 typedef eosio::multi_index<"complainants"_n, complainant,
    indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
-typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp> arbicaseapps;
-typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_processs;
-typedef eosio::multi_index<"arbiresults"_n, arbitration_result> arbitration_results;
+typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp,
+   indexed_by<"svc"_n, const_mem_fun<arbicaseapp, uint64_t, &arbicaseapp::by_svc>>> arbicaseapps;
+typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,
+   indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t, &arbitration_process::by_arbi>>> arbitration_processs;
+typedef eosio::multi_index<"arbiresults"_n, arbitration_result,
+   indexed_by<"arbi"_n, const_mem_fun<arbitration_result, uint64_t, &arbitration_result::by_arbi>>> arbitration_results;
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
 
 // };

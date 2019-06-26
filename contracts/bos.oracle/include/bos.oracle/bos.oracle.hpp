@@ -38,6 +38,8 @@ public:
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _bos_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
+  static constexpr uint64_t arbi_process_time_limit = 3600;
+  static constexpr double default_arbitration_correct_rate = 0.6f;
 
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)
@@ -224,13 +226,33 @@ public:
 
     [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
 
-    [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+    [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider );
 
-    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id, signature sig );
+    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id );
 
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+    
+    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t result, uint64_t process_id, bool is_provider, asset amount);
+    
+    [[eosio::action]] void rerespcase( name provider, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider);
+    
+    [[eosio::action]] void timertimeout(uint64_t arbitration_id, arbitration_timer_type timer_type);
+
+    [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type);
+    
+    void handle_arbitration(uint64_t arbitration_id);
+    void handle_arbitration_result(uint64_t arbitration_id);
+    void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
+    vector<name> random_arbitrator(uint64_t arbitration_id, uint64_t arbi_to_chose) const;
+    void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id, uint64_t arbi_to_chose) const;
+    void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
+    void update_arbitration_correcction(uint64_t arbitration_id);
+    uint128_t make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type) const;
+    void timeout_deferred(uint64_t arbitration_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint64_t process_id);
   /// 
   ///
   /// bos.arbitration end
@@ -269,7 +291,7 @@ private:
   std::tuple<uint64_t, uint64_t> get_consumption(uint64_t service_id);
 
   /// risk control
-  void transfer(name from, name to, asset quantity, string memo);
+  void transfer(name from, name to, asset quantity, string memo) const;
   void add_freeze_delay(uint64_t service_id, name account,
                         time_point_sec start_time, uint64_t duration,
                         asset amount, uint64_t type);
