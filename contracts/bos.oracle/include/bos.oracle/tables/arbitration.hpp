@@ -49,6 +49,7 @@ enum arbi_step_type : uint64_t
 {
    arbi_init = 1,
    arbi_responded,
+   arbi_choosing_arbitrator,
    arbi_started,
    arbi_end,
    arbi_timeout

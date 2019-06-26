@@ -226,20 +226,33 @@ public:
 
     [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
 
-    [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+    [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider );
 
     [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id );
 
     [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+    
+    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t result, uint64_t process_id, bool is_provider, asset amount);
+    
+    [[eosio::action]] void rerespcase( name provider, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider);
+    
+    [[eosio::action]] void timertimeout(uint64_t arbitration_id, arbitration_timer_type timer_type);
 
+    [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type);
+    
+    void handle_arbitration(uint64_t arbitration_id);
+    void handle_arbitration_result(uint64_t arbitration_id);
     void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
-    name random_arbitrator(uint64_t arbitration_id) const;
-    void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id) const;
+    vector<name> random_arbitrator(uint64_t arbitration_id, uint64_t arbi_to_chose) const;
+    void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id, uint64_t arbi_to_chose) const;
     void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
     void update_arbitration_correcction(uint64_t arbitration_id);
-    uint128_t make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type);
+    uint128_t make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type) const;
+    void timeout_deferred(uint64_t arbitration_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint64_t process_id);
   /// 
   ///
   /// bos.arbitration end
