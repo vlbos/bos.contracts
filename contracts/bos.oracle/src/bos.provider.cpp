@@ -96,6 +96,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.service_id = new_service_id;
     p.account = account;
     p.stake_amount = stake_amount;
+    p.freeze_amount = asset(0, core_symbol());
   });
 
   provider_services provservicestable(_self, account.value);
@@ -108,6 +109,23 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.service_id = new_service_id;
     p.create_time = update_start_time;
   });
+
+    data_service_stakes svcstaketable(_self, _self.value);
+  auto svcstake_itr = svcstaketable.find(new_service_id);
+  if(svcstake_itr == svcstaketable.end())
+  {
+ svcstaketable.emplace(_self, [&](auto &ss) {
+      ss.stake_amount = stake_amount;
+      ss.freeze_amount = asset(0, core_symbol());
+  });
+  }
+  else
+  {
+    svcstaketable.modify(svcstake_itr, same_payer,
+                         [&](auto &ss) { ss.stake_amount += stake_amount; });
+  }
+
+
 }
 
 /**
@@ -134,14 +152,14 @@ void bos_oracle::stakeamount(uint64_t service_id, name account,
   check(provision_itr != provisionstable.end(),
         "account does not subscribe services");
 
-  if (stake_amount.amount < 0) {
-    check(provider_itr->total_stake_amount >=
-              asset(fabs(stake_amount.amount), core_symbol()),
-          "");
-    check(provision_itr->stake_amount >=
-              asset(fabs(stake_amount.amount), core_symbol()),
-          "");
-  }
+  // if (stake_amount.amount < 0) {
+  //   check(provider_itr->total_stake_amount >=
+  //             asset(fabs(stake_amount.amount), core_symbol()),
+  //         "");
+  //   check(provision_itr->stake_amount >=
+  //             asset(fabs(stake_amount.amount), core_symbol()),
+  //         "");
+  // }
 
   providertable.modify(provider_itr, same_payer,
                        [&](auto &p) { p.total_stake_amount += stake_amount; });
@@ -149,10 +167,10 @@ void bos_oracle::stakeamount(uint64_t service_id, name account,
   provisionstable.modify(provision_itr, same_payer,
                          [&](auto &p) { p.stake_amount += stake_amount; });
 
-  if (stake_amount.amount < 0) {
-    transfer(provider_account, account,
-             asset(fabs(stake_amount.amount), core_symbol()), "");
-  }
+  // if (stake_amount.amount < 0) {
+  //   transfer(provider_account, account,
+  //            asset(fabs(stake_amount.amount), core_symbol()), "");
+  // }
 }
 
 /**
@@ -209,6 +227,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
  */
 void bos_oracle::multipush(uint64_t service_id, name provider,
                            const string &data_json, bool is_request) {
+                             print("==========multipush");
   require_auth(provider);
   check(service_status::service_in == get_service_status(service_id),
         "service and subscription must be available");
@@ -216,16 +235,16 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   auto push_data = [](uint64_t service_id, name provider, name contract_account,
                       name action_name, uint64_t request_id,
                       const string &data_json) {
-    transaction t;
-    t.actions.emplace_back(
-        permission_level{provider, active_permission}, provider, "pushdata"_n,
-        std::make_tuple(service_id, provider, contract_account, action_name,
-                        request_id, data_json));
-    t.delay_sec = 0;
-    uint128_t deferred_id =
-        (uint128_t(service_id) << 64) | contract_account.value;
-    cancel_deferred(deferred_id);
-    t.send(deferred_id, provider);
+    // transaction t;
+    // t.actions.emplace_back(
+    //     permission_level{provider, active_permission}, provider, "pushdata"_n,
+    //     std::make_tuple(service_id, provider, contract_account, action_name,
+    //                     request_id, data_json));
+    // t.delay_sec = 0;
+    // uint128_t deferred_id =
+    //     (uint128_t(service_id) << 64) | contract_account.value;
+    // cancel_deferred(deferred_id);
+    // t.send(deferred_id, provider);
   };
 
   if (is_request) {

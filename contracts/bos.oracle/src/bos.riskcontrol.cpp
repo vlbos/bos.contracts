@@ -50,14 +50,16 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 /// from dapp user to dapp
 void bos_oracle::deposit(uint64_t service_id, name from, name to,
                          asset quantity, string memo, bool is_notify) {
+                           print("=================deposit");
   require_auth(_self);
-  transfer(from, to, quantity, memo);
+  // transfer(from, to, quantity, memo);
 
-  auto payer = has_auth(to) ? to : from;
-  add_balance(from, quantity, payer);
+  // auto payer = has_auth(to) ? to : from;
+  add_balance(to, quantity, _self);
 
   if (is_notify) {
     // notify dapp
+    // require_recipient( to );
   }
 }
 
@@ -88,13 +90,16 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
+     print("========77777=subsr");
   uint64_t time_length = 1;
-  if (svcstake_itr->total_stake_amount - svcstake_itr->freeze_amount >=
-      quantity) {
+  if (svcstake_itr->stake_amount - svcstake_itr->freeze_amount >=
+      quantity) 
+      {
+        print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
-
-    transfer(from, to, quantity, memo);
+print("======free===subsr");
+    // transfer(from, to, quantity, memo);
     add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
                time_length, quantity);
   } else {
@@ -109,17 +114,18 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
 
     /// delay time length
 
+   print("===delay======subsr");
     add_delay(svcsubs_itr->service_id, from, time_point_sec(now()), time_length,
               quantity);
 
-    transaction t;
-    t.actions.emplace_back(permission_level{_self, active_permission}, _self,
-                           "transfer"_n,
-                           std::make_tuple(from, to, quantity, memo));
-    t.delay_sec = time_length;
-    uint128_t deferred_id = (uint128_t(from.value) << 64) | to.value;
-    cancel_deferred(deferred_id);
-    t.send(deferred_id, from);
+    // transaction t;
+    // t.actions.emplace_back(permission_level{_self, active_permission}, _self,
+    //                        "transfer"_n,
+    //                        std::make_tuple(from, to, quantity, memo));
+    // t.delay_sec = time_length;
+    // uint128_t deferred_id = (uint128_t(from.value) << 64) | to.value;
+    // cancel_deferred(deferred_id);
+    // t.send(deferred_id, from);
   }
 }
 
@@ -164,7 +170,7 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   uint64_t average_amount = amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
   uint64_t real_freeze_amount = 0;
-  uint64_t finish_freeze_provider;
+ 
 
   std::set<name> finish_providers;
   for (const auto &p : providers) {
@@ -214,7 +220,7 @@ bos_oracle::freeze_providers_amount(uint64_t service_id,
   uint64_t average_amount = freeze_amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
   uint64_t real_freeze_amount = 0;
-  uint64_t finish_freeze_provider;
+ 
 
   std::set<name> finish_providers;
   for (const auto &p : providers) {
@@ -272,6 +278,7 @@ void bos_oracle::add_freeze_log(uint64_t service_id, name account,
     t.service_id = service_id;
     t.account = account;
     t.amount = amount;
+    t.update_time = time_point_sec(now());
   });
 
   add_freeze_stat(service_id, account, amount);
@@ -283,7 +290,9 @@ void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
   account_freeze_stats freezestatstable(_self, service_id);
   auto freeze_stats = freezestatstable.find(account.value);
   if (freeze_stats == freezestatstable.end()) {
-    freezestatstable.emplace(_self, [&](auto &f) { f.amount = amount; });
+    freezestatstable.emplace(_self, [&](auto &f) { 
+       f.account = account;
+      f.amount = amount; });
   } else {
     freezestatstable.modify(freeze_stats, same_payer,
                             [&](auto &f) { f.amount += amount; });
@@ -292,7 +301,9 @@ void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
   service_freeze_stats svcfreezestatstable(_self, service_id);
   auto svcfreeze_stats = svcfreezestatstable.find(service_id);
   if (svcfreeze_stats == svcfreezestatstable.end()) {
-    svcfreezestatstable.emplace(_self, [&](auto &s) { s.amount = amount; });
+    svcfreezestatstable.emplace(_self, [&](auto &s) { 
+      s.service_id = service_id;
+      s.amount = amount; });
   } else {
     svcfreezestatstable.modify(svcfreeze_stats, same_payer,
                                [&](auto &s) { s.amount += amount; });
@@ -351,21 +362,34 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
  * @param value
  */
 void bos_oracle::sub_balance(name owner, asset value) {
-  accounts dapp_acnts(_self, owner.value);
+  print("======================123789");
+  riskcontrol_accounts dapp_acnts(_self, owner.value);
 
   const auto &dapp =
       dapp_acnts.get(value.symbol.code().raw(), "no balance object found");
   check(dapp.balance.amount >= value.amount, "overdrawn balance");
 
-  dapp_acnts.modify(dapp, owner, [&](auto &a) { a.balance -= value; });
+  dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance -= value; });
 }
 
 void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
-  accounts dapp_acnts(_self, owner.value);
+  print("======================789");
+  print("<<<");
+  print(value.symbol.code().raw());
+  print(">>>");
+    print("<<<");
+  print(owner.value);
+  print(">>>");
+    print("<<<");
+  print(_self.value);
+  print(">>>");
+  riskcontrol_accounts dapp_acnts(_self, owner.value);
   auto dapp = dapp_acnts.find(value.symbol.code().raw());
   if (dapp == dapp_acnts.end()) {
-    dapp_acnts.emplace(ram_payer, [&](auto &a) { a.balance = value; });
+      print("======================a789");
+    dapp_acnts.emplace(ram_payer, [&](auto &a) {  a.balance = value; });
   } else {
+      print("======================m789");
     dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
   }
 }

@@ -75,14 +75,18 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   substable.emplace(_self, [&](auto &subs) {
     // subs.subscription_id = id;
     subs.service_id = service_id;
+    subs.account = account;
     subs.contract_account = contract_account;
     subs.action_name = action_name;
     subs.payment = amount;
     subs.consumption = asset(0, core_symbol());
+    subs.month_consumption = asset(0, core_symbol());
+    subs.balance =  subs.payment - subs.consumption-subs.month_consumption ;
     subs.subscription_time = time_point_sec(now());
     subs.status = subscription_status::subscription_subscribe;
   });
 }
+
 /**
  * @brief 
  * 
@@ -95,6 +99,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
 void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              name action_name, name requester,
                              std::string request_content) {
+                               print("======requestdata");
   require_auth(requester);
 
   /// check service available subscription status subscribe
