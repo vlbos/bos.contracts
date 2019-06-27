@@ -62,6 +62,8 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] complainant
    uint8_t status;
    uint8_t arbi_method;
    bool is_sponsor;
+   bool is_provider;//provider
+   uint64_t arbitration_id;  //reappeal 
    name applicant;
    time_point_sec appeal_time;
    std::string reason;
@@ -154,6 +156,16 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] fair_award
    uint64_t primary_key() const { return service_id; }
 };
 
+struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account {
+  name account;
+  asset balance;
+  bool is_provider ;
+  uint64_t primary_key() const { return  account.value; }
+  uint64_t by_type() const { return (is_provider?0:1); }
+};
+
+typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account,
+indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t, &arbitration_stake_account::by_type>>> arbitration_stake_accounts;
 
 typedef eosio::multi_index<"complainants"_n, complainant,
    indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;

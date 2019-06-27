@@ -216,14 +216,103 @@ void bos_oracle::reappeal( name applicant, uint64_t arbitration_id, uint64_t ser
   check(svc_iter->status == service_status::service_in, "service status shoule be service_in");
   transfer(applicant, arbitrat_account, amount, "reappeal.");
 
-  if(is_provider) {
-    // TODO
-    // find compaint process_id
-    // notify
-  } else {
-    // TODO
-    // commplain(,bool isreappeal);
-  }
+  
+ auto complainant_tb = complainants( get_self(), get_self().value );
+    auto complainant_by_svc = complainant_tb.template get_index<"svc"_n>();
+    auto iter_compt = complainant_by_svc.find( service_id );
+    auto is_sponsor = false;
+    // // 空或申请结束两种情况又产生新的申诉
+    // if ( iter_compt == complainant_by_svc.end() ) {
+    //     is_sponsor = true;
+    // } else {
+    //     // 正在仲裁中不接受对该服务申诉
+    //     check( iter_compt->status == complainant_status::wait_for_accept, "This complainant is not available." );
+    // }
+    
+    auto appeal_id = 0;
+    complainant_tb.emplace( get_self(), [&]( auto& p ) {
+        p.appeal_id = complainant_tb.available_primary_key();
+        p.service_id = service_id;
+        p.status = complainant_status::wait_for_accept;
+        p.arbi_method = arbi_method;
+        p.is_sponsor = false;
+        p.is_provider=is_provider;
+        p.arbitration_id = arbitration_id;
+        p.applicant = applicant;
+        p.appeal_time = time_point_sec(now());
+        p.reason = reason;
+        appeal_id = p.appeal_id;
+    } );
+
+    // add_freeze
+    const uint64_t duration = eosio::days(1).to_seconds();
+    add_delay(service_id, applicant, time_point_sec(now()), duration, amount);
+
+    // Arbitration case application
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbicaseapp_tb_by_svc = arbicaseapp_tb.template get_index<"svc"_n>();
+    auto arbicaseapp_iter = arbicaseapp_tb_by_svc.find( service_id );
+    auto arbi_id = arbicaseapp_tb.available_primary_key();
+    /// 不为空插入
+    check (arbicaseapp_iter != arbicaseapp_tb_by_svc.end() ,""); 
+    //     (arbicaseapp_iter != arbicaseapp_tb_by_svc.end() && arbicaseapp_iter->arbi_step == arbi_step_type::arbi_started)) {
+    //     arbicaseapp_tb.emplace( get_self(), [&]( auto& p ) {
+    //         p.arbitration_id = arbi_id;
+    //         p.appeal_id = appeal_id;
+    //         p.service_id = service_id;
+    //         p.evidence_info = reason;
+    //         p.arbi_step = arbi_step_type::arbi_init;
+    //         p.required_arbitrator = 5;
+    //         p.deadline = time_point_sec(now() + 3600);
+    //         p.add_applicant(applicant);
+    //     } );
+    // } else 
+    {
+        auto arbi_iter = arbicaseapp_tb.find(arbicaseapp_iter->arbitration_id);
+        check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
+        arbicaseapp_tb.modify(arbi_iter, get_self(), [&]( auto& p ) {
+            // p.add_applicant(applicant);
+            p.is_provider = is_provider;
+             p.arbi_step = arbi_step_type::arbi_reappeal;//arbi_step_crowd
+        } );
+    }
+// if(is_provider) {
+//     // TODO
+//     // find complaint process_id
+//     // notify
+//   } else {
+//     // TODO
+//     // commplain(,bool isreappeal);
+//   }
+if(!is_provider)
+{
+    // Data provider
+    auto svcprovider_tb = data_service_provisions( get_self(), get_self().value );
+    auto svcprovider_tb_by_svc = svcprovider_tb.template get_index<"bysvcid"_n>();
+    auto svcprovider_iter = svcprovider_tb_by_svc.find( service_id );
+    check(svcprovider_iter != svcprovider_tb_by_svc.end(), "Such service has no providers.");
+
+    // Service data providers
+    bool hasProvider = false;
+    for(auto iter = svcprovider_tb.begin(); iter != svcprovider_tb.end(); iter++)
+    {
+        if(!svcprovider_iter->stop_service) {
+            hasProvider = true;
+            auto notify_amount = eosio::asset(1, _bos_symbol);
+            // Transfer to provider
+            auto memo = "arbitration_id: " + std::to_string(arbi_id)
+                + ", service_id: " + std::to_string(service_id) 
+                + ", state_amount: " + amount.to_string();
+            transfer(get_self(), svcprovider_iter->account, notify_amount, memo);
+        }
+    }
+    check(hasProvider, "no provier");
+    }
+    else
+    {
+        ///notifi service complain
+    }
+    
   timeout_deferred(arbitration_id, arbitration_timer_type::resp_appeal_timeout, eosio::hours(10).to_seconds());
 }
 
@@ -298,6 +387,16 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint64_t arb
             chosen_from_arbitrators.push_back(iter->account);
         }
     }
+
+ if(chosen_from_arbitrators.size() < arbi_to_chose)
+ {
+     if(crowd_size > arbi_to_chose*2)
+     {  
+         arib
+         notif()
+     }
+     return ;
+ }
 
     while (arbitrators_set.size() < arbi_to_chose) {
         auto total_arbi = chosen_from_arbitrators.size();
@@ -416,6 +515,12 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, arbitration_timer_type ti
             }
             break;
         }
+        case arbitration_timer_type::resp_reappeal_timeout: {
+            if(arbicaseapp_iter->arbi_step == arbi_step_type::arbi_init) {
+                handle_arbitration_result(arbitration_id);
+            }
+            break;
+        }
 
         case arbitration_timer_type::resp_arbitrate_timeout: {
             random_chose_arbitrator(arbitration_id, arbicaseapp_iter->service_id, arbicaseapp_iter->required_arbitrator);
@@ -437,14 +542,73 @@ void bos_oracle::handle_arbitration(uint64_t arbitration_id) {
     arbicaseapp_tb.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
         p.arbi_step = arbi_step_type::arbi_end;
         p.final_result = arbiprocess_iter->arbitration_result;
+        if(p.is_provider && p.final_result)
+        {
+        p.final_winer = provider;
+        }
+        else
+        {
+            p.final_winer = consumer;
+        }
     } );
 
     // Calculate arbitration correction.
     update_arbitration_correcction(arbitration_id);
 }
 
+
 void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
     // TODO
     // appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,   
     // all  data provider stake amount minus
+    
+}
+
+void bos_oracle::handle_rearbitration_result(uint64_t arbitration_id) {
+    // TODO
+    // appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,   
+    // all  data provider stake amount minus
+    
+     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbicaseapp_iter = arbicaseapp_tb.find(arbitration_id);
+    check(arbicaseapp_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
+
+    if(arbicaseapp_iter->is_provider)
+    arbicaseapp_tb.modify(arbicaseapp_iter, get_self(), [&]( auto& p ) {
+        p.arbi_step = arbi_step_type::arbi_reappeal_timeout_end;
+        // p.final_result = arbiprocess_iter->arbitration_result;
+        p.final_winer = provider;///arbiprocess_iter->arbitration_result;
+    } );
+
+
+    分钱
+    handle_arbitration_result
+}
+
+/**
+ * @brief
+ *
+ * @param owner
+ * @param value
+ */
+void bos_oracle::sub_balance(name owner, asset value,uint64_t arbitration_id,bool is_provider) {
+  
+  riskcontrol_accounts dapp_acnts(_self, arbitration_id);
+
+  const auto &dapp =
+      dapp_acnts.get(value.symbol.code().raw(), "no balance object found");
+  check(dapp.balance.amount >= value.amount, "overdrawn balance");
+
+  dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance -= value; });
+}
+
+void bos_oracle::add_balance(name owner, asset value,uint64_t arbitration_id,bool is_provider) {
+
+  riskcontrol_accounts dapp_acnts(_self, arbitration_id);
+  auto dapp = dapp_acnts.find(value.symbol.code().raw());
+  if (dapp == dapp_acnts.end()) {
+    dapp_acnts.emplace(_self, [&](auto &a) {  a.balance = value; });
+  } else {
+    dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
+  }
 }

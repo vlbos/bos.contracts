@@ -85,7 +85,6 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] service_freeze_stat
    uint64_t primary_key() const { return service_id; }
 };
 
-
 struct [[eosio::table, eosio::contract("bos.oracle")]] riskcontrol_account {
 
   asset balance;
