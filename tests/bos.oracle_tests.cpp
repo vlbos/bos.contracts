@@ -255,10 +255,10 @@ public:
 
    }
 
-   action_result stakeamount( uint64_t service_id, 
+   action_result stakeasset( uint64_t service_id, 
                                      name account, 
                                      asset stake_amount){
-      return push_action( account, N(stakeamount), mvo()
+      return push_action( account, N(stakeasset), mvo()
            ( "service_id", service_id)
            ( "account", account)
            ( "stake_amount", stake_amount)
@@ -664,7 +664,7 @@ BOOST_FIXTURE_TEST_CASE( stakeamount_test, bos_oracle_tester ) try {
   name account = N(alice);
   asset stake_amount = asset::from_string("0 EOS");
   
-  auto token = stakeamount(service_id, account, stake_amount);
+  auto token = stakeasset(service_id, account, stake_amount);
 
 
 } FC_LOG_AND_RETHROW()

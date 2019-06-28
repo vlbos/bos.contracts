@@ -119,7 +119,10 @@ public:
       uint64_t provider_limit, uint64_t update_cycle,
       time_point_sec update_start_time);
 
-  [[eosio::action]] void stakeamount(uint64_t service_id, name account,
+  [[eosio::action]] void stakeasset(uint64_t service_id, name account,
+                                     asset stake_amount);
+
+  [[eosio::action]] void unstakeasset(uint64_t service_id, name account,
                                      asset stake_amount);
 
   [[eosio::action]] void addfeetypes(uint64_t service_id,
@@ -140,11 +143,14 @@ public:
 
   [[eosio::action]] void unregservice(uint64_t service_id, name account,
                                       uint64_t is_suspense);
-  using regiservice_action =
+  using regservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 
   using stakeamount_action =
-      eosio::action_wrapper<"stakeamount"_n, &bos_oracle::stakeamount>;
+      eosio::action_wrapper<"stakeasset"_n, &bos_oracle::stakeasset>;
+
+  using stakeamount_action =
+      eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
 
   using addfeetypes_action =
       eosio::action_wrapper<"addfeetypes"_n, &bos_oracle::addfeetypes>;
