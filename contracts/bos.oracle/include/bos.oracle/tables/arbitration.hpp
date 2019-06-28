@@ -82,6 +82,8 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] arbitrator
    uint64_t invitations;
    uint64_t responses;
    asset stake_amount;
+   asset income;
+   asset claim;
    std::string public_info;
    bool is_malicious;
 
@@ -159,13 +161,16 @@ struct [[ eosio::table, eosio::contract("bos.oracle") ]] fair_award
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account {
   name account;
   asset balance;
+  asset income;
+  asset claim;
   bool is_provider ;
   uint64_t primary_key() const { return  account.value; }
   uint64_t by_type() const { return (is_provider?0:1); }
 };
 
 typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account,
-indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t, &arbitration_stake_account::by_type>>> arbitration_stake_accounts;
+indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, 
+uint64_t, &arbitration_stake_account::by_type>>> arbitration_stake_accounts;
 
 typedef eosio::multi_index<"complainants"_n, complainant,
    indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
@@ -173,9 +178,11 @@ typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
 typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp,
    indexed_by<"svc"_n, const_mem_fun<arbicaseapp, uint64_t, &arbicaseapp::by_svc>>> arbicaseapps;
 typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,
-   indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t, &arbitration_process::by_arbi>>> arbitration_processs;
+   indexed_by<"arbi"_n, const_mem_fun<arbitration_process, 
+   uint64_t, &arbitration_process::by_arbi>>> arbitration_processs;
 typedef eosio::multi_index<"arbiresults"_n, arbitration_result,
-   indexed_by<"arbi"_n, const_mem_fun<arbitration_result, uint64_t, &arbitration_result::by_arbi>>> arbitration_results;
+   indexed_by<"arbi"_n, const_mem_fun<arbitration_result, 
+   uint64_t, &arbitration_result::by_arbi>>> arbitration_results;
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
 
 // };

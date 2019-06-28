@@ -29,6 +29,8 @@ void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, ass
         p.pubkey = pubkey;
         p.type = type;
         p.stake_amount = stake_amount;
+        p.income = asset(0,core_symbol());
+        p.claim = asset(0,core_symbol());
         p.public_info = public_info;
     } );
 }
@@ -561,15 +563,63 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
     // TODO
     // appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,   
     // all  data provider stake amount minus
+
+    // 
+    auto arbicaseapp_tb = arbicaseapps(get_self(), get_self().value);
+    auto arbi_iter = arbicaseapp_tb.find(arbitration_id);
+    check(arbi_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
+
+    //
+    const final_result_provider = 0;
+    bool is_provider = arbi_iter->final_winer != final_result_provider;
+    std::tuple<std::vector<name>, asset> slash_stake_accounts =
+        get_balances(arbitration_id, is_provider);
+    int64_t slash_amount = std::get<1>(slash_stake_accounts).amount;
     
+    // if final winer is not provider   then slash  all service providers' stakes 
+    if (is_provider) {
+      uint64_t service_id = arbi_iter->service_id;
+
+      std::tuple<std::vector<name>, asset> service_stakes =
+          get_provider_service_stakes(service_id);
+      const std::vector<name> &accounts = std::get<0>(service_stakes);
+      const asset &stake_amount = std::get<1>(service_stakes);
+      slash_amount += stake_amount.amount;//  add slash service stake from all service providers
+      slash_service_stake(service_id, accounts, stake_amount);
+    }
+
+    double dividend_percent = 0.8;
+    double slash_amount_dividend_part = slash_amount * dividend_percent;
+    double slash_amount_fee_part = slash_amount * (1 - dividend_percent);
+    check(slash_amount_dividend_part > 0 && slash_amount_fee_part > 0, "");
+
+    // award stake accounts
+    std::tuple<std::vector<name>, asset> award_stake_accounts =
+        get_balances(arbitration_id, !is_provider);
+
+    // slash all losers' arbitration stake 
+    slash_arbitration_stake(arbitration_id, std::get<0>(slash_stake_accounts));
+
+    // pay all winers' award
+    pay_arbitration_award(arbitration_id, std::get<0>(award_stake_accounts),
+                          slash_amount_dividend_part);
+
+    // pay all arbitrators' arbitration fee
+    pay_arbitration_fee(arbitration_id, arbi_iter->arbitrators,
+                        slash_amount_fee_part);
 }
 
+/**
+ * @brief 
+ * 
+ * @param arbitration_id 
+ */
 void bos_oracle::handle_rearbitration_result(uint64_t arbitration_id) {
     // TODO
     // appeal over  give  data prvoider fine amount from his stake amount, give  complaints bonus,   
     // all  data provider stake amount minus
     
-     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
+    auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbicaseapp_iter = arbicaseapp_tb.find(arbitration_id);
     check(arbicaseapp_iter != arbicaseapp_tb.end(), "Can not find such arbitration.");
 
@@ -579,10 +629,8 @@ void bos_oracle::handle_rearbitration_result(uint64_t arbitration_id) {
         // p.final_result = arbiprocess_iter->arbitration_result;
         p.final_winer = provider;///arbiprocess_iter->arbitration_result;
     } );
-
-
-    分钱
-    handle_arbitration_result
+    
+    handle_arbitration_result(arbitration_id);
 }
 
 /**
@@ -591,24 +639,202 @@ void bos_oracle::handle_rearbitration_result(uint64_t arbitration_id) {
  * @param owner
  * @param value
  */
-void bos_oracle::sub_balance(name owner, asset value,uint64_t arbitration_id,bool is_provider) {
-  
-  riskcontrol_accounts dapp_acnts(_self, arbitration_id);
+void bos_oracle::sub_balance(name owner, asset value,uint64_t arbitration_id) {
 
-  const auto &dapp =
-      dapp_acnts.get(value.symbol.code().raw(), "no balance object found");
-  check(dapp.balance.amount >= value.amount, "overdrawn balance");
+  arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+  auto acc = stake_acnts.find(owner.value);
+  check(acc != stake_acnts.end(), "no balance object found");
+  check(acc.balance.amount >= value.amount, "overdrawn balance");
 
-  dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance -= value; });
+  stake_acnts.modify(acc, same_payer, [&](auto &a) { a.balance -= value; });
 }
 
+/**
+ * @brief 
+ * 
+ * @param owner 
+ * @param value 
+ * @param arbitration_id 
+ * @param is_provider 
+ */
 void bos_oracle::add_balance(name owner, asset value,uint64_t arbitration_id,bool is_provider) {
-
-  riskcontrol_accounts dapp_acnts(_self, arbitration_id);
-  auto dapp = dapp_acnts.find(value.symbol.code().raw());
-  if (dapp == dapp_acnts.end()) {
-    dapp_acnts.emplace(_self, [&](auto &a) {  a.balance = value; });
+  arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+  auto acc = stake_acnts.find(owner.value);
+  if (acc == stake_acnts.end()) {
+    stake_acnts.emplace(_self, [&](auto &a) {
+      a.account = owner;
+      a.balance = value;
+      a.income = asset(0, core_symbol());
+      a.claim = asset(0, core_symbol());
+      a.is_provider = is_provider;
+    });
   } else {
-    dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
+    stake_acnts.modify(acc, same_payer, [&](auto &a) { a.balance += value; });
   }
+}
+
+/**
+ * @brief 
+ * 
+ * @param arbitration_id 
+ * @param is_provider 
+ * @return std::tuple<std::vector<name>,asset> 
+ */
+std::tuple<std::vector<name>,asset> bos_oracle::get_balances(uint64_t arbitration_id,bool is_provider) {
+  uint64_t stake_type = static_cast<uint64_t>(is_provider);
+  arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+
+  auto type_index = addresses.get_index<"type"_n>();
+
+  auto type_itr = type_index.lower_bound(stake_type);
+  auto upper = type_index.upper_bound(stake_type);
+  std::vector<name> accounts;
+  asset stakes = asset(0, core_symbol());
+  while (type_itr != uppper) {
+    if (type_itr->is_provider = is_provider) {
+      stakes.push_back(type_itr->account);
+      stakes += type_itr->balance;
+    }
+
+    type_itr++;
+  }
+
+  return std::make_tuple(accounts, stakes);
+}
+
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @return std::tuple<std::vector<name>,asset> 
+ */
+std::tuple<std::vector<name>,asset>
+bos_oracle::get_provider_service_stakes(uint64_t service_id) {
+
+  data_service_provisions provisionstable(_self, service_id);
+
+  std::vector<name> providers;
+  asset stakes= asset(0,core_symbole());
+
+  for (const auto &p : provisionstable) {
+    if (p.status == provision_status::provision_reg ) {
+      providers.push_back(p.account);
+      stakes +=p.stake_amount;
+    }
+  }
+
+  return std::make_tuple(providers,stakes);
+}
+
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param slash_accounts 
+ * @param stake_amount 
+ */
+void bos_oracle::slash_service_stake(uint64_t service_id,std::vector<name>& slash_accounts,const asset &stake_amount ) {
+ 
+  // oracle internal account provider acount transfer to arbitrat account
+  if (stake_amount.amount > 0) {
+    transfer(provider_account, arbitrat_account, stake_amount, "");
+  }
+
+  for (auto &account : slash_accounts) {
+    data_providers providertable(_self, _self.value);
+    auto provider_itr = providertable.find(account.value);
+    check(provider_itr != providertable.end(), "");
+
+    data_service_provisions provisionstable(_self, service_id);
+
+    auto provision_itr = provisionstable.find(account.value);
+    check(provision_itr != provisionstable.end(),
+          "account does not subscribe services");
+    check(provider_itr->total_stake_amount >= provision_itr->stake_amount,
+          "account does not subscribe services");
+
+    providertable.modify(provider_itr, same_payer, [&](auto &p) {
+      p.total_stake_amount -= provision_itr->stake_amount;
+    });
+
+    provisionstable.modify(provision_itr, same_payer, [&](auto &p) {
+      p.stake_amount = asset(0, core_symbol());
+    });
+  }
+  data_service_stakes svcstaketable(_self, _self.value);
+  auto svcstake_itr = svcstaketable.find(service_id);
+  check(svcstake_itr != svcstaketable.end(), "");
+  check(svcstake_itr->stake_amount >= stake_amount, "");
+
+  svcstaketable.modify(svcstake_itr, same_payer,
+                       [&](auto &ss) { ss.stake_amount -= stake_amount; });
+}
+
+/**
+ * @brief 
+ * 
+ * @param arbitration_id 
+ * @param slash_accounts 
+ */
+void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id,std::vector<name>& slash_accounts) {
+
+  arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+  for (auto &a : std::get<0>(slash_accounts)) {
+    auto acc = stake_acnts.find(a.value);
+    check(acc != stake_acnts.end(), "");
+
+    stake_acnts.modify(acc, same_payer,
+                       [&](auto &a) { a.balance = asset(0, core_symbol()); });
+  }
+ 
+}
+
+/**
+ * @brief 
+ * 
+ * @param arbitration_id 
+ * @param award_accounts 
+ * @param dividend_amount 
+ */
+void bos_oracle::pay_arbitration_award(uint64_t arbitration_id,std::vector<name>& award_accounts,double dividend_amount) {
+ uint64_t award_size = award_accounts.size();
+  check(award_size > 0, "");
+  int64_t average_award_amount =
+      static_cast<int64_t>(dividend_amount / award_size);
+  if (average_award_amount > 0) {
+       arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+    for (auto &a : award_accounts) {
+      auto acc = stake_acnts.find(a.value);
+      check(acc != stake_acnts.end(), "");
+
+      stake_acnts.modify(acc, same_payer, [&](auto &a) {
+        a.balance += asset(average_award_amount, core_symbol());
+      });
+    }
+  }
+
+}
+
+/**
+ * @brief 
+ * 
+ * @param arbitration_id 
+ * @param fee_accounts 
+ * @param fee_amount 
+ */
+void bos_oracle::pay_arbitration_fee(uint64_t arbitration_id,std::vector<name>& fee_accounts,double fee_amount) {
+
+  auto abr_table = arbitrators( get_self(), get_self().value );
+
+  for(auto& a: fee_accounts)
+  {
+    auto iter = abr_table.find( a.value );
+    check( iter != abr_table.end(), "no Arbitrator   found " );
+    // transfer(account, arbitrat_account, stake_amount, "regarbitrat deposit.");
+
+    abr_table.modify( iter,get_self(), [&]( auto& p ) {
+         p.income += asset(static_cast<int64_t>(fee_amount),core_symbol());
+    } );
+  }
+
 }
