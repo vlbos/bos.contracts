@@ -146,10 +146,10 @@ public:
   using regservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 
-  using stakeamount_action =
+  using stakeasset_action =
       eosio::action_wrapper<"stakeasset"_n, &bos_oracle::stakeasset>;
 
-  using stakeamount_action =
+  using unstakeasset_action =
       eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
 
   using addfeetypes_action =

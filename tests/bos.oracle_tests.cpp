@@ -658,7 +658,7 @@ BOOST_FIXTURE_TEST_CASE( execaction_test, bos_oracle_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( stakeamount_test, bos_oracle_tester ) try {
+BOOST_FIXTURE_TEST_CASE( stakeasset_test, bos_oracle_tester ) try {
 
   uint64_t service_id = 0;
   name account = N(alice);

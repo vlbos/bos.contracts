@@ -35,13 +35,20 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
+                              print("=====1");
   require_auth(account);
   uint64_t new_service_id = service_id;
   data_services svctable(_self, _self.value);
-  if (0 == service_id) {
+ auto service_itr = svctable.find(service_id);
+  if (service_itr == svctable.end()) { 
+    //  if (0 == service_id) {
+     print("=====2");
     // add service
     svctable.emplace(_self, [&](auto &s) {
       s.service_id = svctable.available_primary_key();
+      print("$$$$$$$$$$$$$");
+      print(s.service_id);
+      print("**************");
       s.service_price = service_price;
       s.fee_type = fee_type;
       s.data_format = data_format;
@@ -64,11 +71,12 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       s.emergency_flag = false;
       s.status = service_status::service_in;
       new_service_id = s.service_id;
+      
     });
   }
-
+    print("=====1");
   transfer(account, provider_account, stake_amount, "");
-
+    print("=====1");
   // add provider
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
@@ -80,25 +88,30 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       p.total_freeze_amount = asset(0, core_symbol());
       p.unconfirmed_amount = asset(0, core_symbol());
       p.claim_amount = asset(0, core_symbol());
+      p.last_claim_time = time_point_sec(now());
     });
   } else {
     providertable.modify(provider_itr, same_payer, [&](auto &p) {
       p.total_stake_amount += stake_amount;
     });
   }
-
+    print("=====1");
   data_service_provisions provisionstable(_self, new_service_id);
 
   auto provision_itr = provisionstable.find(account.value);
-  check(provision_itr == provisionstable.end(), "service already  exist");
+  check(provision_itr == provisionstable.end(), "the account has subscribed service   ");
 
   provisionstable.emplace(_self, [&](auto &p) {
     p.service_id = new_service_id;
     p.account = account;
     p.stake_amount = stake_amount;
     p.freeze_amount = asset(0, core_symbol());
+    p.service_income = asset(0, core_symbol());
+    p.status = 0;
+    p.public_information = "";
+    p.stop_service =false;
   });
-
+    print("=====1");
   provider_services provservicestable(_self, account.value);
   uint64_t create_time_sec =
       static_cast<uint64_t>(update_start_time.sec_since_epoch());
@@ -109,14 +122,16 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.service_id = new_service_id;
     p.create_time = update_start_time;
   });
-
+    print("=====1");
     data_service_stakes svcstaketable(_self, _self.value);
   auto svcstake_itr = svcstaketable.find(new_service_id);
   if(svcstake_itr == svcstaketable.end())
   {
  svcstaketable.emplace(_self, [&](auto &ss) {
+      ss.service_id = new_service_id;
       ss.stake_amount = stake_amount;
       ss.freeze_amount = asset(0, core_symbol());
+      ss.unconfirmed_amount = asset(0, core_symbol());
   });
   }
   else

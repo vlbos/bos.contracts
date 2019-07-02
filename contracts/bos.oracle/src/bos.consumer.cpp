@@ -113,9 +113,10 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
               fee_type::fee_times);
 
   data_service_requests reqtable(_self, _self.value);
+  bool flag = (reqtable.begin() == reqtable.end());
 
   reqtable.emplace(_self, [&](auto &r) {
-    r.request_id = reqtable.available_primary_key();
+    r.request_id = flag?1:reqtable.available_primary_key();
     r.service_id = service_id;
     r.contract_account = contract_account;
     r.action_name = action_name;

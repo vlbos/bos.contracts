@@ -60,10 +60,9 @@ void bos_oracle::add_times(uint64_t service_id, name account,
                            name contract_account, name action_name,
                            bool is_request) {
 
-  push_records pushtable(_self, service_id);
-  provider_push_records providetable(_self, service_id);
-  action_push_records actiontable(_self, service_id);
-  provider_action_push_records provideractiontable(_self, service_id);
+  
+ 
+
   const uint64_t one_time = 1;
   auto add_time = [is_request](uint64_t &times, uint64_t &month_times,
                                bool is_new = false) {
@@ -79,9 +78,10 @@ void bos_oracle::add_times(uint64_t service_id, name account,
     }
   };
 
+push_records pushtable(_self, service_id);
   auto push_itr = pushtable.find(service_id);
   if (push_itr == pushtable.end()) {
-    providetable.emplace(_self, [&](auto &p) {
+    pushtable.emplace(_self, [&](auto &p) {
       p.service_id = service_id;
       add_time(p.times, p.month_times, true);
     });
@@ -90,6 +90,7 @@ void bos_oracle::add_times(uint64_t service_id, name account,
                      [&](auto &p) { add_time(p.times, p.month_times); });
   }
 
+ provider_push_records providetable(_self, service_id);
   auto provide_itr = providetable.find(account.value);
   if (provide_itr == providetable.end()) {
     providetable.emplace(_self, [&](auto &p) {
@@ -102,7 +103,8 @@ void bos_oracle::add_times(uint64_t service_id, name account,
                         [&](auto &p) { add_time(p.times, p.month_times); });
   }
 
-  uint64_t a_id = get_hash_key(get_nn_hash(contract_account, action_name));
+  action_push_records actiontable(_self, service_id);
+   uint64_t a_id = get_hash_key(get_nn_hash(contract_account, action_name));
   auto action_itr = actiontable.find(a_id);
   if (action_itr == actiontable.end()) {
     actiontable.emplace(_self, [&](auto &a) {
@@ -116,6 +118,7 @@ void bos_oracle::add_times(uint64_t service_id, name account,
                        [&](auto &a) { add_time(a.times, a.month_times); });
   }
 
+ provider_action_push_records provideractiontable(_self, service_id);
   uint64_t pa_id =
       get_hash_key(get_nnn_hash(account, contract_account, action_name));
   auto provider_action_itr = provideractiontable.find(pa_id);
