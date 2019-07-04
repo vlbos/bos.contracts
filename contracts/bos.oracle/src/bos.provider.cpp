@@ -57,7 +57,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       s.acceptance = acceptance;
       s.declaration = declaration;
       s.injection_method = injection_method;
-      s.stake_amount = stake_amount;
+      s.stake_amount = asset(0,core_symbol());//stake_amount;
       s.duration = duration;
       s.provider_limit = provider_limit;
       s.update_cycle = update_cycle;
@@ -95,7 +95,8 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       p.total_stake_amount += stake_amount;
     });
   }
-    print("=====1");
+    print("===service_id==1");
+    print(new_service_id);
   data_service_provisions provisionstable(_self, new_service_id);
 
   auto provision_itr = provisionstable.find(account.value);
@@ -107,7 +108,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.stake_amount = stake_amount;
     p.freeze_amount = asset(0, core_symbol());
     p.service_income = asset(0, core_symbol());
-    p.status = 0;
+    p.status = provision_status::provision_reg;
     p.public_information = "";
     p.stop_service =false;
   });
@@ -145,6 +146,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
 
 void bos_oracle::unstakeasset(uint64_t service_id, name account,
                               asset stake_amount) {
+  require_auth(account);
   stakeasset(service_id, account, -stake_amount);
 }
 
@@ -157,7 +159,7 @@ void bos_oracle::unstakeasset(uint64_t service_id, name account,
  */
 void bos_oracle::stakeasset(uint64_t service_id, name account,
                              asset stake_amount) {
-  require_auth(account);
+  require_auth(_self);
   if (stake_amount.amount > 0) {
     transfer(account, provider_account, stake_amount, "");
   }
@@ -270,12 +272,13 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   check(service_status::service_in == get_service_status(service_id),
         "service and subscription must be available");
 
-  auto push_data = [](uint64_t service_id, name provider, name contract_account,
+  auto push_data = [this](uint64_t service_id, name provider, name contract_account,
                       name action_name, uint64_t request_id,
                       const string &data_json) {
+                        
     transaction t;
     t.actions.emplace_back(
-        permission_level{provider, active_permission}, provider, "pushdata"_n,
+        permission_level{_self, active_permission}, _self, "callpushdata"_n,
         std::make_tuple(service_id, provider, contract_account, action_name,
                         request_id, data_json));
     t.delay_sec = 0;
@@ -308,6 +311,26 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   }
 }
 
+void bos_oracle::pushdata(uint64_t service_id, name provider,
+                          name contract_account, name action_name,
+                          uint64_t request_id, const string &data_json) {
+  require_auth(provider);
+  //  action(permission_level{_self, "active"_n},
+  //          _self, "callpushdata"_n,
+  //          std::make_tuple(aservice_id,  provider,
+  //                          contract_account,  action_name,
+  //                          request_id, data_json))
+  //       .send();
+
+      // inline callpushdata 
+      {
+         callpushdata_action callpushdata_act{ _self, { _self, active_permission } };
+         callpushdata_act.send( service_id,  provider,
+                           contract_account,  action_name,
+                           request_id, data_json );
+      }
+
+                          }
 /**
  * @brief
  *
@@ -318,10 +341,10 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
  * @param data_json
  * @param request_id
  */
-void bos_oracle::pushdata(uint64_t service_id, name provider,
+void bos_oracle::callpushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
                           uint64_t request_id, const string &data_json) {
-  require_auth(provider);
+  require_auth(_self);
   check(service_status::service_in == get_service_status(service_id) &&
             subscription_status::subscription_subscribe ==
                 get_subscription_status(service_id, contract_account,

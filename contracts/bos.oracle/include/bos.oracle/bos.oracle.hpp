@@ -137,6 +137,9 @@ public:
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
                                   uint64_t request_id, const string &data_json);
+  [[eosio::action]] void callpushdata(uint64_t service_id, name provider,
+                                  name contract_account, name action_name,
+                                  uint64_t request_id, const string &data_json);
   [[eosio::action]] void claim(name account, name receive_account);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
@@ -162,6 +165,8 @@ public:
 
   using pushdata_action =
       eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
+  using callpushdata_action =
+      eosio::action_wrapper<"callpushdata"_n, &bos_oracle::callpushdata>;
 
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
@@ -186,9 +191,7 @@ public:
                                      name action_name, name requester,
                                      std::string request_content);
 
-  [[eosio::action]] void payservice(uint64_t service_id, name contract_account,
-                                    name action_name, name account,
-                                    asset amount, std::string memo);
+  [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount);
   [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
                                     name action_name, asset amount);
   using subscribe_action =
@@ -218,6 +221,9 @@ public:
   ///
   ///
   /// bos.riskctrl end
+
+        // [[eosio::on_notify("eosio.token::transfer")]] 
+      void on_transfer(name from, name to, asset quantity, std::string memo);
 private:
   oracle_fee_singleton _oracle_fee;
   bos_oracle_fee _fee_state;
@@ -276,3 +282,6 @@ private:
   /// common
   symbol core_symbol() const { return _core_symbol; };
 };
+
+
+

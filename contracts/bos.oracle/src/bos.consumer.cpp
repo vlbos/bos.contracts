@@ -138,14 +138,12 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
  * @param amount 
  * @param memo 
  */
-void bos_oracle::payservice(uint64_t service_id, name contract_account,
-                            name action_name, name account, asset amount,
-                            std::string memo) {
+void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount) {
 
-  require_auth(account);
+  require_auth(_self);
   // require_auth(contract_account);
   check(amount.amount > 0, "amount must be greater than zero");
-  transfer(account, consumer_account, amount, memo);
+  // transfer(account, consumer_account, amount, memo);
 
   data_service_subscriptions substable(_self,service_id);
 
@@ -156,16 +154,16 @@ void bos_oracle::payservice(uint64_t service_id, name contract_account,
 
   substable.modify(subs_itr, _self,
                    [&](auto &subs) { subs.payment += amount; });
-
-  transaction t;
-  t.actions.emplace_back(
-      permission_level{_self, active_permission}, _self, "confirmpay"_n,
-      std::make_tuple(service_id, contract_account, action_name, amount));
-  t.delay_sec = 120; // seconds
-  uint128_t deferred_id =
-      (uint128_t(contract_account.value) << 64) | action_name.value;
-  cancel_deferred(deferred_id);
-  t.send(deferred_id, _self);
+  
+  // transaction t;
+  // t.actions.emplace_back(
+  //     permission_level{_self, active_permission}, _self, "confirmpay"_n,
+  //     std::make_tuple(service_id, contract_account, action_name, amount));
+  // t.delay_sec = 120; // seconds
+  // uint128_t deferred_id =
+  //     (uint128_t(contract_account.value) << 64) | action_name.value;
+  // cancel_deferred(deferred_id);
+  // t.send(deferred_id, _self);
 }
 
 /**

@@ -383,6 +383,11 @@ bos_oracle::get_provider_list(uint64_t service_id) {
   std::vector<std::tuple<name,asset>> providers;
 
   for (const auto &p : provisionstable) {
+    
+    print("p.stake_amount.amount");
+    print(p.stake_amount.amount);
+    print("p.freeze_amount.amount");
+    print(p.freeze_amount.amount);
     if (p.status == provision_status::provision_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
       providers.push_back(std::make_tuple(p.account,p.stake_amount-p.freeze_amount));
     }

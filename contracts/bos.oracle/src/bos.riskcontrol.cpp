@@ -6,7 +6,93 @@
 #include <eosiolib/print.h>
 #include <eosiolib/time.hpp>
 #include <eosiolib/transaction.hpp>
-#include <string>
+#include "bos.oracle/bos.util.hpp"
+
+void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) 
+ {
+        //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
+         print_f("On notify : % % % %", from, to, quantity, memo);
+         if(memo.empty())
+         {
+           print("memo is empty on trasfer");
+           return;
+         }
+
+    //      auto get_parameters =
+    //          [&](const std::string &source) -> std::vector<std::string> {
+    //        std::vector<std::string> results;
+    //        const string delimiter = ",";
+    //        size_t prev = 0;
+    //        size_t next = 0;
+
+    //        while ((next = source.find_first_of(delimiter.c_str(), prev)) !=
+    //               std::string::npos) {
+    //          if (next - prev != 0) {
+    //            results.push_back(source.substr(prev, next - prev));
+    //          }
+    //          prev = next + 1;
+    //        }
+
+    //        if (prev < source.size()) {
+    //          results.push_back(source.substr(prev));
+    //        }
+
+    //        return results;
+    //      };
+
+    // auto convert_to_int = [](const string &parameter) -> uint64_t {
+    //        stringstream strValue("");
+
+    //        strValue << parameter;
+
+    //        uint64_t value;
+
+    //        strValue >> value;
+
+    //        strValue.clear();
+    //        strValue.str("");
+
+    //        return value;
+    //      };
+
+         std::vector<std::string> parameters = bos_util::get_parameters(memo);
+        check(parameters.size()>0, "parse memo failed ");
+         uint64_t transfer_category =
+             bos_util::convert_to_int(parameters[memo_index::index_category]);
+         if (tc_deposit == transfer_category) {
+           check(parameters.size() == memo_index_deposit::deposit_count,
+                 "wrong deposit's memo format  ");
+                     name  deposit_from =
+             name(parameters[memo_index_deposit::deposit_from]);
+                name  deposit_to =
+             name(parameters[memo_index_deposit::deposit_from]);
+             uint64_t deposit_notify = bos_util::convert_to_int(parameters[memo_index_deposit::deposit_notify]);
+
+             deposit(0,deposit_from,deposit_to,quantity,"",deposit_notify);
+
+         } else {
+           check(parameters.size() == memo_index::index_count,
+                 "wrong memo format ");
+           uint64_t id =
+               bos_util::convert_to_int(parameters[memo_index::index_service]);
+           name account = name(parameters[memo_index::index_service]);
+           switch (transfer_category) {
+           case tc_service_stake:
+             stakeasset(id, account, quantity);
+             break;
+           case tc_pay_service:
+             payservice(id, account, quantity);
+             break;
+           case tc_arbitration_stake:
+
+             break;
+           default:
+             check(false, "unknown  transfer category ");
+             break;
+           }
+         }
+
+}
 
 /**
  * @brief
@@ -50,7 +136,7 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 /// from dapp user to dapp
 void bos_oracle::deposit(uint64_t service_id, name from, name to,
                          asset quantity, string memo, bool is_notify) {
-                           print("=================deposit");
+  print("=================deposit");
   require_auth(_self);
   // transfer(from, to, quantity, memo);
 
@@ -165,7 +251,7 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   std::vector<std::tuple<name, asset>> providers =
       get_provider_list(service_id);
 
-  check(providers.size() > 0, " no provider found");
+  check(providers.size() > 0, " no provider found when add freeze");
 
   uint64_t average_amount = amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
@@ -215,7 +301,7 @@ bos_oracle::freeze_providers_amount(uint64_t service_id,
   std::vector<std::tuple<name, asset>> providers =
       get_provider_list(service_id);
 
-  check(providers.size() > 0, " no provider found");
+  check(providers.size() > 0, " no provider found in freeze providers amount");
 
   uint64_t average_amount = freeze_amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
@@ -252,7 +338,7 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
 
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
-  check(provider_itr != providertable.end(), "no provider found");
+  check(provider_itr != providertable.end(), "no provider found in freeze asset");
 
   data_service_provisions provisionstable(_self, service_id);
 
@@ -377,10 +463,10 @@ void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
   print("<<<");
   print(value.symbol.code().raw());
   print(">>>");
-    print("<<<");
+  print("<<<");
   print(owner.value);
   print(">>>");
-    print("<<<");
+  print("<<<");
   print(_self.value);
   print(">>>");
   riskcontrol_accounts dapp_acnts(_self, owner.value);
