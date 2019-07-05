@@ -147,7 +147,13 @@ void bos_oracle::regservice(uint64_t service_id, name account,
 void bos_oracle::unstakeasset(uint64_t service_id, name account,
                               asset stake_amount) {
   require_auth(account);
-  stakeasset(service_id, account, -stake_amount);
+  stake_asset(service_id, account, -stake_amount);
+}
+
+void bos_oracle::stakeasset(uint64_t service_id, name account,
+                            asset stake_amount) {
+  require_auth(_self);
+  stake_asset(service_id, account, stake_amount);
 }
 
 /**
@@ -157,9 +163,9 @@ void bos_oracle::unstakeasset(uint64_t service_id, name account,
  * @param account
  * @param stake_amount
  */
-void bos_oracle::stakeasset(uint64_t service_id, name account,
+void bos_oracle::stake_asset(uint64_t service_id, name account,
                              asset stake_amount) {
-  require_auth(_self);
+ 
   if (stake_amount.amount > 0) {
     transfer(account, provider_account, stake_amount, "");
   }

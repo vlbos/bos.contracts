@@ -68,7 +68,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
              name(parameters[memo_index_deposit::deposit_from]);
              uint64_t deposit_notify = bos_util::convert_to_int(parameters[memo_index_deposit::deposit_notify]);
 
-             deposit(0,deposit_from,deposit_to,quantity,"",deposit_notify);
+             call_deposit(deposit_from,deposit_to,quantity,deposit_notify);
 
          } else {
            check(parameters.size() == memo_index::index_count,
@@ -78,10 +78,10 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
            name account = name(parameters[memo_index::index_service]);
            switch (transfer_category) {
            case tc_service_stake:
-             stakeasset(id, account, quantity);
+             stake_asset(id, account, quantity);
              break;
            case tc_pay_service:
-             payservice(id, account, quantity);
+             pay_service(id, account, quantity);
              break;
            case tc_arbitration_stake:
 
@@ -134,10 +134,16 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 }
 
 /// from dapp user to dapp
-void bos_oracle::deposit(uint64_t service_id, name from, name to,
+void bos_oracle::deposit(name from, name to,
                          asset quantity, string memo, bool is_notify) {
   print("=================deposit");
   require_auth(_self);
+  call_deposit(  from,  to,  quantity,   is_notify);
+}
+
+void bos_oracle::call_deposit( name from, name to,
+                         asset quantity,  bool is_notify) {
+  
   // transfer(from, to, quantity, memo);
 
   // auto payer = has_auth(to) ? to : from;

@@ -209,7 +209,7 @@ public:
   /// bos.riskctrl begin
   ///
   ///
-  [[eosio::action]] void deposit(uint64_t service_id, name from, name to,
+  [[eosio::action]] void deposit( name from, name to,
                                  asset quantity, string memo, bool is_notify);
   [[eosio::action]] void withdraw(uint64_t service_id, name from, name to,
                                   asset quantity, string memo);
@@ -229,7 +229,8 @@ private:
   bos_oracle_fee _fee_state;
 
   // provider
-
+  void stake_asset(uint64_t service_id, name account,
+                                     asset stake_amount);
   void add_times(uint64_t service_id, name account, name contract_account,
                  name action_name, bool is_request);
   std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> get_times(
@@ -251,6 +252,7 @@ private:
                                    const std::set<name> &available_providers,
                                    asset freeze_amount);
   /// consumer
+  void pay_service(uint64_t service_id, name contract_account, asset amount);
   std::vector<std::tuple<name, name>> get_subscription_list(
       uint64_t service_id);
   std::vector<std::tuple<name, name, uint64_t>> get_request_list(
@@ -259,6 +261,8 @@ private:
 
   /// risk control
   void transfer(name from, name to, asset quantity, string memo);
+  void call_deposit( name from, name to,
+                         asset quantity,  bool is_notify);
   void add_freeze_delay(uint64_t service_id, name account,
                         time_point_sec start_time, uint64_t duration,
                         asset amount, uint64_t type);

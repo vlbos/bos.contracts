@@ -128,6 +128,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
   
 }
 
+
 /**
  * @brief 
  * 
@@ -139,8 +140,23 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
  * @param memo 
  */
 void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount) {
+ require_auth(contract_account);
+ pay_service( service_id,  contract_account,  amount);
+}
 
-  require_auth(_self);
+/**
+ * @brief 
+ * 
+ * @param service_id 
+ * @param contract_account 
+ * @param action_name 
+ * @param account 
+ * @param amount 
+ * @param memo 
+ */
+void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset amount) {
+
+ 
   // require_auth(contract_account);
   check(amount.amount > 0, "amount must be greater than zero");
   // transfer(account, consumer_account, amount, memo);
