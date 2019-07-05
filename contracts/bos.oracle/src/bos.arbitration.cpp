@@ -684,7 +684,7 @@ std::tuple<std::vector<name>,asset> bos_oracle::get_balances(uint64_t arbitratio
   uint64_t stake_type = static_cast<uint64_t>(is_provider);
   arbitration_stake_accounts stake_acnts(_self, arbitration_id);
 
-  auto type_index = addresses.get_index<"type"_n>();
+  auto type_index = stake_acnts.get_index<"type"_n>();
 
   auto type_itr = type_index.lower_bound(stake_type);
   auto upper = type_index.upper_bound(stake_type);
@@ -779,7 +779,7 @@ void bos_oracle::slash_service_stake(uint64_t service_id,std::vector<name>& slas
 void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id,std::vector<name>& slash_accounts) {
 
   arbitration_stake_accounts stake_acnts(_self, arbitration_id);
-  for (auto &a : std::get<0>(slash_accounts)) {
+  for (auto &a : slash_accounts) {
     auto acc = stake_acnts.find(a.value);
     check(acc != stake_acnts.end(), "");
 
@@ -837,4 +837,22 @@ void bos_oracle::pay_arbitration_fee(uint64_t arbitration_id,std::vector<name>& 
     } );
   }
 
+}
+
+void bos_oracle::stakearbitr(uint64_t arbitration_id, name account,
+                                   asset quantity) {
+  require_auth(account);
+  // transfer();
+  stake_arbitration(arbitration_id, account, quantity);
+}
+void bos_oracle::stake_arbitration(uint64_t arbitration_id, name account,
+                                   asset quantity) {
+  check(quantity.amount > 0, "");
+
+  arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+
+  auto acc = stake_acnts.find(account.value);
+  check(acc != stake_acnts.end(), "");
+
+  stake_acnts.modify(acc, same_payer, [&](auto &a) { a.balance += quantitys; });
 }
