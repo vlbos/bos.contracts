@@ -50,7 +50,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   check(price_by_month.amount > 0 && amount >= price_by_month,
         "amount must greater than price by month");
 
-  transfer(account, consumer_account, amount, memo);
+  // transfer(account, consumer_account, amount, memo);
 
   // add consumer
   data_consumers consumertable(_self, _self.value);
@@ -141,6 +141,8 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
  */
 void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount) {
  require_auth(contract_account);
+  check(amount.amount > 0, "amount must be greater than zero");
+ transfer(account, consumer_account, amount, memo);
  pay_service( service_id,  contract_account,  amount);
 }
 
@@ -158,8 +160,8 @@ void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset a
 
  
   // require_auth(contract_account);
-  check(amount.amount > 0, "amount must be greater than zero");
-  // transfer(account, consumer_account, amount, memo);
+ 
+  
 
   data_service_subscriptions substable(_self,service_id);
 

@@ -32,6 +32,7 @@ public:
   static constexpr eosio::name provider_account{"provider.bos"_n};
   static constexpr eosio::name consumer_account{"consumer.bos"_n};
   static constexpr eosio::name riskctrl_account{"riskctrl.bos"_n};
+  static constexpr eosio::name arbitrat_account{"arbitrat.bos"_n};
   static constexpr eosio::name token_account{"eosio.token"_n};
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);

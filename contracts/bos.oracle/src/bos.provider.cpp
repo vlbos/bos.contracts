@@ -75,7 +75,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     });
   }
     print("=====1");
-  transfer(account, provider_account, stake_amount, "");
+  // transfer(account, provider_account, stake_amount, "");
     print("=====1");
   // add provider
   data_providers providertable(_self, _self.value);
@@ -153,6 +153,9 @@ void bos_oracle::unstakeasset(uint64_t service_id, name account,
 void bos_oracle::stakeasset(uint64_t service_id, name account,
                             asset stake_amount) {
   require_auth(_self);
+  check (stake_amount.amount > 0,"") ;
+     transfer(account, provider_account, stake_amount, "");
+  
   stake_asset(service_id, account, stake_amount);
 }
 
@@ -166,9 +169,9 @@ void bos_oracle::stakeasset(uint64_t service_id, name account,
 void bos_oracle::stake_asset(uint64_t service_id, name account,
                              asset stake_amount) {
  
-  if (stake_amount.amount > 0) {
-    transfer(account, provider_account, stake_amount, "");
-  }
+  // if (stake_amount.amount > 0) {
+  //    transfer(account, provider_account, stake_amount, "");
+  // }
 
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);

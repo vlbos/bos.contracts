@@ -18,44 +18,11 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
            return;
          }
 
-    //      auto get_parameters =
-    //          [&](const std::string &source) -> std::vector<std::string> {
-    //        std::vector<std::string> results;
-    //        const string delimiter = ",";
-    //        size_t prev = 0;
-    //        size_t next = 0;
+//  check(quantity.amount>100, "amount could not be less than 100");
+//
+// check(find(to) != end, "no account's business found ");
 
-    //        while ((next = source.find_first_of(delimiter.c_str(), prev)) !=
-    //               std::string::npos) {
-    //          if (next - prev != 0) {
-    //            results.push_back(source.substr(prev, next - prev));
-    //          }
-    //          prev = next + 1;
-    //        }
-
-    //        if (prev < source.size()) {
-    //          results.push_back(source.substr(prev));
-    //        }
-
-    //        return results;
-    //      };
-
-    // auto convert_to_int = [](const string &parameter) -> uint64_t {
-    //        stringstream strValue("");
-
-    //        strValue << parameter;
-
-    //        uint64_t value;
-
-    //        strValue >> value;
-
-    //        strValue.clear();
-    //        strValue.str("");
-
-    //        return value;
-    //      };
-
-         std::vector<std::string> parameters = bos_util::get_parameters(memo);
+           std::vector<std::string> parameters = bos_util::get_parameters(memo);
         check(parameters.size()>0, "parse memo failed ");
          uint64_t transfer_category =
              bos_util::convert_to_int(parameters[memo_index::index_category]);
@@ -68,8 +35,8 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
              name(parameters[memo_index_deposit::deposit_from]);
              uint64_t deposit_notify = bos_util::convert_to_int(parameters[memo_index_deposit::deposit_notify]);
 
-             call_deposit(deposit_from,deposit_to,quantity,deposit_notify);
-
+             call_deposit(deposit_from, deposit_to, quantity, deposit_notify);
+             transfer(account, riskctrl_account, amount, memo);
          } else {
            check(parameters.size() == memo_index::index_count,
                  "wrong memo format ");
@@ -79,12 +46,15 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
            switch (transfer_category) {
            case tc_service_stake:
              stake_asset(id, account, quantity);
+             transfer(account, provider_account, amount, memo);
              break;
            case tc_pay_service:
              pay_service(id, account, quantity);
+             transfer(account, consumer_account, amount, memo);
              break;
            case tc_arbitration_stake:
-
+            // stake_arbitration(id,account,quantity);
+            transfer(account, arbitrat_account, amount, memo);
              break;
            default:
              check(false, "unknown  transfer category ");
@@ -182,15 +152,13 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
-     print("========77777=subsr");
+  print("========77777=subsr");
   uint64_t time_length = 1;
-  if (svcstake_itr->stake_amount - svcstake_itr->freeze_amount >=
-      quantity) 
-      {
-        print("=========subsr");
+  if (svcstake_itr->stake_amount - svcstake_itr->freeze_amount >= quantity) {
+    print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
-print("======free===subsr");
+    print("======free===subsr");
     // transfer(from, to, quantity, memo);
     add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
                time_length, quantity);
@@ -206,7 +174,7 @@ print("======free===subsr");
 
     /// delay time length
 
-   print("===delay======subsr");
+    print("===delay======subsr");
     add_delay(svcsubs_itr->service_id, from, time_point_sec(now()), time_length,
               quantity);
 
