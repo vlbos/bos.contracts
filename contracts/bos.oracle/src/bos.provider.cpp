@@ -83,7 +83,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   if (provider_itr == providertable.end()) {
     providertable.emplace(_self, [&](auto &p) {
       p.account = account;
-      p.total_stake_amount = stake_amount;
+      p.total_stake_amount = asset(0,core_symbol());//stake_amount;
       // p.pubkey = "";
       p.total_freeze_amount = asset(0, core_symbol());
       p.unconfirmed_amount = asset(0, core_symbol());
@@ -92,7 +92,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     });
   } else {
     providertable.modify(provider_itr, same_payer, [&](auto &p) {
-      p.total_stake_amount += stake_amount;
+      p.total_stake_amount += asset(0,core_symbol());//stake_amount;
     });
   }
     print("===service_id==1");
@@ -130,7 +130,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   {
  svcstaketable.emplace(_self, [&](auto &ss) {
       ss.service_id = new_service_id;
-      ss.stake_amount = stake_amount;
+      ss.stake_amount = asset(0,core_symbol());//stake_amount;
       ss.freeze_amount = asset(0, core_symbol());
       ss.unconfirmed_amount = asset(0, core_symbol());
   });
@@ -138,23 +138,25 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   else
   {
     svcstaketable.modify(svcstake_itr, same_payer,
-                         [&](auto &ss) { ss.stake_amount += stake_amount; });
+                         [&](auto &ss) { 
+                           ss.stake_amount += asset(0,core_symbol());//stake_amount;
+                          });
   }
 
 
 }
 
 void bos_oracle::unstakeasset(uint64_t service_id, name account,
-                              asset stake_amount) {
+                              asset stake_amount, std::string memo) {
   require_auth(account);
   stake_asset(service_id, account, -stake_amount);
 }
 
 void bos_oracle::stakeasset(uint64_t service_id, name account,
-                            asset stake_amount) {
-  require_auth(_self);
+                            asset stake_amount, std::string memo) {
+  require_auth(account);
   check (stake_amount.amount > 0,"") ;
-     transfer(account, provider_account, stake_amount, "");
+  transfer(account, provider_account, stake_amount, "");
   
   stake_asset(service_id, account, stake_amount);
 }

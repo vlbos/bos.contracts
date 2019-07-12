@@ -45,10 +45,10 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   // require_auth(contract_account);
 
 
-  asset price_by_month =
-      get_price_by_fee_type(service_id, fee_type::fee_month);
-  check(price_by_month.amount > 0 && amount >= price_by_month,
-        "amount must greater than price by month");
+  // asset price_by_month =
+  //     get_price_by_fee_type(service_id, fee_type::fee_month);
+  // check(price_by_month.amount > 0 && amount >= price_by_month,
+  //       "amount must greater than price by month");
 
   // transfer(account, consumer_account, amount, memo);
 
@@ -78,7 +78,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     subs.account = account;
     subs.contract_account = contract_account;
     subs.action_name = action_name;
-    subs.payment = amount;
+    subs.payment = asset(0, core_symbol());//amount;
     subs.consumption = asset(0, core_symbol());
     subs.month_consumption = asset(0, core_symbol());
     subs.balance =  subs.payment - subs.consumption-subs.month_consumption ;
@@ -139,10 +139,10 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
  * @param amount 
  * @param memo 
  */
-void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount) {
+void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount, std::string memo) {
  require_auth(contract_account);
   check(amount.amount > 0, "amount must be greater than zero");
- transfer(account, consumer_account, amount, memo);
+ transfer(contract_account, consumer_account, amount, "");
  pay_service( service_id,  contract_account,  amount);
 }
 

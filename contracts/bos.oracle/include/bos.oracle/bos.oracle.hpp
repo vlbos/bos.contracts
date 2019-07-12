@@ -121,10 +121,10 @@ public:
       time_point_sec update_start_time);
 
   [[eosio::action]] void stakeasset(uint64_t service_id, name account,
-                                     asset stake_amount);
+                                     asset stake_amount, std::string memo);
 
   [[eosio::action]] void unstakeasset(uint64_t service_id, name account,
-                                     asset stake_amount);
+                                     asset stake_amount, std::string memo);
 
   [[eosio::action]] void addfeetypes(uint64_t service_id,
                                      std::vector<uint8_t> fee_types,
@@ -192,7 +192,7 @@ public:
                                      name action_name, name requester,
                                      std::string request_content);
 
-  [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount);
+  [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
   [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
                                     name action_name, asset amount);
   using subscribe_action =

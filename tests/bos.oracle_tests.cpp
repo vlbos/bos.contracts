@@ -49,6 +49,35 @@ public:
 
       return base_tester::push_action( std::move(act), uint64_t(signer));
    }
+
+   auto push_action(  ) 
+   {
+       auto auth = authority(eosio::testing::base_tester::get_public_key("alice", "active"));
+   auth.accounts.push_back( permission_level_weight{{N(oracle.bos), config::eosio_code_name}, 1} );
+
+    return base_tester::push_action(N(eosio), N(updateauth), N(alice), mvo()
+      ( "account", "alice" )
+      ( "permission", "active" )
+      ( "parent", "owner" )
+      ( "auth", auth )
+   );
+
+   }
+
+   auto push_permission_update_auth_action( const account_name& signer ) 
+   {
+       auto auth = authority(eosio::testing::base_tester::get_public_key(signer, "active"));
+   auth.accounts.push_back( permission_level_weight{{N(oracle.bos), config::eosio_code_name}, 1} );
+
+    return base_tester::push_action(N(eosio), N(updateauth), signer, mvo()
+      ( "account", signer )
+      ( "permission", "active" )
+      ( "parent", "owner" )
+      ( "auth", auth )
+   );
+
+   }
+
    
    //provider
    fc::variant get_data_service( const uint64_t& service_id )
@@ -257,11 +286,13 @@ public:
 
    action_result stakeasset( uint64_t service_id, 
                                      name account, 
-                                     asset stake_amount){
+                                     asset stake_amount,
+                                     string memo){
       return push_action( account, N(stakeasset), mvo()
            ( "service_id", service_id)
            ( "account", account)
            ( "stake_amount", stake_amount)
+           ( "memo", memo)
       );
    }
 
@@ -344,14 +375,11 @@ public:
    }
 
    action_result payservice(uint64_t service_id, name contract_account,
-                                    name action_name, name account,
-                                    asset amount, std::string memo) {
+                                     asset amount, std::string memo) {
      return push_action(
-         account, N(payservice),mvo()
+         contract_account, N(payservice),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
-         ("action_name", action_name)
-         ("account", account)
          ("amount", amount)
          ("memo", memo)
          );
@@ -454,7 +482,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
       ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
       ("guarantee_id", guarantee_id)
       ("service_price", service_price)
-      ("stake_amount", stake_amount)
+      ("stake_amount", asset::from_string("0.0000 EOS"))
       ("risk_control_amount",  risk_control_amount)
       ("pause_service_stake_amount", pause_service_stake_amount)
       ("data_format", data_format)
@@ -465,7 +493,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
       ("update_start_time",  update_start_time)
   );
 
- BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
       // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
       // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
     
@@ -660,13 +688,87 @@ BOOST_FIXTURE_TEST_CASE( execaction_test, bos_oracle_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( stakeasset_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 0;
+name account = N(alice);
+ uint64_t service_id =0;
+  uint8_t fee_type = 1;
+  uint8_t data_type = 1;
+  uint8_t status = 0;
+  uint8_t injection_method = 0;
+  uint64_t acceptance = 0;
+  uint64_t duration = 1;
+  uint64_t provider_limit = 3;
+  uint64_t update_cycle = 1;
+  uint64_t appeal_freeze_period = 0;
+  uint64_t exceeded_risk_control_freeze_period = 0;
+  uint64_t guarantee_id = 0;
+  asset service_price = asset::from_string("1.0000 EOS");
+  asset stake_amount = asset::from_string("10.0000 EOS");
+  asset risk_control_amount = asset::from_string("0.0000 EOS");
+  asset pause_service_stake_amount = asset::from_string("0.0000 EOS");
+  std::string data_format = "";
+  std::string criteria = "";
+  std::string declaration = "";
+  bool freeze_flag = false;
+  bool emergency_flag = false;
+  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+
+  auto token = regservice(service_id, account, stake_amount, service_price,
+                          fee_type, data_format, data_type, criteria,
+                          acceptance, declaration, injection_method, duration,
+                          provider_limit, update_cycle, update_start_time);
+
+  uint64_t create_time_sec =
+      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+
+  uint64_t new_service_id = get_provider_service_id(
+      account, create_time_sec);
+
+BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
+
+  auto services = get_data_service(new_service_id);
+  REQUIRE_MATCHING_OBJECT(services,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_type)
+      ("data_type", data_type)
+      ("status", status)
+      ("injection_method", injection_method)
+      ("acceptance", acceptance)
+      ("duration", duration)
+      ("provider_limit", provider_limit)
+      ("update_cycle", update_cycle)
+      ("appeal_freeze_period",appeal_freeze_period)
+      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
+      ("guarantee_id", guarantee_id)
+      ("service_price", service_price)
+      ("stake_amount", asset::from_string("0.0000 EOS"))
+      ("risk_control_amount",  risk_control_amount)
+      ("pause_service_stake_amount", pause_service_stake_amount)
+      ("data_format", data_format)
+      ("criteria", criteria)
+      ("declaration", declaration)
+      ( "freeze_flag", freeze_flag)
+      ("emergency_flag",  emergency_flag)
+      ("update_start_time",  update_start_time)
+  );
+
+//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
+      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
+    
+BOOST_TEST("" == "====reg test true");
+  produce_blocks(1);
+
+  {
+ uint64_t service_id = new_service_id;
   name account = N(alice);
-  asset stake_amount = asset::from_string("0 EOS");
-  
-  auto token = stakeasset(service_id, account, stake_amount);
-
-
+  asset stake_amount = asset::from_string("1.0000 EOS");
+  string memo = "";
+//   push_action();
+   push_permission_update_auth_action(account);
+  auto token = stakeasset(service_id, account, stake_amount,memo);
+  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+  }
+ 
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( claim_test, bos_oracle_tester ) try {
@@ -744,14 +846,132 @@ BOOST_FIXTURE_TEST_CASE( requestdata_test, bos_oracle_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( payservice_test, bos_oracle_tester ) try {
-  uint64_t service_id = 0;
-  name contract_account = N(alice);
-  name action_name = N(alice);
-  name account = N(alice);
-  asset amount = asset::from_string("1000 EOS");
+
+ name account = N(alice);
+ uint64_t service_id =0;
+  uint8_t fee_type = 1;
+  uint8_t data_type = 1;
+  uint8_t status = 0;
+  uint8_t injection_method = 0;
+  uint64_t acceptance = 0;
+  uint64_t duration = 1;
+  uint64_t provider_limit = 3;
+  uint64_t update_cycle = 1;
+  uint64_t appeal_freeze_period = 0;
+  uint64_t exceeded_risk_control_freeze_period = 0;
+  uint64_t guarantee_id = 0;
+  asset service_price = asset::from_string("1.0000 EOS");
+  asset stake_amount = asset::from_string("10.0000 EOS");
+  asset risk_control_amount = asset::from_string("0.0000 EOS");
+  asset pause_service_stake_amount = asset::from_string("0.0000 EOS");
+  std::string data_format = "";
+  std::string criteria = "";
+  std::string declaration = "";
+  bool freeze_flag = false;
+  bool emergency_flag = false;
+  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+
+  auto token = regservice(service_id, account, stake_amount, service_price,
+                          fee_type, data_format, data_type, criteria,
+                          acceptance, declaration, injection_method, duration,
+                          provider_limit, update_cycle, update_start_time);
+
+  uint64_t create_time_sec =
+      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+
+  uint64_t new_service_id = get_provider_service_id(
+      account, create_time_sec);
+
+BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
+
+  auto services = get_data_service(new_service_id);
+  REQUIRE_MATCHING_OBJECT(services,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_type)
+      ("data_type", data_type)
+      ("status", status)
+      ("injection_method", injection_method)
+      ("acceptance", acceptance)
+      ("duration", duration)
+      ("provider_limit", provider_limit)
+      ("update_cycle", update_cycle)
+      ("appeal_freeze_period",appeal_freeze_period)
+      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
+      ("guarantee_id", guarantee_id)
+      ("service_price", service_price)
+      ("stake_amount", asset::from_string("0.0000 EOS"))
+      ("risk_control_amount",  risk_control_amount)
+      ("pause_service_stake_amount", pause_service_stake_amount)
+      ("data_format", data_format)
+      ("criteria", criteria)
+      ("declaration", declaration)
+      ( "freeze_flag", freeze_flag)
+      ("emergency_flag",  emergency_flag)
+      ("update_start_time",  update_start_time)
+  );
+
+//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
+      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
+    
+
+  produce_blocks(1);
+/// add fee type
+{
+   uint64_t service_id = new_service_id;
+  std::vector<uint8_t> fee_types = {0,1};
+  std::vector<asset> service_prices = {asset::from_string("1.0000 EOS"),asset::from_string("2.0000 EOS")};
+  auto token = addfeetypes(service_id, fee_types, service_prices);
+
+  int fee_type = 1;
+  auto fee = get_data_service_fee(service_id,fee_types[fee_type]);
+  REQUIRE_MATCHING_OBJECT(fee,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_types[fee_type])
+      ("service_price", service_prices[fee_type])
+  );
+
+  produce_blocks(1);
+}
+
+// subscribe service
+{
+  service_id = new_service_id;
+  name contract_account = N(dappuser.bos);
+  name action_name = N(receivejson);
+  std::string publickey = "";
+  name account = N(bob);
+  asset amount = asset::from_string("0.0000 EOS");
   std::string memo = "";
-  auto token = payservice(service_id, contract_account, action_name, account,
+  auto subs = subscribe(service_id, contract_account, action_name, publickey,
+                        account, amount, memo);
+
+  auto consumer = get_data_consumer(account);
+  auto time = consumer["create_time"];
+  //  BOOST_TEST("" == "1221ss");
+  BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
+  //  BOOST_TEST("" == "11ss");
+  auto subscription =
+      get_data_service_subscription(service_id, contract_account);
+  BOOST_TEST("" == "ss");
+  BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
+  BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
+  BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
+}
+
+produce_blocks(1);
+
+BOOST_TEST("" == "subscribe service");
+{
+  uint64_t service_id = new_service_id;
+  name contract_account = N(dappuser.bos);
+  asset amount = asset::from_string("1.0000 EOS");
+  std::string memo = "";
+  push_permission_update_auth_action(contract_account);
+  auto token = payservice(service_id, contract_account, 
                           amount, memo);
+}
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( confirmpay_test, bos_oracle_tester ) try {
@@ -766,13 +986,145 @@ BOOST_FIXTURE_TEST_CASE( confirmpay_test, bos_oracle_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( deposit_test, bos_oracle_tester ) try {
 
- uint64_t service_id = 0;
-  name from = N(alice);
-  name to = N(alice);
-  asset quantity = asset::from_string("1000 EOS");
-  std::string memo = "";
-  bool is_notify = false;
-  auto token = deposit(service_id,from, to, quantity, memo, is_notify);
+
+ name account = N(alice);
+ uint64_t service_id =0;
+  uint8_t fee_type = 1;
+  uint8_t data_type = 1;
+  uint8_t status = 0;
+  uint8_t injection_method = 0;
+  uint64_t acceptance = 0;
+  uint64_t duration = 1;
+  uint64_t provider_limit = 3;
+  uint64_t update_cycle = 1;
+  uint64_t appeal_freeze_period = 0;
+  uint64_t exceeded_risk_control_freeze_period = 0;
+  uint64_t guarantee_id = 0;
+  asset service_price = asset::from_string("1.0000 EOS");
+  asset stake_amount = asset::from_string("10.0000 EOS");
+  asset risk_control_amount = asset::from_string("0.0000 EOS");
+  asset pause_service_stake_amount = asset::from_string("0.0000 EOS");
+  std::string data_format = "";
+  std::string criteria = "";
+  std::string declaration = "";
+  bool freeze_flag = false;
+  bool emergency_flag = false;
+  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+
+  auto token = regservice(service_id, account, stake_amount, service_price,
+                          fee_type, data_format, data_type, criteria,
+                          acceptance, declaration, injection_method, duration,
+                          provider_limit, update_cycle, update_start_time);
+
+  uint64_t create_time_sec =
+      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+
+  uint64_t new_service_id = get_provider_service_id(
+      account, create_time_sec);
+
+BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
+
+  auto services = get_data_service(new_service_id);
+  REQUIRE_MATCHING_OBJECT(services,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_type)
+      ("data_type", data_type)
+      ("status", status)
+      ("injection_method", injection_method)
+      ("acceptance", acceptance)
+      ("duration", duration)
+      ("provider_limit", provider_limit)
+      ("update_cycle", update_cycle)
+      ("appeal_freeze_period",appeal_freeze_period)
+      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
+      ("guarantee_id", guarantee_id)
+      ("service_price", service_price)
+      ("stake_amount", asset::from_string("0.0000 EOS"))
+      ("risk_control_amount",  risk_control_amount)
+      ("pause_service_stake_amount", pause_service_stake_amount)
+      ("data_format", data_format)
+      ("criteria", criteria)
+      ("declaration", declaration)
+      ( "freeze_flag", freeze_flag)
+      ("emergency_flag",  emergency_flag)
+      ("update_start_time",  update_start_time)
+  );
+
+//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
+      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
+    
+
+  produce_blocks(1);
+/// add fee type
+{
+   uint64_t service_id = new_service_id;
+  std::vector<uint8_t> fee_types = {0,1};
+  std::vector<asset> service_prices = {asset::from_string("1.0000 EOS"),asset::from_string("2.0000 EOS")};
+  auto token = addfeetypes(service_id, fee_types, service_prices);
+
+  int fee_type = 1;
+  auto fee = get_data_service_fee(service_id,fee_types[fee_type]);
+  REQUIRE_MATCHING_OBJECT(fee,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_types[fee_type])
+      ("service_price", service_prices[fee_type])
+  );
+
+  produce_blocks(1);
+}
+
+  // subscribe service
+  {
+    service_id = new_service_id;
+    name contract_account = N(dappuser.bos);
+    name action_name = N(receivejson);
+    std::string publickey = "";
+    name account = N(bob);
+    asset amount = asset::from_string("10.0000 EOS");
+    std::string memo = "";
+    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+                          account, amount, memo);
+
+    auto consumer = get_data_consumer(account);
+    auto time = consumer["create_time"];
+    //  BOOST_TEST("" == "1221ss");
+    BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
+    //  BOOST_TEST("" == "11ss");
+    auto subscription =
+        get_data_service_subscription(service_id, contract_account);
+     BOOST_TEST("" == "ss");
+    BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
+    BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
+   BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
+   }
+
+   produce_blocks(1);
+
+ 
+
+BOOST_TEST("" == "====subsscribe true");
+
+   /// deposit
+   {
+     uint64_t service_id = new_service_id;
+     name from = N(dappuser);
+     name to = N(bob);
+     asset quantity = asset::from_string("1.0000 EOS");
+     std::string memo = "";
+     bool is_notify = false;
+     auto token = deposit(service_id, from, to, quantity, memo, is_notify);
+
+      auto app_balance = get_riskcontrol_account(to, "4,EOS");
+   REQUIRE_MATCHING_OBJECT( app_balance, mvo()
+      ("balance", "1.0000 EOS")
+   );
+
+
+   }
+
+
+
 } FC_LOG_AND_RETHROW()
 
 

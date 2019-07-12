@@ -32,29 +32,29 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
                      name  deposit_from =
              name(parameters[memo_index_deposit::deposit_from]);
                 name  deposit_to =
-             name(parameters[memo_index_deposit::deposit_from]);
+             name(parameters[memo_index_deposit::deposit_to]);
              uint64_t deposit_notify = bos_util::convert_to_int(parameters[memo_index_deposit::deposit_notify]);
 
              call_deposit(deposit_from, deposit_to, quantity, deposit_notify);
-             transfer(account, riskctrl_account, amount, memo);
+             transfer(_self, riskctrl_account, quantity, memo);
          } else {
            check(parameters.size() == memo_index::index_count,
                  "wrong memo format ");
            uint64_t id =
                bos_util::convert_to_int(parameters[memo_index::index_service]);
-           name account = name(parameters[memo_index::index_service]);
+           name account = from;
            switch (transfer_category) {
            case tc_service_stake:
              stake_asset(id, account, quantity);
-             transfer(account, provider_account, amount, memo);
+             transfer(_self, provider_account, quantity, memo);
              break;
            case tc_pay_service:
              pay_service(id, account, quantity);
-             transfer(account, consumer_account, amount, memo);
+             transfer(_self, consumer_account, quantity, memo);
              break;
            case tc_arbitration_stake:
             // stake_arbitration(id,account,quantity);
-            transfer(account, arbitrat_account, amount, memo);
+            transfer(_self, arbitrat_account, quantity, memo);
              break;
            default:
              check(false, "unknown  transfer category ");
@@ -94,13 +94,11 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 
   //  auto payer = has_auth( to ) ? to : from;
 
-  // action(permission_level{from, "active"_n}, token_account, "transfer"_n,
-  //        std::make_tuple(from, to, quantity, memo))
-  //     .send();
+  action(permission_level{from, "active"_n}, token_account, "transfer"_n,
+         std::make_tuple(from, to, quantity, memo))
+      .send();
 
-  // INLINE_ACTION_SENDER(eosio::token, transfer)
-  // (token_account, {{from, active_permission}, {to, active_permission}},
-  //  {from, to, quantity, memo});
+  // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from, active_permission}, {to, active_permission}},{from, to, quantity, memo});
 }
 
 /// from dapp user to dapp
