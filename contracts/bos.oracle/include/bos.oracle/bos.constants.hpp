@@ -34,3 +34,9 @@ enum transfer_type : uint8_t { tt_freeze , tt_delay };
 enum transfer_category : uint8_t { tc_service_stake , tc_pay_service,tc_deposit,tc_arbitration_stake };
 enum memo_index : uint8_t { index_category,index_service , index_count};
 enum memo_index_deposit : uint8_t { deposit_category,deposit_from ,deposit_to,deposit_notify , deposit_count};
+enum arbitration_timer_type: uint8_t {
+  appeal_timeout,
+  resp_appeal_timeout,
+  resp_arbitrate_timeout,
+  upload_result_timeout
+};

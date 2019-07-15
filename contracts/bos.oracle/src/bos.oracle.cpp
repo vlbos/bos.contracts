@@ -21,6 +21,7 @@
 #include "bos.provider.cpp"
 #include "bos.consumer.cpp"
 #include "bos.riskcontrol.cpp"
+#include "bos.arbitration.cpp"
 #include "bos.fee.cpp"
 #include "bos.stat.cpp"
 
@@ -242,6 +243,7 @@ using namespace eosio;
 
 // EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
 // (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(pushdata)(multipush)(addfeetypes)(addfeetype)(claim)
+//(regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 // (subscribe)(requestdata)(payservice)(confirmpay)
 // (deposit)(withdraw)
 // )
@@ -272,6 +274,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
 (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(pushdata)(multipush)(addfeetypes)(addfeetype)(claim)
 (subscribe)(requestdata)(payservice)(confirmpay)
+(regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 (deposit)(withdraw))
       }
     }

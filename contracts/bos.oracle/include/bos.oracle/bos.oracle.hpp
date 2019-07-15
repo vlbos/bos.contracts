@@ -21,6 +21,7 @@
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
 #include "bos.oracle/tables/singletons.hpp"
+#include "bos.oracle/tables/arbitration.hpp"
 #include <eosiolib/chain.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/fixedpoint.hpp>
@@ -35,7 +36,11 @@ public:
   static constexpr eosio::name arbitrat_account{"arbitrat.bos"_n};
   static constexpr eosio::name token_account{"eosio.token"_n};
   static constexpr eosio::name active_permission{"active"_n};
+  static constexpr symbol _bos_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
+  static constexpr uint64_t arbi_process_time_limit = 3600;
+  static constexpr double default_arbitration_correct_rate = 0.6f;
+
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)
       : contract(receiver, code, ds), requests(_self, _self.value),
@@ -225,6 +230,43 @@ public:
 
         // [[eosio::on_notify("eosio.token::transfer")]] 
       void on_transfer(name from, name to, asset quantity, std::string memo);
+ /// bos.arbitration begin
+  ///
+  ///
+    [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset stake_amount, std::string public_info );
+
+    [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
+
+    [[eosio::action]] void respcase( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider );
+
+    [[eosio::action]] void resparbitrat( name arbitrator, asset amount, uint64_t arbitration_id );
+
+    [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
+
+    [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
+    
+    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t result, uint64_t process_id, bool is_provider, asset amount);
+    
+    [[eosio::action]] void rerespcase( name provider, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider);
+    
+    [[eosio::action]] void timertimeout(uint64_t arbitration_id, arbitration_timer_type timer_type);
+
+    [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type);
+    
+    void handle_arbitration(uint64_t arbitration_id);
+    void handle_arbitration_result(uint64_t arbitration_id);
+    void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
+    vector<name> random_arbitrator(uint64_t arbitration_id, uint64_t arbi_to_chose) const;
+    void random_chose_arbitrator(uint64_t arbitration_id, uint64_t service_id, uint64_t arbi_to_chose) const;
+    void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
+    void update_arbitration_correcction(uint64_t arbitration_id);
+    uint128_t make_deferred_id(uint64_t arbitration_id, arbitration_timer_type timer_type) const;
+    void timeout_deferred(uint64_t arbitration_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type, uint64_t time_length) const;
+    void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint64_t process_id);
+  /// 
+  ///
+  /// bos.arbitration end
 private:
   oracle_fee_singleton _oracle_fee;
   bos_oracle_fee _fee_state;
