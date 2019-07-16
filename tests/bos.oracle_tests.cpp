@@ -37,6 +37,18 @@ public:
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
+
+
+      produce_blocks( 100 );
+      set_code( N(eosio.token), contracts::token_wasm());
+      set_abi( N(eosio.token), contracts::token_abi().data() );
+      {
+         const auto& accnt = control->db().get<account_object,by_name>( N(eosio.token) );
+         abi_def abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+         token_abi_ser.set_abi(abi, abi_serializer_max_time);
+      }
+
    }
 
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {
@@ -77,8 +89,13 @@ public:
    );
 
    }
-
+ 
+    asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM} ) {
+      vector<char> data = get_row_by_account( N(eosio.token), act, N(accounts), balance_symbol.to_symbol_code().value );
+      return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
+   }
    
+
    //provider
    fc::variant get_data_service( const uint64_t& service_id )
    {
@@ -424,6 +441,7 @@ public:
    }
 
    abi_serializer abi_ser;
+   abi_serializer token_abi_ser;
 };
 
 BOOST_AUTO_TEST_SUITE(bos_oracle_tests)
@@ -524,7 +542,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
     name action_name = N(receivejson);
     std::string publickey = "";
     name account = N(bob);
-    asset amount = asset::from_string("10.0000 EOS");
+    asset amount = asset::from_string("0.0000 EOS");
     std::string memo = "";
     auto subs = subscribe(service_id, contract_account, action_name, publickey,
                           account, amount, memo);
@@ -616,7 +634,7 @@ BOOST_TEST("" == "====multipush true");
 
    }
 
-BOOST_TEST("" == "====deposit ");
+   BOOST_TEST("" == "====deposit ");
    /// withdraw
    {
      uint64_t service_id = new_service_id;
@@ -630,35 +648,15 @@ BOOST_TEST("" == "====deposit ");
      REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 EOS"));
    }
 
-   //   status = 2;
+   BOOST_TEST("" == "====withdraw ");
+   produce_blocks(2*24*60*60);
+   {
+      name account = N(alice);
+      name receive_account = N(alice);
+      auto token = claim(account, receive_account);
 
-   //   auto unregedservice = unregservice(service_id, account, status);
-   //    auto unregedservices = get_data_service(new_service_id);
-   //      REQUIRE_MATCHING_OBJECT( services, mvo()
-   //    ( "service_id", service_id)
-   //            ( "account", account)
-   //            ( "stake_amount", stake_amount)
-   //            ( "service_price", service_price)
-   //            ( "fee_type", fee_type)
-   //            ( "data_format", data_format)
-   //            ( "data_type", data_type)
-   //            ( "criteria", criteria)
-   //            ( "acceptance", acceptance)
-   //            ( "declaration", declaration)
-   //            ( "injection_method", injection_method)
-   //            ( "duration", duration)
-   //            ( "provider_limit", provider_limit)
-   //            ( "update_cycle", update_cycle)
-   //            ( "update_start_time", update_start_time)
-   //            ( "appeal_freeze_period", appeal_freeze_period)
-   //            ( "exceeded_risk_control_freeze_period",
-   //            exceeded_risk_control_freeze_period) ( "guarantee_id",
-   //            guarantee_id) ( "risk_control_amount", risk_control_amount) (
-   //            "pause_service_stake_amount", pause_service_stake_amount) (
-   //            "freeze_flag", freeze_flag) ( "emergency_flag", emergency_flag)
-   //            ( "status", status)
-   //  );
-
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice" ) );
+   }
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( unreg_freeze_test, bos_oracle_tester ) try {

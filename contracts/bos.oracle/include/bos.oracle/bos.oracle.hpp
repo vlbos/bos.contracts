@@ -249,9 +249,9 @@ public:
     
     [[eosio::action]] void rerespcase( name provider, uint64_t arbitration_id, uint64_t result, uint64_t process_id, bool is_provider);
     
-    [[eosio::action]] void timertimeout(uint64_t arbitration_id, arbitration_timer_type timer_type);
+    [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint64_t timer_type);
 
-    [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, arbitration_timer_type timer_type);
+    [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, uint64_t timer_type);
     
     void handle_arbitration(uint64_t arbitration_id);
     void handle_arbitration_result(uint64_t arbitration_id);
