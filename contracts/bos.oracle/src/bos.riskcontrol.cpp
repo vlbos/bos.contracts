@@ -93,12 +93,14 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   //          transfer_act.send( account, consumer_account, amount, memo );
 
   //  auto payer = has_auth( to ) ? to : from;
-
+  print("===quantity");
+  quantity.print();
   action(permission_level{from, "active"_n}, token_account, "transfer"_n,
          std::make_tuple(from, to, quantity, memo))
       .send();
 
   // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from, active_permission}, {to, active_permission}},{from, to, quantity, memo});
+
 }
 
 /// from dapp user to dapp
@@ -424,7 +426,7 @@ void bos_oracle::sub_balance(name owner, asset value) {
   riskcontrol_accounts dapp_acnts(_self, owner.value);
 
   const auto &dapp =
-      dapp_acnts.get(value.symbol.code().raw(), "no balance object found");
+      dapp_acnts.get(value.symbol.code().raw(), "no balance object found sub");
   check(dapp.balance.amount >= value.amount, "overdrawn balance");
 
   dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance -= value; });

@@ -199,7 +199,7 @@ asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
  */
 void bos_oracle::fee_service(uint64_t service_id, name contract_account,
                              name action_name, uint8_t fee_type) {
-  static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
+  // static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
   // //   token::transfer_action transfer_act{ token_account, { account,
   // active_permission } };
   // //          transfer_act.send( account, consumer_account, amount, memo );
@@ -228,9 +228,35 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
       subs.consumption += price_by_times;
     } else {
       subs.month_consumption += price_by_times;
-      subs.last_payment_time += month_seconds;
+      subs.last_payment_time += eosio::days(30);
     }
   });
+
+  service_consumptions consumptionstable(_self, service_id);
+    auto consumptions_itr = consumptionstable.find(service_id);
+  check(consumptions_itr != consumptionstable.end(), "not service found");
+  if (consumptions_itr == consumptionstable.end()) {
+    consumptionstable.emplace(_self, [&](auto &c) {
+      c.service_id = service_id;
+      if (fee_type::fee_times == fee_type) {
+      c.consumption = price_by_times;
+      } else {
+      c.month_consumption = price_by_times;
+      }
+      c.update_time = time_point_sec(now());
+     
+    });
+  } else {
+    consumptionstable.modify(consumptions_itr, same_payer, [&](auto &c) {
+       if (fee_type::fee_times == fee_type) {
+      c.consumption += price_by_times;
+      } else {
+      c.month_consumption += price_by_times;
+      }
+      c.update_time = time_point_sec(now());
+    });
+  }
+
 
 }
 

@@ -95,7 +95,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       p.total_stake_amount += asset(0,core_symbol());//stake_amount;
     });
   }
-    print("===service_id==1");
+    print("===service_id==");
     print(new_service_id);
   data_service_provisions provisionstable(_self, new_service_id);
 
@@ -155,7 +155,7 @@ void bos_oracle::unstakeasset(uint64_t service_id, name account,
 void bos_oracle::stakeasset(uint64_t service_id, name account,
                             asset stake_amount, std::string memo) {
   require_auth(account);
-  check (stake_amount.amount > 0,"") ;
+  check (stake_amount.amount > 0,"stake amount could not equal zero") ;
   transfer(account, provider_account, stake_amount, "");
   
   stake_asset(service_id, account, stake_amount);
