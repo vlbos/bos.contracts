@@ -62,19 +62,19 @@ public:
       return base_tester::push_action( std::move(act), uint64_t(signer));
    }
 
-   auto push_action(  ) 
-   {
-       auto auth = authority(eosio::testing::base_tester::get_public_key("alice", "active"));
-   auth.accounts.push_back( permission_level_weight{{N(oracle.bos), config::eosio_code_name}, 1} );
+   // auto push_action(  ) 
+   // {
+   //     auto auth = authority(eosio::testing::base_tester::get_public_key("alice", "active"));
+   // auth.accounts.push_back( permission_level_weight{{N(oracle.bos), config::eosio_code_name}, 1} );
 
-    return base_tester::push_action(N(eosio), N(updateauth), N(alice), mvo()
-      ( "account", "alice" )
-      ( "permission", "active" )
-      ( "parent", "owner" )
-      ( "auth", auth )
-   );
+   //  return base_tester::push_action(N(eosio), N(updateauth), N(alice), mvo()
+   //    ( "account", "alice" )
+   //    ( "permission", "active" )
+   //    ( "parent", "owner" )
+   //    ( "auth", auth )
+   // );
 
-   }
+   // }
 
    auto push_permission_update_auth_action( const account_name& signer ) 
    {
@@ -440,6 +440,107 @@ public:
          );
    }
 
+uint64_t reg_sevice(name account,time_point_sec update_start_time)
+{
+//  name account = N(alice);
+ uint64_t service_id =0;
+  uint8_t fee_type = 1;
+  uint8_t data_type = 1;
+  uint8_t status = 0;
+  uint8_t injection_method = 0;
+  uint64_t acceptance = 0;
+  uint64_t duration = 1;
+  uint64_t provider_limit = 3;
+  uint64_t update_cycle = 1;
+  uint64_t appeal_freeze_period = 0;
+  uint64_t exceeded_risk_control_freeze_period = 0;
+  uint64_t guarantee_id = 0;
+  asset service_price = asset::from_string("1.0000 EOS");
+  asset stake_amount = asset::from_string("10.0000 EOS");
+  asset risk_control_amount = asset::from_string("0.0000 EOS");
+  asset pause_service_stake_amount = asset::from_string("0.0000 EOS");
+  std::string data_format = "";
+  std::string criteria = "";
+  std::string declaration = "";
+  bool freeze_flag = false;
+  bool emergency_flag = false;
+//   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+
+  auto token = regservice(service_id, account, stake_amount, service_price,
+                          fee_type, data_format, data_type, criteria,
+                          acceptance, declaration, injection_method, duration,
+                          provider_limit, update_cycle, update_start_time);
+
+  uint64_t create_time_sec =
+      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+
+  uint64_t new_service_id = get_provider_service_id(
+      account, create_time_sec);
+
+      return new_service_id;
+}
+
+/// add fee type
+void add_fee_type(uint64_t service_id)
+{
+   // uint64_t service_id = new_service_id;
+  std::vector<uint8_t> fee_types = {0,1};
+  std::vector<asset> service_prices = {asset::from_string("1.0000 EOS"),asset::from_string("2.0000 EOS")};
+  auto token = addfeetypes(service_id, fee_types, service_prices);
+
+}
+
+ // subscribe service
+ void subscribe_service(uint64_t service_id,name account)
+  {
+   //  service_id = new_service_id;
+    name contract_account = N(dappuser.bos);
+    name action_name = N(receivejson);
+    std::string publickey = "";
+   //  name account = N(bob);
+    asset amount = asset::from_string("10.0000 EOS");
+    std::string memo = "";
+    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+                          account, amount, memo);
+
+   //  auto consumer = get_data_consumer(account);
+   //  auto time = consumer["create_time"];
+   //  //  BOOST_TEST("" == "1221ss");
+   // //  BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
+   //  //  BOOST_TEST("" == "11ss");
+   //  auto subscription =
+   //      get_data_service_subscription(service_id, contract_account);
+   //   BOOST_TEST("" == "ss");
+   //  BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
+   //  BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
+   // BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
+   }
+
+  /// push data
+  void push_data(uint64_t service_id,name provider,uint64_t request_id)
+   {
+   // service_id = new_service_id;
+   // name provider = N(alice);
+   name contract_account = N(dappuser.bos);
+   name action_name = N(receivejson);
+   const string data_json = "test data json";
+   // uint64_t request_id = 0;
+
+   auto data = pushdata(service_id, provider, contract_account, action_name,
+                         request_id, data_json);
+   }
+
+ /// multipush
+ void multi_push(uint64_t service_id,name provider,bool is_request)
+   {
+   //   uint64_t service_id = new_service_id;
+   //   name provider = N(alice);
+     const string data_json = "multipush request test data json";
+   //   bool is_request = true;
+
+     auto token = multipush(service_id, provider, data_json, is_request);
+   }
+
    abi_serializer abi_ser;
    abi_serializer token_abi_ser;
 };
@@ -657,6 +758,7 @@ BOOST_TEST("" == "====multipush true");
 
       BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice" ) );
    }
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( unreg_freeze_test, bos_oracle_tester ) try {
@@ -1079,7 +1181,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
     name action_name = N(receivejson);
     std::string publickey = "";
     name account = N(bob);
-    asset amount = asset::from_string("10.0000 EOS");
+    asset amount = asset::from_string("0.0000 EOS");
     std::string memo = "";
     auto subs = subscribe(service_id, contract_account, action_name, publickey,
                           account, amount, memo);
