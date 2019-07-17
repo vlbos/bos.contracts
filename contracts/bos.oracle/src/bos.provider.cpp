@@ -88,7 +88,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       p.total_freeze_amount = asset(0, core_symbol());
       p.unconfirmed_amount = asset(0, core_symbol());
       p.claim_amount = asset(0, core_symbol());
-      p.last_claim_time = time_point_sec(now());
+      p.last_claim_time = time_point_sec();
     });
   } else {
     providertable.modify(provider_itr, same_payer, [&](auto &p) {
