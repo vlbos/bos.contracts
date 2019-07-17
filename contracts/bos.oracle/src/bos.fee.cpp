@@ -84,10 +84,20 @@ push_records pushtable(_self, service_id);
     pushtable.emplace(_self, [&](auto &p) {
       p.service_id = service_id;
       add_time(p.times, p.month_times, true);
+         print(p.times);
+                     print("==new==times");
+                       print(p.month_times);
+                         print("====month times");
     });
   } else {
     pushtable.modify(push_itr, same_payer,
-                     [&](auto &p) { add_time(p.times, p.month_times); });
+                     [&](auto &p) { add_time(p.times, p.month_times); 
+                     print(p.times);
+                     print("====times");
+                       print(p.month_times);
+                         print("====month times");
+                     });
+
   }
 
  provider_push_records providetable(_self, service_id);
@@ -213,34 +223,39 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
   // transfer(account, consumer_account, amount, memo);
   asset price_by_times = get_price_by_fee_type(service_id, fee_type);
 
+ check(price_by_times.amount > 0 ,
+        " get price by times cound not be greater than zero");
+
   data_service_subscriptions substable(_self, service_id);
   // auto id =
   //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
-  check(price_by_times.amount > 0 and subs_itr->balance >= price_by_times,
-        "balance must greater than price by times");
+  check(subs_itr->balance >= price_by_times,
+        "balance cound not be  greater than price by times");
+ 
 
   substable.modify(subs_itr, _self, [&](auto &subs) {
-    subs.balance -= price_by_times;
     if (fee_type::fee_times == fee_type) {
       subs.consumption += price_by_times;
     } else {
       subs.month_consumption += price_by_times;
-      subs.last_payment_time += eosio::days(30);
+      subs.last_payment_time = time_point_sec(now());
     }
+    subs.balance =  subs.payment - subs.consumption-subs.month_consumption ;
   });
 
   service_consumptions consumptionstable(_self, service_id);
     auto consumptions_itr = consumptionstable.find(service_id);
-  check(consumptions_itr != consumptionstable.end(), "not service found");
   if (consumptions_itr == consumptionstable.end()) {
     consumptionstable.emplace(_self, [&](auto &c) {
       c.service_id = service_id;
       if (fee_type::fee_times == fee_type) {
       c.consumption = price_by_times;
+      c.month_consumption = asset(0,core_symbol());
       } else {
+      c.consumption = asset(0,core_symbol());
       c.month_consumption = price_by_times;
       }
       c.update_time = time_point_sec(now());
@@ -249,6 +264,11 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
   } else {
     consumptionstable.modify(consumptions_itr, same_payer, [&](auto &c) {
        if (fee_type::fee_times == fee_type) {
+         print("%%%%%%%%%%consumption");
+         c.consumption.print();
+         price_by_times.print();
+          print("%%%%%%%00000%%%consumption");
+
       c.consumption += price_by_times;
       } else {
       c.month_consumption += price_by_times;

@@ -359,6 +359,7 @@ namespace eosiosystem {
    }
 
    void system_contract::bidrefund( name bidder, name newname ) {
+      print("==========****************==$$$$$$$$$===============bidrefund=====================");
       bid_refund_table refunds_table(_self, newname.value);
       auto it = refunds_table.find( bidder.value );
       check( it != refunds_table.end(), "refund not found" );

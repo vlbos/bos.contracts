@@ -76,6 +76,9 @@ transfer( "eosio", "carol1111111", ("1000.0000"), "eosio" );
 transfer( "eosio", "alice", ("1000.0000"), "eosio" );
 transfer( "eosio", "bob", ("1000.0000"), "eosio" );
 transfer( "eosio", "carol", ("1000.0000"), "eosio" );
+transfer( "eosio", "dappuser.bos", ("1000.0000"), "eosio" );
+transfer( "eosio", "dappuser", ("1000.0000"), "eosio" );
+transfer( "eosio", "dapp", ("1000.0000"), "eosio" );
 
    }
 
@@ -439,6 +442,19 @@ transfer( "eosio", "carol", ("1000.0000"), "eosio" );
       );
    }
 
+  action_result innerpush(uint64_t service_id, name provider,
+                                  name contract_account, name action_name,
+                                   uint64_t request_id,const string& data_json){
+      return push_action( provider, N(innerpush), mvo()
+           ( "service_id", service_id )
+           ( "provider", provider )
+           ( "contract_account", contract_account )
+           ( "action_name", action_name )
+           ( "request_id", request_id)
+           ( "data_json", data_json )
+      );
+   }
+
    action_result multipush(uint64_t service_id, name provider,
                                   const string& data_json, bool is_request){
       return push_action( provider, N(multipush), mvo()
@@ -646,7 +662,7 @@ void add_fee_type(uint64_t service_id)
    {
 //   uint64_t service_id = new_service_id;
   name contract_account = N(dappuser.bos);
-//   asset amount = core_sym::from_string("1.0000");
+//   asset amount = core_sym::from_string("10.0000");
   std::string memo = "";
   push_permission_update_auth_action(contract_account);
   auto token = payservice(service_id, contract_account, 
@@ -818,7 +834,7 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
    {
   uint64_t service_id = new_service_id;
   name contract_account = N(dappuser.bos);
-  asset amount = core_sym::from_string("1.0000");
+  asset amount = core_sym::from_string("10.0000");
   std::string memo = "";
   push_permission_update_auth_action(contract_account);
   auto token = payservice(service_id, contract_account, 
@@ -890,9 +906,9 @@ BOOST_TEST("" == "====multipush true");
      bool is_notify = false;
      auto token = deposit(service_id, from, to, quantity, memo, is_notify);
 
-      auto app_balance = get_riskcontrol_account(to, "4,EOS");
+      auto app_balance = get_riskcontrol_account(to, "4,TST");
    REQUIRE_MATCHING_OBJECT( app_balance, mvo()
-      ("balance", "1.0000")
+      ("balance", "1.0000 TST")
    );
 
 
@@ -908,8 +924,8 @@ BOOST_TEST("" == "====multipush true");
      std::string memo = "";
      auto token = withdraw(service_id, from, to, quantity, memo);
 
-     auto app_balance = get_riskcontrol_account(from, "4,EOS");
-     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000"));
+     auto app_balance = get_riskcontrol_account(from, "4,TST");
+     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 TST"));
    }
 
    BOOST_TEST("" == "====withdraw ");
@@ -1383,7 +1399,7 @@ BOOST_TEST("" == "====subsscribe true");
      bool is_notify = false;
      auto token = deposit(service_id, from, to, quantity, memo, is_notify);
 
-      auto app_balance = get_riskcontrol_account(to, "4,EOS");
+      auto app_balance = get_riskcontrol_account(to, "4,TST");
    REQUIRE_MATCHING_OBJECT( app_balance, mvo()
       ("balance", "1.0000")
    );

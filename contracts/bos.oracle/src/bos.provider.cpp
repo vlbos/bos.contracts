@@ -277,7 +277,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
  * @param is_request
  */
 void bos_oracle::multipush(uint64_t service_id, name provider,
-                           const string &data_json, bool is_request) {
+                           string data_json, bool is_request) {
                              print("==========multipush");
   require_auth(provider);
   check(service_status::service_in == get_service_status(service_id),
@@ -285,18 +285,20 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 
   auto push_data = [this](uint64_t service_id, name provider, name contract_account,
                       name action_name, uint64_t request_id,
-                      const string &data_json) {
-                        
+                      string data_json) {
+                        print("====push_data========");
+                        print(contract_account);
+                        print("=======contract_account");
     transaction t;
     t.actions.emplace_back(
-        permission_level{_self, active_permission}, _self, "callpushdata"_n,
+        permission_level{_self, active_permission}, _self, "innerpush"_n,
         std::make_tuple(service_id, provider, contract_account, action_name,
                         request_id, data_json));
     t.delay_sec = 0;
     uint128_t deferred_id =
         (uint128_t(service_id) << 64) | contract_account.value;
     cancel_deferred(deferred_id);
-    t.send(deferred_id, provider);
+    t.send(deferred_id, _self,true);
   };
 
   if (is_request) {
@@ -324,22 +326,36 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 
 void bos_oracle::pushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
-                          uint64_t request_id, const string &data_json) {
+                          uint64_t request_id, string data_json) {
+                            print("=====pushdata====");
+                        print(contract_account);
+                        print("====222===contract_account");
   require_auth(provider);
   //  action(permission_level{_self, "active"_n},
-  //          _self, "callpushdata"_n,
+  //          _self, "innerpush"_n,
   //          std::make_tuple(aservice_id,  provider,
   //                          contract_account,  action_name,
   //                          request_id, data_json))
   //       .send();
 
-      // inline callpushdata 
-      {
-         callpushdata_action callpushdata_act{ _self, { _self, active_permission } };
-         callpushdata_act.send( service_id,  provider,
-                           contract_account,  action_name,
-                           request_id, data_json );
-      }
+      // inline innerpush 
+      // {
+      //    innerpush_action innerpush_act{ _self, { _self, active_permission } };
+      //    innerpush_act.send( service_id,  provider,
+      //                      contract_account,  action_name,
+      //                      request_id, data_json );
+      // }
+
+ transaction t;
+    t.actions.emplace_back(
+        permission_level{_self, active_permission}, _self, "innerpush"_n,
+        std::make_tuple(service_id, provider, contract_account, action_name,
+                        request_id, data_json));
+    t.delay_sec = 0;
+    uint128_t deferred_id =
+        (uint128_t(service_id) << 64) | contract_account.value;
+    cancel_deferred(deferred_id);
+    t.send(deferred_id, _self,true);
 
                           }
 /**
@@ -352,9 +368,10 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
  * @param data_json
  * @param request_id
  */
-void bos_oracle::callpushdata(uint64_t service_id, name provider,
+void bos_oracle::innerpush(uint64_t service_id, name provider,
                           name contract_account, name action_name,
-                          uint64_t request_id, const string &data_json) {
+                          uint64_t request_id, string data_json) {
+  print("======@@@@@@@@@@@@@@@@@@@@@@@@@@@@===innerpush====================");
   require_auth(_self);
   check(service_status::service_in == get_service_status(service_id) &&
             subscription_status::subscription_subscribe ==
@@ -365,7 +382,7 @@ void bos_oracle::callpushdata(uint64_t service_id, name provider,
   if (0 == request_id) {
     time_point_sec pay_time =
         get_payment_time(service_id, contract_account, action_name);
-
+    pay_time+=eosio::days(30);
     if (pay_time < time_point_sec(now())) {
       fee_service(service_id, contract_account, action_name,
                   fee_type::fee_month);

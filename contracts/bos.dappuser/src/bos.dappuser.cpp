@@ -97,7 +97,7 @@ using std::string;
       thiscontract.receive(name(receiver), name(code));
     }
 
-    if (code != self.value && action == "pushdata"_n.value) {
+    if (code != self.value && action == "innerpush"_n.value) {
       thiscontract.receivejson(name(receiver), name(code));
     }
 

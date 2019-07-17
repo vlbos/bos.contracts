@@ -138,14 +138,14 @@ public:
                                     asset service_price);
 
   [[eosio::action]] void multipush(uint64_t service_id, name provider,
-                                   const string &data_json, bool is_request);
+                                   string data_json, bool is_request);
 
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
-                                  uint64_t request_id, const string &data_json);
-  [[eosio::action]] void callpushdata(uint64_t service_id, name provider,
+                                  uint64_t request_id, string data_json);
+  [[eosio::action]] void innerpush(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
-                                  uint64_t request_id, const string &data_json);
+                                  uint64_t request_id, string data_json);
   [[eosio::action]] void claim(name account, name receive_account);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
@@ -171,8 +171,8 @@ public:
 
   using pushdata_action =
       eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
-  using callpushdata_action =
-      eosio::action_wrapper<"callpushdata"_n, &bos_oracle::callpushdata>;
+  using innerpush_action =
+      eosio::action_wrapper<"innerpush"_n, &bos_oracle::innerpush>;
 
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
