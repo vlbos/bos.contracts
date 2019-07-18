@@ -933,9 +933,10 @@ BOOST_TEST("" == "====multipush true");
    {
       name account = N(alice);
       name receive_account = N(alice);
+      push_permission_update_auth_action(N(consumer.bos));
       auto token = claim(account, receive_account);
 
-      BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice" ) );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("1003.8000"), get_balance( "alice" ) );
    }
 
 } FC_LOG_AND_RETHROW()

@@ -113,7 +113,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
   fee_service(service_id, contract_account, action_name,
               fee_type::fee_times);
 
-  data_service_requests reqtable(_self, _self.value);
+  data_service_requests reqtable(_self, service_id);
   bool flag = (reqtable.begin() == reqtable.end());
 
   reqtable.emplace(_self, [&](auto &r) {
@@ -124,6 +124,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
     r.requester = requester;
     r.request_time = time_point_sec(now());
     r.request_content = request_content;
+    r.status = request_status::reqeust_valid;
   });
   
   

@@ -288,7 +288,9 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
                       string data_json) {
                         print("====push_data========");
                         print(contract_account);
-                        print("=======contract_account");
+                        print("=======contract_account====");
+                         print(request_id);
+                         print("=======request_id=======");
     transaction t;
     t.actions.emplace_back(
         permission_level{_self, active_permission}, _self, "innerpush"_n,
@@ -301,13 +303,17 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
     t.send(deferred_id, _self,true);
   };
 
+     print("=======is_request==true= before====");
   if (is_request) {
+     print("=======is_request==true=====");
     // request
     uint64_t request_id = get_request_by_last_push(service_id, provider);
     std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
         get_request_list(service_id, request_id);
-
+    print("=======is_request==for=====");
     for (const auto &rc : receive_contracts) {
+           print(request_id);
+                         print("=======request_id==true=====");
       push_data(service_id, provider, std::get<0>(rc), std::get<1>(rc),
                std::get<2>(rc), data_json);
     }
@@ -442,12 +448,16 @@ void bos_oracle::claim(name account, name receive_account) {
 
   auto calc_income = [](uint64_t service_times, uint64_t provide_times,
                         uint64_t consumption) -> uint64_t {
-    check(provide_times > 0 && service_times > provide_times,
-          "provider times and service_times must greater than zero");
+                          print("==========provide_times=================");
+                          print(provide_times);
+                           print("==========service_times=================");
+                            print(service_times);
+
     uint64_t income = 0;
-    // if (provide_times > 0 && service_times > provide_times) {
+     if (provide_times > 0 && service_times >= provide_times) {
+
     income = consumption * provide_times / static_cast<double>(service_times);
-    // }
+     }
 
     return income;
   };
@@ -466,13 +476,17 @@ void bos_oracle::claim(name account, name receive_account) {
                                 month_consumption * 0.8);
 
     uint64_t stake_income = (consumption + month_consumption) * 0.8;
-    check(stake_freeze_amount.amount > 0 &&
-              service_stake_freeze_amount.amount > stake_freeze_amount.amount,
-          "provider freeze_amount and service_times must greater than zero");
-
+    // check(stake_freeze_amount.amount > 0 &&
+    //           service_stake_freeze_amount.amount > stake_freeze_amount.amount,
+    //       "provider freeze_amount and service_times must greater than zero");
+  stake_freeze_income = 0;
+  if(stake_freeze_amount.amount > 0 &&
+              service_stake_freeze_amount.amount >=stake_freeze_amount.amount)
+              {
     stake_freeze_income =
         stake_income * stake_freeze_amount.amount /
         static_cast<double>(service_stake_freeze_amount.amount);
+              }
   }
   asset new_income =
       asset(income + month_income + stake_freeze_income, core_symbol()) -
@@ -484,6 +498,7 @@ void bos_oracle::claim(name account, name receive_account) {
                        [&](auto &p) { p.claim_amount += new_income; });
 
   transfer(consumer_account, account, new_income, "claim");
+  
 }
 
 /**
