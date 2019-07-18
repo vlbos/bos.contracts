@@ -230,11 +230,11 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
       subs.month_consumption += price_by_times;
       subs.last_payment_time += eosio::days(30);
     }
+      subs.balance = subs.payment - subs.consumption - subs.month_consumption;
   });
 
   service_consumptions consumptionstable(_self, service_id);
     auto consumptions_itr = consumptionstable.find(service_id);
-  check(consumptions_itr != consumptionstable.end(), "not service found");
   if (consumptions_itr == consumptionstable.end()) {
     consumptionstable.emplace(_self, [&](auto &c) {
       c.service_id = service_id;

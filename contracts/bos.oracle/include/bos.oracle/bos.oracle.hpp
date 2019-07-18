@@ -198,8 +198,8 @@ public:
                                      std::string request_content);
 
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
-  [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
-                                    name action_name, asset amount);
+//   [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
+//                                     name action_name, asset amount);
   using subscribe_action =
       eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action =
@@ -207,8 +207,8 @@ public:
   using payservice_action =
       eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
 
-  using confirmpay_action =
-      eosio::action_wrapper<"confirmpay"_n, &bos_oracle::confirmpay>;
+//   using confirmpay_action =
+//       eosio::action_wrapper<"confirmpay"_n, &bos_oracle::confirmpay>;
   ///
   ///
   /// bos.consumer end

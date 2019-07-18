@@ -21,62 +21,72 @@ class bos_oracle_tester : public tester {
 public:
 
    bos_oracle_tester() {
-      produce_blocks( 2 );
-  create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex) });
-      create_accounts( { N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(oracle.bos),N(dappuser.bos),N(provider.bos),N(consumer.bos),N(riskctrl.bos)} );
-      produce_blocks( 2 );
+     produce_blocks(2);
+     create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee),
+                      N(eosio.stake), N(eosio.bpay), N(eosio.vpay),
+                      N(eosio.saving), N(eosio.names), N(eosio.rex)});
+     create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser),
+                      N(oracle.bos), N(dappuser.bos), N(provider.bos),
+                      N(consumer.bos), N(riskctrl.bos)});
+     produce_blocks(2);
 
-//   produce_blocks( 100 );
-//       set_code( N(eosio.token), contracts::token_wasm());
-//       set_abi( N(eosio.token), contracts::token_abi().data() );
-//       {
-//          const auto& accnt = control->db().get<account_object,by_name>( N(eosio.token) );
-//          abi_def abi;
-//          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-//          token_abi_ser.set_abi(abi, abi_serializer_max_time);
-//       }
+     //   produce_blocks( 100 );
+     //       set_code( N(eosio.token), contracts::token_wasm());
+     //       set_abi( N(eosio.token), contracts::token_abi().data() );
+     //       {
+     //          const auto& accnt = control->db().get<account_object,by_name>(
+     //          N(eosio.token) ); abi_def abi;
+     //          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi),
+     //          true); token_abi_ser.set_abi(abi, abi_serializer_max_time);
+     //       }
 
-      set_code( N(oracle.bos), contracts::oracle_wasm() );
-      set_abi( N(oracle.bos), contracts::oracle_abi().data() );
-      set_code( N(dappuser.bos), contracts::dappuser_wasm() );
-      set_abi( N(dappuser.bos), contracts::dappuser_abi().data() );
+     set_code(N(oracle.bos), contracts::oracle_wasm());
+     set_abi(N(oracle.bos), contracts::oracle_abi().data());
+     set_code(N(dappuser.bos), contracts::dappuser_wasm());
+     set_abi(N(dappuser.bos), contracts::dappuser_abi().data());
 
-      produce_blocks();
+     produce_blocks();
 
-      const auto& accnt = control->db().get<account_object,by_name>( N(oracle.bos) );
-      abi_def abi;
-      BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-      abi_ser.set_abi(abi, abi_serializer_max_time);
+     const auto &accnt =
+         control->db().get<account_object, by_name>(N(oracle.bos));
+     abi_def abi;
+     BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+     abi_ser.set_abi(abi, abi_serializer_max_time);
 
+     set_code(N(eosio.token), contracts::token_wasm());
+     set_abi(N(eosio.token), contracts::token_abi().data());
 
-      set_code( N(eosio.token), contracts::token_wasm() );
-   set_abi( N(eosio.token), contracts::token_abi().data() );
+     create_currency(N(eosio.token), config::system_account_name,
+                     core_sym::from_string("10000000000.0000"));
+     issue(config::system_account_name,
+           core_sym::from_string("1000000000.0000"));
+     BOOST_REQUIRE_EQUAL(core_sym::from_string("1000000000.0000"),
+                         get_balance("eosio") + get_balance("eosio.ramfee") +
+                             get_balance("eosio.stake") +
+                             get_balance("eosio.ram"));
 
-   create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
-   issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+     set_code(config::system_account_name, contracts::system_wasm());
+     set_abi(config::system_account_name, contracts::system_abi().data());
+     base_tester::push_action(
+         config::system_account_name, N(init), config::system_account_name,
+         mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
+     produce_blocks();
+     create_account_with_resources(N(alice1111111), N(eosio),
+                                   core_sym::from_string("1.0000"), false);
+     create_account_with_resources(N(bob111111111), N(eosio),
+                                   core_sym::from_string("0.4500"), false);
+     create_account_with_resources(N(carol1111111), N(eosio),
+                                   core_sym::from_string("1.0000"), false);
 
-   set_code( config::system_account_name, contracts::system_wasm() );
-   set_abi( config::system_account_name, contracts::system_abi().data() );
-   base_tester::push_action( config::system_account_name, N(init),
-                             config::system_account_name,  mutable_variant_object()
-                              ("version", 0)
-                              ("core", CORE_SYM_STR)
-   );
-   produce_blocks();
-   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
-
-transfer( "eosio", "alice1111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "bob111111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "carol1111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "alice", ("1000.0000"), "eosio" );
-transfer( "eosio", "bob", ("1000.0000"), "eosio" );
-transfer( "eosio", "carol", ("1000.0000"), "eosio" );
-
+     transfer("eosio", "alice1111111", ("1000.0000"), "eosio");
+     transfer("eosio", "bob111111111", ("1000.0000"), "eosio");
+     transfer("eosio", "carol1111111", ("1000.0000"), "eosio");
+     transfer("eosio", "alice", ("1000.0000"), "eosio");
+     transfer("eosio", "bob", ("1000.0000"), "eosio");
+     transfer("eosio", "carol", ("1000.0000"), "eosio");
+     transfer("eosio", "dappuser.bos", ("1000.0000"), "eosio");
+     transfer("eosio", "dappuser", ("1000.0000"), "eosio");
+     transfer("eosio", "dapp", ("1000.0000"), "eosio");
    }
 
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
@@ -208,7 +218,6 @@ transfer( "eosio", "carol", ("1000.0000"), "eosio" );
    //    return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
    // }
    
-
    //provider
    fc::variant get_data_service( const uint64_t& service_id )
    {
@@ -818,7 +827,7 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
    {
   uint64_t service_id = new_service_id;
   name contract_account = N(dappuser.bos);
-  asset amount = core_sym::from_string("1.0000");
+  asset amount = core_sym::from_string("50.0000");
   std::string memo = "";
   push_permission_update_auth_action(contract_account);
   auto token = payservice(service_id, contract_account, 
@@ -890,9 +899,9 @@ BOOST_TEST("" == "====multipush true");
      bool is_notify = false;
      auto token = deposit(service_id, from, to, quantity, memo, is_notify);
 
-      auto app_balance = get_riskcontrol_account(to, "4,EOS");
+      auto app_balance = get_riskcontrol_account(to, "4,TST");
    REQUIRE_MATCHING_OBJECT( app_balance, mvo()
-      ("balance", "1.0000")
+      ("balance", "1.0000 TST")
    );
 
 
@@ -908,8 +917,10 @@ BOOST_TEST("" == "====multipush true");
      std::string memo = "";
      auto token = withdraw(service_id, from, to, quantity, memo);
 
-     auto app_balance = get_riskcontrol_account(from, "4,EOS");
-     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000"));
+     auto app_balance = get_riskcontrol_account(from, "4,TST");
+     REQUIRE_MATCHING_OBJECT(app_balance, mvo()
+             ("balance", "0.9000 TST")
+     );
    }
 
    BOOST_TEST("" == "====withdraw ");

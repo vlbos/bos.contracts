@@ -170,9 +170,11 @@ void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset a
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
-  substable.modify(subs_itr, _self,
-                   [&](auto &subs) { subs.payment += amount; });
-  
+  substable.modify(subs_itr, _self, [&](auto &subs) {
+    subs.payment += amount;
+    subs.balance = subs.payment - subs.consumption - subs.month_consumption;
+  });
+
   // transaction t;
   // t.actions.emplace_back(
   //     permission_level{_self, active_permission}, _self, "confirmpay"_n,
@@ -192,22 +194,22 @@ void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset a
  * @param action_name 
  * @param amount 
  */
-void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
-                            name action_name, asset amount) {
-                require_auth(_self);
-  check(amount.amount > 0, "amount must be greater than zero");
-  data_service_subscriptions substable(_self, service_id);
+// void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
+//                             name action_name, asset amount) {
+//                 require_auth(_self);
+//   check(amount.amount > 0, "amount must be greater than zero");
+//   data_service_subscriptions substable(_self, service_id);
 
-  // auto id =
-  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  auto subs_itr = substable.find(contract_account.value);
-  check(subs_itr != substable.end(), "contract_account does not exist");
-  check(subs_itr->payment > amount, "payment must be greater than amount");
-  substable.modify(subs_itr, _self, [&](auto &subs) {
-    subs.payment -= amount;
-    subs.balance += amount;
-  });
-}
+//   // auto id =
+//   //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+//   auto subs_itr = substable.find(contract_account.value);
+//   check(subs_itr != substable.end(), "contract_account does not exist");
+//   check(subs_itr->payment > amount, "payment must be greater than amount");
+//   substable.modify(subs_itr, _self, [&](auto &subs) {
+//     subs.payment -= amount;
+//     subs.balance += amount;
+//   });
+// }
 
 
 
