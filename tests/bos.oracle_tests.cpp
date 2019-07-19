@@ -70,16 +70,15 @@ public:
    create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
    create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
 
-transfer( "eosio", "alice1111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "bob111111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "carol1111111", ("1000.0000"), "eosio" );
-transfer( "eosio", "alice", ("1000.0000"), "eosio" );
-transfer( "eosio", "bob", ("1000.0000"), "eosio" );
-transfer( "eosio", "carol", ("1000.0000"), "eosio" );
-transfer( "eosio", "dappuser.bos", ("1000.0000"), "eosio" );
-transfer( "eosio", "dappuser", ("1000.0000"), "eosio" );
-transfer( "eosio", "dapp", ("1000.0000"), "eosio" );
-
+   transfer("eosio", "alice1111111", ("1000.0000"), "eosio");
+   transfer("eosio", "bob111111111", ("1000.0000"), "eosio");
+   transfer("eosio", "carol1111111", ("1000.0000"), "eosio");
+   transfer("eosio", "alice", ("1000.0000"), "eosio");
+   transfer("eosio", "bob", ("1000.0000"), "eosio");
+   transfer("eosio", "carol", ("1000.0000"), "eosio");
+   transfer("eosio", "dappuser.bos", ("1000.0000"), "eosio");
+   transfer("eosio", "dappuser", ("1000.0000"), "eosio");
+   transfer("eosio", "dapp", ("1000.0000"), "eosio");
    }
 
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
@@ -569,7 +568,7 @@ transfer( "eosio", "dapp", ("1000.0000"), "eosio" );
          );
    }
 
-uint64_t reg_sevice(name account,time_point_sec update_start_time)
+uint64_t reg_service(name account,time_point_sec update_start_time)
 {
 //  name account = N(alice);
  uint64_t service_id =0;
@@ -645,29 +644,20 @@ void add_fee_type(uint64_t service_id)
     auto subs = subscribe(service_id, contract_account, action_name, publickey,
                           account, amount, memo);
 
-   //  auto consumer = get_data_consumer(account);
-   //  auto time = consumer["create_time"];
-   //  //  BOOST_TEST("" == "1221ss");
-   // //  BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
-   //  //  BOOST_TEST("" == "11ss");
-   //  auto subscription =
-   //      get_data_service_subscription(service_id, contract_account);
-   //   BOOST_TEST("" == "ss");
-   //  BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
-   //  BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
-   // BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
-   }
+    }
+
   ///pay service
-  void pay_service(uint64_t service_id,                          asset amount)
+  void pay_service(uint64_t service_id, name contract_account, asset amount)
    {
 //   uint64_t service_id = new_service_id;
-  name contract_account = N(dappuser.bos);
+//   name contract_account = N(dappuser.bos);
 //   asset amount = core_sym::from_string("10.0000");
   std::string memo = "";
   push_permission_update_auth_action(contract_account);
   auto token = payservice(service_id, contract_account, 
                           amount, memo);
 }
+
   /// push data
   void push_data(uint64_t service_id,name provider,uint64_t request_id)
    {
@@ -693,6 +683,43 @@ void add_fee_type(uint64_t service_id)
      auto token = multipush(service_id, provider, data_json, is_request);
    }
 
+ /// request data
+   void request_data(uint64_t service_id,name account)
+   {
+   //   service_id = new_service_id;
+     name contract_account = N(dappuser.bos);
+     name action_name = N(alice);
+   //   name account = N(bob);
+     std::string request_content = "request once";
+     auto req = requestdata(service_id, contract_account, action_name, account,
+                            request_content);
+   }
+
+ /// deposit
+   void _deposit(uint64_t service_id,name to)
+   {
+   //   uint64_t service_id = new_service_id;
+     name from = N(dappuser);
+   //   name to = N(bob);
+     asset quantity = core_sym::from_string("1.0000");
+     std::string memo = "";
+     bool is_notify = false;
+     auto token = deposit(service_id, from, to, quantity, memo, is_notify);
+   }
+
+   /// withdraw
+   void _withdraw(uint64_t service_id,name from)
+   {
+   //   uint64_t service_id = new_service_id;
+   //   name from = N(bob);
+     name to = N(dappuser);
+     asset quantity = core_sym::from_string("0.1000");
+     std::string memo = "";
+     auto token = withdraw(service_id, from, to, quantity, memo);
+
+     auto app_balance = get_riskcontrol_account(from, "4,TST");
+     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 TST"));
+   }
 
    abi_serializer abi_ser;
    abi_serializer token_abi_ser;
@@ -943,425 +970,138 @@ BOOST_TEST("" == "====multipush true");
 
 BOOST_FIXTURE_TEST_CASE( unreg_freeze_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 1;
   name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
   uint8_t status = 2;
- 
-   // auto services = get_data_service(service_id);
-//   auto token = unregservice(service_id, account, status);
-    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "provider does not subscribe service" ),
-                        unregservice(service_id, account, status)
-   );
-
+  auto token = unregservice(service_id, account, status);
+  BOOST_REQUIRE_EQUAL(wasm_assert_msg("provider does not subscribe service"),
+                      unregservice(service_id, account, status));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( execaction_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 0;
+   name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
   uint8_t action_type = 2;
  
   auto token = execaction(service_id,  action_type);
-
-   produce_blocks(1);
 
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( stakeasset_test, bos_oracle_tester ) try {
 
 name account = N(alice);
- uint64_t service_id =0;
-  uint8_t fee_type = 1;
-  uint8_t data_type = 1;
-  uint8_t status = 0;
-  uint8_t injection_method = 0;
-  uint64_t acceptance = 0;
-  uint64_t duration = 1;
-  uint64_t provider_limit = 3;
-  uint64_t update_cycle = 1;
-  uint64_t appeal_freeze_period = 0;
-  uint64_t exceeded_risk_control_freeze_period = 0;
-  uint64_t guarantee_id = 0;
-  asset service_price = core_sym::from_string("1.0000");
-  asset stake_amount = core_sym::from_string("10.0000");
-  asset risk_control_amount = core_sym::from_string("0.0000");
-  asset pause_service_stake_amount = core_sym::from_string("0.0000");
-  std::string data_format = "";
-  std::string criteria = "";
-  std::string declaration = "";
-  bool freeze_flag = false;
-  bool emergency_flag = false;
-  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+ uint64_t new_service_id= reg_service(account,update_start_time);
 
-  auto token = regservice(service_id, account, stake_amount, service_price,
-                          fee_type, data_format, data_type, criteria,
-                          acceptance, declaration, injection_method, duration,
-                          provider_limit, update_cycle, update_start_time);
-BOOST_TEST("" == "===1=reg test true");
-  uint64_t create_time_sec =
-      static_cast<uint64_t>(update_start_time.sec_since_epoch());
-BOOST_TEST("" == "===3=reg test true");
-  uint64_t new_service_id = get_provider_service_id(
-      account, create_time_sec);
-BOOST_TEST("" == "===3=reg test true");
-BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
-BOOST_TEST("" == "===4=reg test true");
-  auto services = get_data_service(new_service_id);
-  REQUIRE_MATCHING_OBJECT(services,mvo()
-      ("service_id", service_id)
-      ("fee_type", fee_type)
-      ("data_type", data_type)
-      ("status", status)
-      ("injection_method", injection_method)
-      ("acceptance", acceptance)
-      ("duration", duration)
-      ("provider_limit", provider_limit)
-      ("update_cycle", update_cycle)
-      ("appeal_freeze_period",appeal_freeze_period)
-      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
-      ("guarantee_id", guarantee_id)
-      ("service_price", service_price)
-      ("stake_amount", core_sym::from_string("0.0000"))
-      ("risk_control_amount",  risk_control_amount)
-      ("pause_service_stake_amount", pause_service_stake_amount)
-      ("data_format", data_format)
-      ("criteria", criteria)
-      ("declaration", declaration)
-      ( "freeze_flag", freeze_flag)
-      ("emergency_flag",  emergency_flag)
-      ("update_start_time",  update_start_time)
-  );
-BOOST_TEST("" == "==5==reg test true");
-//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
-      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
-      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
-    
 BOOST_TEST("" == "====reg test true");
   produce_blocks(1);
-
+/// stake asset
   {
  uint64_t service_id = new_service_id;
   name account = N(alice);
   asset stake_amount = core_sym::from_string("1.0000");
   string memo = "";
 //   push_action();
-BOOST_TEST("" == "==7==reg test true");
+BOOST_TEST("" == "push_permission_update_auth_action before");
    push_permission_update_auth_action(account);
-   BOOST_TEST("" == "==8==reg test true");
+   BOOST_TEST("" == "push_permission_update_auth_action");
   auto token = stakeasset(service_id, account, stake_amount,memo);
-  BOOST_TEST("" == "==9==reg test true");
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("1.0000"), get_balance( "provider.bos" ) );
-   BOOST_TEST("" == "==10==reg test true");
   BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
   }
  
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( claim_test, bos_oracle_tester ) try {
-name account = N(alice);
-name receive_account = N(alice);
-auto token = claim(account,receive_account);
-
-} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( pushdata_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 0;
-  name provider = N(alice);
-  name contract_account = N(alice);
-  name action_name = N(alice);
-  const string data_json = "";
-  uint64_t request_id = 0;
+///reg service
+name account = N(alice);
+time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+ uint64_t service_id= reg_service(account,update_start_time);
+add_fee_type(service_id);
+stake_asset(service_id,N(alice),core_sym::from_string("10.0000"));
+subscribe_service(service_id,N(bob));
+pay_service(service_id, N(dappuser.bos),core_sym::from_string("10.0000"));
 
-  auto token = pushdata(service_id,  provider,
-                           contract_account,  action_name,  request_id,
-                           data_json);
+  /// push data
+   {
+   name provider = N(alice);
+   name contract_account = N(dappuser.bos);
+   name action_name = N(receivejson);
+   const string data_json = "test data json";
+   uint64_t request_id = 0;
+
+   auto data = pushdata(service_id, provider, contract_account, action_name,
+                         request_id, data_json);
+   }
 
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( multipush_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 0;
-  name provider = N(alice);
-  const string data_json = "";
-  uint64_t request_id = 0;
+  name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
 
-  auto token = multipush(service_id,  provider,
-                     data_json,  request_id);
-   produce_blocks(1);
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
 
+  /// multipush
+  {
+     name provider = N(alice);
+    const string data_json = "multipush test data json";
+    bool is_request = false;
+
+    auto token = multipush(service_id, provider, data_json, is_request);
+     
   
+     is_request = true;
+
+     token = multipush(service_id, provider, data_json, is_request);
+   }
 
    
 
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( addfeetype_test, bos_oracle_tester ) try {
+name account = N(alice);
+time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+ uint64_t new_service_id= reg_service(account,update_start_time);
 
-  uint64_t service_id = 0;
+/// add fee type
+{
+   uint64_t service_id = new_service_id;
   std::vector<uint8_t> fee_types = {0,1};
   std::vector<asset> service_prices = {core_sym::from_string("1.0000"),core_sym::from_string("2.0000")};
   auto token = addfeetypes(service_id, fee_types, service_prices);
-  produce_blocks(1);
+
+  int fee_type = 1;
+  auto fee = get_data_service_fee(service_id,fee_types[fee_type]);
+  REQUIRE_MATCHING_OBJECT(fee,mvo()
+      ("service_id", service_id)
+      ("fee_type", fee_types[fee_type])
+      ("service_price", service_prices[fee_type])
+  );
+}
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( subscribe_test, bos_oracle_tester ) try {
 
-  uint64_t service_id = 0;
-  name contract_account = N(alice);
-  name action_name = N(alice);
-  std::string publickey = "";
-  name account = N(alice);
-  asset amount = core_sym::from_string("1000");
-  std::string memo = "";
-  auto token = subscribe(service_id,  contract_account,
-                            action_name,  publickey,
-                            account,  amount,  memo);
+name account = N(alice);
+time_point_sec update_start_time = time_point_sec( control->head_block_time() );
+ uint64_t service_id= reg_service(account,update_start_time);
+add_fee_type(service_id);
+stake_asset(service_id,N(alice),core_sym::from_string("10.0000"));
 
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( requestdata_test, bos_oracle_tester ) try {
-  uint64_t service_id = 0;
-  name contract_account = N(alice);
-  name action_name = N(alice);
-  name account = N(alice);
-  std::string request_content = "";
-  auto token = requestdata(service_id, contract_account, action_name, account,
-                           request_content);
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( payservice_test, bos_oracle_tester ) try {
-
- name account = N(alice);
- uint64_t service_id =0;
-  uint8_t fee_type = 1;
-  uint8_t data_type = 1;
-  uint8_t status = 0;
-  uint8_t injection_method = 0;
-  uint64_t acceptance = 0;
-  uint64_t duration = 1;
-  uint64_t provider_limit = 3;
-  uint64_t update_cycle = 1;
-  uint64_t appeal_freeze_period = 0;
-  uint64_t exceeded_risk_control_freeze_period = 0;
-  uint64_t guarantee_id = 0;
-  asset service_price = core_sym::from_string("1.0000");
-  asset stake_amount = core_sym::from_string("10.0000");
-  asset risk_control_amount = core_sym::from_string("0.0000");
-  asset pause_service_stake_amount = core_sym::from_string("0.0000");
-  std::string data_format = "";
-  std::string criteria = "";
-  std::string declaration = "";
-  bool freeze_flag = false;
-  bool emergency_flag = false;
-  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
-
-  auto token = regservice(service_id, account, stake_amount, service_price,
-                          fee_type, data_format, data_type, criteria,
-                          acceptance, declaration, injection_method, duration,
-                          provider_limit, update_cycle, update_start_time);
-
-  uint64_t create_time_sec =
-      static_cast<uint64_t>(update_start_time.sec_since_epoch());
-
-  uint64_t new_service_id = get_provider_service_id(
-      account, create_time_sec);
-
-BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
-
-  auto services = get_data_service(new_service_id);
-  REQUIRE_MATCHING_OBJECT(services,mvo()
-      ("service_id", service_id)
-      ("fee_type", fee_type)
-      ("data_type", data_type)
-      ("status", status)
-      ("injection_method", injection_method)
-      ("acceptance", acceptance)
-      ("duration", duration)
-      ("provider_limit", provider_limit)
-      ("update_cycle", update_cycle)
-      ("appeal_freeze_period",appeal_freeze_period)
-      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
-      ("guarantee_id", guarantee_id)
-      ("service_price", service_price)
-      ("stake_amount", core_sym::from_string("0.0000"))
-      ("risk_control_amount",  risk_control_amount)
-      ("pause_service_stake_amount", pause_service_stake_amount)
-      ("data_format", data_format)
-      ("criteria", criteria)
-      ("declaration", declaration)
-      ( "freeze_flag", freeze_flag)
-      ("emergency_flag",  emergency_flag)
-      ("update_start_time",  update_start_time)
-  );
-
-//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
-      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
-      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
-    
-
-  produce_blocks(1);
-/// add fee type
-{
-   uint64_t service_id = new_service_id;
-  std::vector<uint8_t> fee_types = {0,1};
-  std::vector<asset> service_prices = {core_sym::from_string("1.0000"),core_sym::from_string("2.0000")};
-  auto token = addfeetypes(service_id, fee_types, service_prices);
-
-  int fee_type = 1;
-  auto fee = get_data_service_fee(service_id,fee_types[fee_type]);
-  REQUIRE_MATCHING_OBJECT(fee,mvo()
-      ("service_id", service_id)
-      ("fee_type", fee_types[fee_type])
-      ("service_price", service_prices[fee_type])
-  );
-
-  produce_blocks(1);
-}
-
-// subscribe service
-{
-  service_id = new_service_id;
-  name contract_account = N(dappuser.bos);
-  name action_name = N(receivejson);
-  std::string publickey = "";
-  name account = N(bob);
-  asset amount = core_sym::from_string("0.0000");
-  std::string memo = "";
-  auto subs = subscribe(service_id, contract_account, action_name, publickey,
-                        account, amount, memo);
-
-  auto consumer = get_data_consumer(account);
-  auto time = consumer["create_time"];
-  //  BOOST_TEST("" == "1221ss");
-  BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
-  //  BOOST_TEST("" == "11ss");
-  auto subscription =
-      get_data_service_subscription(service_id, contract_account);
-  BOOST_TEST("" == "ss");
-  BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
-  BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
-  BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
-}
-
-produce_blocks(1);
-
-BOOST_TEST("" == "subscribe service");
-{
-  uint64_t service_id = new_service_id;
-  name contract_account = N(dappuser.bos);
-  asset amount = core_sym::from_string("1.0000");
-  std::string memo = "";
-  push_permission_update_auth_action(contract_account);
-  auto token = payservice(service_id, contract_account, 
-                          amount, memo);
-}
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( confirmpay_test, bos_oracle_tester ) try {
-  uint64_t service_id = 0;
-  name contract_account = N(alice);
-  name action_name = N(alice);
-  name account = N(alice);
-  asset amount = core_sym::from_string("1000");
-  std::string memo = "";
-  auto token = confirmpay(service_id, contract_account, action_name, amount);
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( deposit_test, bos_oracle_tester ) try {
-
-
- name account = N(alice);
- uint64_t service_id =0;
-  uint8_t fee_type = 1;
-  uint8_t data_type = 1;
-  uint8_t status = 0;
-  uint8_t injection_method = 0;
-  uint64_t acceptance = 0;
-  uint64_t duration = 1;
-  uint64_t provider_limit = 3;
-  uint64_t update_cycle = 1;
-  uint64_t appeal_freeze_period = 0;
-  uint64_t exceeded_risk_control_freeze_period = 0;
-  uint64_t guarantee_id = 0;
-  asset service_price = core_sym::from_string("1.0000");
-  asset stake_amount = core_sym::from_string("10.0000");
-  asset risk_control_amount = core_sym::from_string("0.0000");
-  asset pause_service_stake_amount = core_sym::from_string("0.0000");
-  std::string data_format = "";
-  std::string criteria = "";
-  std::string declaration = "";
-  bool freeze_flag = false;
-  bool emergency_flag = false;
-  time_point_sec update_start_time = time_point_sec( control->head_block_time() );
-
-  auto token = regservice(service_id, account, stake_amount, service_price,
-                          fee_type, data_format, data_type, criteria,
-                          acceptance, declaration, injection_method, duration,
-                          provider_limit, update_cycle, update_start_time);
-
-  uint64_t create_time_sec =
-      static_cast<uint64_t>(update_start_time.sec_since_epoch());
-
-  uint64_t new_service_id = get_provider_service_id(
-      account, create_time_sec);
-
-BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_sec)["service_id"].as<uint64_t>() );
-
-  auto services = get_data_service(new_service_id);
-  REQUIRE_MATCHING_OBJECT(services,mvo()
-      ("service_id", service_id)
-      ("fee_type", fee_type)
-      ("data_type", data_type)
-      ("status", status)
-      ("injection_method", injection_method)
-      ("acceptance", acceptance)
-      ("duration", duration)
-      ("provider_limit", provider_limit)
-      ("update_cycle", update_cycle)
-      ("appeal_freeze_period",appeal_freeze_period)
-      ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
-      ("guarantee_id", guarantee_id)
-      ("service_price", service_price)
-      ("stake_amount", core_sym::from_string("0.0000"))
-      ("risk_control_amount",  risk_control_amount)
-      ("pause_service_stake_amount", pause_service_stake_amount)
-      ("data_format", data_format)
-      ("criteria", criteria)
-      ("declaration", declaration)
-      ( "freeze_flag", freeze_flag)
-      ("emergency_flag",  emergency_flag)
-      ("update_start_time",  update_start_time)
-  );
-
-//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
-      // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
-      // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
-    
-
-  produce_blocks(1);
-/// add fee type
-{
-   uint64_t service_id = new_service_id;
-  std::vector<uint8_t> fee_types = {0,1};
-  std::vector<asset> service_prices = {core_sym::from_string("1.0000"),core_sym::from_string("2.0000")};
-  auto token = addfeetypes(service_id, fee_types, service_prices);
-
-  int fee_type = 1;
-  auto fee = get_data_service_fee(service_id,fee_types[fee_type]);
-  REQUIRE_MATCHING_OBJECT(fee,mvo()
-      ("service_id", service_id)
-      ("fee_type", fee_types[fee_type])
-      ("service_price", service_prices[fee_type])
-  );
-
-  produce_blocks(1);
-}
-
-  // subscribe service
+   // subscribe service
   {
-    service_id = new_service_id;
     name contract_account = N(dappuser.bos);
     name action_name = N(receivejson);
     std::string publickey = "";
@@ -1378,21 +1118,96 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
     //  BOOST_TEST("" == "11ss");
     auto subscription =
         get_data_service_subscription(service_id, contract_account);
-     BOOST_TEST("" == "ss");
+    BOOST_TEST("" == "ss");
     BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
     BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
-   BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
+    BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
    }
 
-   produce_blocks(1);
 
- 
+} FC_LOG_AND_RETHROW()
 
-BOOST_TEST("" == "====subsscribe true");
+BOOST_FIXTURE_TEST_CASE( requestdata_test, bos_oracle_tester ) try {
+   
+     name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
 
-   /// deposit
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+
+     /// request data
    {
-     uint64_t service_id = new_service_id;
+     name contract_account = N(dappuser.bos);
+     name action_name = N(alice);
+     name account = N(bob);
+     std::string request_content = "request once";
+     auto req = requestdata(service_id, contract_account, action_name, account,
+                            request_content);
+   }
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( payservice_test, bos_oracle_tester ) try {
+     name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+ 
+ ///pay service
+   {
+  name contract_account = N(dappuser.bos);
+  asset amount = core_sym::from_string("10.0000");
+  std::string memo = "";
+  push_permission_update_auth_action(contract_account);
+  auto token = payservice(service_id, contract_account, 
+                          amount, memo);
+}
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( claim_test, bos_oracle_tester ) try {
+     name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+  request_data(service_id,N(bob));
+  push_data(service_id,N(alice),0);
+  multi_push(service_id,N(alice),false);
+  multi_push(service_id,N(alice),true);
+ _deposit(service_id,N(bob));
+ _withdraw(service_id,N(bob));
+
+  {
+      name account = N(alice);
+      name receive_account = N(alice);
+      push_permission_update_auth_action(N(consumer.bos));
+      auto token = claim(account, receive_account);
+
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("1003.8000"), get_balance( "alice" ) );
+   }
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( deposit_test, bos_oracle_tester ) try {
+  name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+ /// deposit
+   {
      name from = N(dappuser);
      name to = N(bob);
      asset quantity = core_sym::from_string("1.0000");
@@ -1402,7 +1217,7 @@ BOOST_TEST("" == "====subsscribe true");
 
       auto app_balance = get_riskcontrol_account(to, "4,TST");
    REQUIRE_MATCHING_OBJECT( app_balance, mvo()
-      ("balance", "1.0000")
+      ("balance", "1.0000 TST")
    );
 
 
@@ -1414,13 +1229,31 @@ BOOST_TEST("" == "====subsscribe true");
 
 
 BOOST_FIXTURE_TEST_CASE( withdraw_test, bos_oracle_tester ) try {
- uint64_t service_id = 0;
-  name from = N(alice);
-  name to = N(alice);
-  asset quantity = core_sym::from_string("1000");
-  std::string memo = "";
-  auto token = withdraw(service_id,from,  to,
-                             quantity,  memo);
+      name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+  request_data(service_id,N(bob));
+  push_data(service_id,N(alice),0);
+  multi_push(service_id,N(alice),false);
+  multi_push(service_id,N(alice),true);
+ _deposit(service_id,N(bob));
+
+  /// withdraw
+   {
+     name from = N(bob);
+     name to = N(dappuser);
+     asset quantity = core_sym::from_string("0.1000");
+     std::string memo = "";
+     auto token = withdraw(service_id, from, to, quantity, memo);
+
+     auto app_balance = get_riskcontrol_account(from, "4,TST");
+     REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 TST"));
+   }
 
 } FC_LOG_AND_RETHROW()
 
