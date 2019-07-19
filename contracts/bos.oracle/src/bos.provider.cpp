@@ -509,11 +509,12 @@ void bos_oracle::claim(name account, name receive_account) {
  */
 void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
   require_auth(_self);
+  check(service_status::service_freeze == action_type||service_status::service_emergency == action_type, "unknown action type,support action:freeze(3),emergency(4)");
   data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
   check(service_itr != svctable.end(), "service does not exist");
   svctable.modify(service_itr, _self, [&](auto &s) {
-    if (0 == action_type) {
+    if (service_status::service_freeze == action_type) {
       s.freeze_flag = true;
     } else {
       s.emergency_flag = true;

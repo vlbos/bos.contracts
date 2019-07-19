@@ -151,7 +151,7 @@ public:
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
 
   [[eosio::action]] void unregservice(uint64_t service_id, name account,
-                                      uint64_t is_suspense);
+                                      uint64_t status);
   using regservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 

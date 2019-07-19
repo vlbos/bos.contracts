@@ -2,7 +2,7 @@
 #include <eosiolib/eosio.hpp>
 
 /// provider
-enum service_status : uint8_t { service_in, service_cancel, service_pause };
+enum service_status : uint8_t { service_in, service_cancel, service_pause, service_freeze,service_emergency };
 
 enum consumer_status : uint8_t { consumer_on, consumer_stop };
 

@@ -400,11 +400,11 @@ public:
 
    action_result unregservice(uint64_t service_id,
                                       name account,
-                                      uint64_t is_suspense) {
+                                      uint64_t status) {
       return push_action(  account, N(unregservice), mvo()
            ( "service_id", service_id)
            ( "account", account)
-           ( "is_suspense", is_suspense)
+           ( "status", status)
       );
    }
 
@@ -968,25 +968,33 @@ BOOST_TEST("" == "====multipush true");
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( unreg_freeze_test, bos_oracle_tester ) try {
+BOOST_FIXTURE_TEST_CASE( unreg_pause_test, bos_oracle_tester ) try {
 
   name account = N(alice);
   time_point_sec update_start_time = time_point_sec(control->head_block_time());
   uint64_t service_id = reg_service(account, update_start_time);
-  uint8_t status = 2;
-  auto token = unregservice(service_id, account, status);
-  BOOST_REQUIRE_EQUAL(wasm_assert_msg("provider does not subscribe service"),
-                      unregservice(service_id, account, status));
+  const uint8_t status_cancel = 1;
+  const uint8_t status_pause = 2;
+  auto token = unregservice(service_id, account, status_pause);
+  BOOST_TEST_REQUIRE( status_pause == get_data_service_provision(service_id,account)["status"].as<uint8_t>() );
+
+//   BOOST_TEST_REQUIRE( status_pause == get_svc_provision_cancel_apply(service_id)["status"].as<uint8_t>() );
+
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( execaction_test, bos_oracle_tester ) try {
 
-   name account = N(alice);
+  name account = N(alice);
   time_point_sec update_start_time = time_point_sec(control->head_block_time());
   uint64_t service_id = reg_service(account, update_start_time);
-  uint8_t action_type = 2;
- 
-  auto token = execaction(service_id,  action_type);
+  const uint8_t freeze_action_type = 3;
+  const uint8_t emergency_action_type = 4;
+  auto token = execaction(service_id,  freeze_action_type);
+BOOST_TEST_REQUIRE( true == get_data_service(service_id)["freeze_flag"].as<bool>() );
+  token = execaction(service_id,  emergency_action_type);
+BOOST_TEST_REQUIRE( true == get_data_service(service_id)["emergency_flag"].as<bool>() );
+
 
 } FC_LOG_AND_RETHROW()
 
@@ -1193,7 +1201,7 @@ BOOST_FIXTURE_TEST_CASE( claim_test, bos_oracle_tester ) try {
       push_permission_update_auth_action(N(consumer.bos));
       auto token = claim(account, receive_account);
 
-      BOOST_REQUIRE_EQUAL( core_sym::from_string("1003.8000"), get_balance( "alice" ) );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("994.8000"), get_balance( "alice" ) );
    }
 } FC_LOG_AND_RETHROW()
 
