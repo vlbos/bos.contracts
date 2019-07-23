@@ -170,7 +170,7 @@ void token::close( name owner, const symbol& symbol )
 ///bos begin
 void token::addblacklist(const std::vector<name>& accounts)
 {
-   require_auth("eosio"_n);
+   require_auth(_self);
 
    eosio_assert(blacklist_limit_size >= accounts.size(), "accounts' size must be less than 100.");
    static const std::string msg = std::string(" account does not exist");
@@ -193,7 +193,7 @@ void token::addblacklist(const std::vector<name>& accounts)
 
 void token::rmblacklist(const std::vector<name>& accounts)
 {
-   require_auth("eosio"_n);
+   require_auth(_self);
 
    eosio_assert( blacklist_limit_size>=accounts.size(), "accounts' size must be less than 100." );
    bool is_executed = false;
