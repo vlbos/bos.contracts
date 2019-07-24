@@ -17,11 +17,13 @@
 #include "bos.oracle/tables/arbitration.hpp"
 #include "bos.oracle/tables/consumer.hpp"
 #include "bos.oracle/tables/oracle.hpp"
+#include "bos.oracle/tables/oracle_api.hpp"
 #include "bos.oracle/tables/oraclize.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
 #include "bos.oracle/tables/singletons.hpp"
 #include "bos.oracle/tables/arbitration.hpp"
+
 #include <eosiolib/chain.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/fixedpoint.hpp>
@@ -146,12 +148,22 @@ public:
   [[eosio::action]] void innerpush(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
                                   uint64_t request_id, string data_json);
+  [[eosio::action]] void multipublish(uint64_t service_id, name provider,
+                           string data_json, bool is_request);
+  [[eosio::action]] void publishdata(uint64_t service_id, name provider,
+                          uint64_t update_number,
+                          uint64_t request_id, string data_json);   
+  [[eosio::action]] void innerpublish(uint64_t service_id, name provider,
+                          uint64_t update_number,
+                          uint64_t request_id, string data_json);
   [[eosio::action]] void claim(name account, name receive_account);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
 
   [[eosio::action]] void unregservice(uint64_t service_id, name account,
                                       uint64_t status);
+  [[eosio::action]] void starttimer();
+
   using regservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 
@@ -174,6 +186,14 @@ public:
   using innerpush_action =
       eosio::action_wrapper<"innerpush"_n, &bos_oracle::innerpush>;
 
+  using multipublish_action =
+      eosio::action_wrapper<"multipublish"_n, &bos_oracle::multipublish>;
+
+  using publishdata_action =
+      eosio::action_wrapper<"publishdata"_n, &bos_oracle::publishdata>;
+  using innerpublish_action =
+      eosio::action_wrapper<"innerpublish"_n, &bos_oracle::innerpublish>;
+
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
 
@@ -182,6 +202,10 @@ public:
 
   using unregister_action =
       eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
+  
+  using starttimer_action =
+      eosio::action_wrapper<"starttimer"_n, &bos_oracle::starttimer>;
+  
   ///
   ///
   /// bos.provider end
@@ -198,8 +222,6 @@ public:
                                      std::string request_content);
 
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
-  [[eosio::action]] void confirmpay(uint64_t service_id, name contract_account,
-                                    name action_name, asset amount);
   using subscribe_action =
       eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action =
@@ -207,8 +229,7 @@ public:
   using payservice_action =
       eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
 
-  using confirmpay_action =
-      eosio::action_wrapper<"confirmpay"_n, &bos_oracle::confirmpay>;
+ 
   ///
   ///
   /// bos.consumer end
@@ -294,6 +315,16 @@ private:
   uint64_t freeze_providers_amount(uint64_t service_id,
                                    const std::set<name> &available_providers,
                                    asset freeze_amount);
+
+void start_timer();
+void check_publish_services();
+void check_publish_service(uint64_t service_id,uint64_t update_number);
+void save_publish_data(uint64_t service_id,uint64_t update_number,string  value);
+uint64_t get_provider_count(uint64_t service_id);
+uint64_t get_publish_provider_count(uint64_t service_id,uint64_t update_number);
+string get_publish_data(uint64_t service_id,uint64_t update_number,uint64_t  provider_limit);
+std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_services_update_number();
+
   /// consumer
   void pay_service(uint64_t service_id, name contract_account, asset amount);
   std::vector<std::tuple<name, name>> get_subscription_list(

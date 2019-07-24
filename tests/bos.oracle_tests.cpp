@@ -531,10 +531,10 @@ public:
    }
 
 
-   action_result confirmpay(uint64_t service_id, name contract_account,
+   action_result starttimer(uint64_t service_id, name contract_account,
                                     name action_name, asset amount) {
      return push_action(
-         N(oracle.bos), N(confirmpay),mvo()
+         N(oracle.bos), N(starttimer),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
          ("action_name", action_name)

@@ -444,8 +444,6 @@ bos_oracle::get_provider_list(uint64_t service_id) {
   return providers;
 }
 
-
-
 // std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
 // bos_oracle::stat_freeze_amounts(uint64_t service_id, name account) {
 // }

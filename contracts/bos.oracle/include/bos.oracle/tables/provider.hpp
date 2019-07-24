@@ -17,6 +17,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t duration;
   uint64_t provider_limit;
   uint64_t update_cycle;
+  uint64_t last_update_number;
   uint64_t appeal_freeze_period;
   uint64_t exceeded_risk_control_freeze_period;
   uint64_t guarantee_id;
@@ -72,8 +73,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
   // uint64_t bysvcid() const { return service_id; }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_apply {
+struct [[eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_apply {
   uint64_t apply_id;
   uint64_t service_id;
   name provider;
@@ -85,8 +85,7 @@ struct [
   uint64_t primary_key() const { return provider.value; }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] data_service_provision_log {
+struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_log {
   uint64_t log_id;
   uint64_t service_id;
   std::string data_json;
@@ -95,10 +94,15 @@ struct [
   name action_name;
   uint64_t request_id;
   time_point_sec update_time;
+  uint64_t update_number;
+  uint64_t status;
 
   uint64_t primary_key() const { return log_id; }
   uint64_t by_time() const {
     return static_cast<uint64_t>(-update_time.sec_since_epoch());
+  }
+  uint64_t by_number() const {
+    return update_number;
   }
 };
 
@@ -154,11 +158,13 @@ typedef eosio::multi_index<"svcprovision"_n, data_service_provision>
 
 typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply>
     svc_provision_cancel_applys;
-
+ 
 typedef eosio::multi_index<
     "provisionlog"_n, data_service_provision_log,
     indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                         &data_service_provision_log::by_time>>>
+                                          &data_service_provision_log::by_time>>,
+    indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t,
+                                         &data_service_provision_log::by_number>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;

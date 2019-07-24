@@ -114,10 +114,9 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
               fee_type::fee_times);
 
   data_service_requests reqtable(_self, service_id);
-  bool flag = (reqtable.begin() == reqtable.end());
 
   reqtable.emplace(_self, [&](auto &r) {
-    r.request_id = flag?1:reqtable.available_primary_key();
+    r.request_id = reqtable.available_primary_key()+(0==reqtable.available_primary_key()?1:0);
     r.service_id = service_id;
     r.contract_account = contract_account;
     r.action_name = action_name;
@@ -179,39 +178,13 @@ void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset a
 
   // transaction t;
   // t.actions.emplace_back(
-  //     permission_level{_self, active_permission}, _self, "confirmpay"_n,
+  //     permission_level{_self, active_permission}, _self, "starttimer"_n,
   //     std::make_tuple(service_id, contract_account, action_name, amount));
   // t.delay_sec = 120; // seconds
   // uint128_t deferred_id =
   //     (uint128_t(contract_account.value) << 64) | action_name.value;
   // cancel_deferred(deferred_id);
   // t.send(deferred_id, _self);
-}
-
-/**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param amount 
- */
-void bos_oracle::confirmpay(uint64_t service_id, name contract_account,
-                            name action_name, asset amount) {
-                              print("%%%%%%%%%%%%%%%%%%%%%%%%confirmpay^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-                require_auth(_self);
-  // check(amount.amount > 0, "amount must be greater than zero");
-  // data_service_subscriptions substable(_self, service_id);
-
-  // // auto id =
-  // //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
-  // auto subs_itr = substable.find(contract_account.value);
-  // check(subs_itr != substable.end(), "contract_account does not exist");
-  // check(subs_itr->payment > amount, "payment must be greater than amount");
-  // substable.modify(subs_itr, _self, [&](auto &subs) {
-  //   subs.payment -= amount;
-  //   subs.balance += amount;
-  // });
 }
 
 
