@@ -100,7 +100,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
 void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              name action_name, name requester,
                              std::string request_content) {
-                               print("======requestdata");
+                               //print("======requestdata");
   require_auth(requester);
 
   /// check service available subscription status subscribe

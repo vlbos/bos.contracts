@@ -3,7 +3,7 @@
 #include <eosiolib/action.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
-#include <eosiolib/print.h>
+// #include <eosiolib/print.h>
 #include <eosiolib/time.hpp>
 #include <eosiolib/transaction.hpp>
 #include "bos.oracle/bos.util.hpp"
@@ -14,7 +14,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
          print_f("On notify : % % % %", from, to, quantity, memo);
          if(memo.empty())
          {
-           print("memo is empty on trasfer");
+           //print("memo is empty on trasfer");
            return;
          }
 
@@ -93,7 +93,7 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   //          transfer_act.send( account, consumer_account, amount, memo );
 
   //  auto payer = has_auth( to ) ? to : from;
-  print("===quantity");
+  //print("===quantity");
   quantity.print();
   action(permission_level{from, "active"_n}, token_account, "transfer"_n,
          std::make_tuple(from, to, quantity, memo))
@@ -106,7 +106,7 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to,
                          asset quantity, string memo, bool is_notify) {
-  print("=================deposit");
+  //print("=================deposit");
   require_auth(_self);
   call_deposit(  from,  to,  quantity,   is_notify);
 }
@@ -152,13 +152,13 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
-  print("========77777=subsr");
+  //print("========77777=subsr");
   uint64_t time_length = 1;
   if (svcstake_itr->stake_amount - svcstake_itr->freeze_amount >= quantity) {
-    print("=========subsr");
+    //print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
-    print("======free===subsr");
+    //print("======free===subsr");
     // transfer(from, to, quantity, memo);
     add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
                time_length, quantity);
@@ -174,7 +174,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
 
     /// delay time length
 
-    print("===delay======subsr");
+    //print("===delay======subsr");
     add_delay(svcsubs_itr->service_id, from, time_point_sec(now()), time_length,
               quantity);
 
@@ -422,7 +422,7 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
  * @param value
  */
 void bos_oracle::sub_balance(name owner, asset value) {
-  print("======================123789");
+  //print("======================123789");
   riskcontrol_accounts dapp_acnts(_self, owner.value);
 
   const auto &dapp =
@@ -433,23 +433,23 @@ void bos_oracle::sub_balance(name owner, asset value) {
 }
 
 void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
-  print("======================789");
-  print("<<<");
-  print(value.symbol.code().raw());
-  print(">>>");
-  print("<<<");
-  print(owner.value);
-  print(">>>");
-  print("<<<");
-  print(_self.value);
-  print(">>>");
+  //print("======================789");
+  //print("<<<");
+  //print(value.symbol.code().raw());
+  //print(">>>");
+  //print("<<<");
+  //print(owner.value);
+  //print(">>>");
+  //print("<<<");
+  //print(_self.value);
+  //print(">>>");
   riskcontrol_accounts dapp_acnts(_self, owner.value);
   auto dapp = dapp_acnts.find(value.symbol.code().raw());
   if (dapp == dapp_acnts.end()) {
-      print("======================a789");
+      //print("======================a789");
     dapp_acnts.emplace(ram_payer, [&](auto &a) {  a.balance = value; });
   } else {
-      print("======================m789");
+      //print("======================m789");
     dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
   }
 }

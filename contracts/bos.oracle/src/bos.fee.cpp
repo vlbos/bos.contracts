@@ -84,18 +84,18 @@ push_records pushtable(_self, service_id);
     pushtable.emplace(_self, [&](auto &p) {
       p.service_id = service_id;
       add_time(p.times, p.month_times, true);
-         print(p.times);
-                     print("==new==times");
-                       print(p.month_times);
-                         print("====month times");
+         //print(p.times);
+                     //print("==new==times");
+                       //print(p.month_times);
+                         //print("====month times");
     });
   } else {
     pushtable.modify(push_itr, same_payer,
                      [&](auto &p) { add_time(p.times, p.month_times); 
-                     print(p.times);
-                     print("====times=====");
-                       print(p.month_times);
-                         print("====month times=====");
+                     //print(p.times);
+                     //print("====times=====");
+                       //print(p.month_times);
+                         //print("====month times=====");
                      });
 
   }
@@ -354,7 +354,7 @@ bos_oracle::get_subscription_list(uint64_t service_id) {
  */
 std::vector<std::tuple<name, name, uint64_t>>
 bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
-print("=-=============get_request_list in===========");
+//print("=-=============get_request_list in===========");
   static constexpr int64_t request_time_deadline =
       2 ; // 2 hours
   std::vector<std::tuple<name, name, uint64_t>> receive_contracts;
@@ -369,14 +369,14 @@ print("=-=============get_request_list in===========");
     lower = request_time_idx.lower_bound(
         static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
   }
-  print("=-=============get_request_list while before===========");
+  //print("=-=============get_request_list while before===========");
   while (lower != upper) {
-    print("=-=============get_request_list while (lower != upper)===========");
+    //print("=-=============get_request_list while (lower != upper)===========");
     auto req = lower++;
     if (req->status == request_status::reqeust_valid &&
         time_point_sec(now()) - req->request_time <
             eosio::hours(request_time_deadline)) {
-               print("=-=============get_request_list while  if===========");
+               //print("=-=============get_request_list while  if===========");
       receive_contracts.push_back(std::make_tuple(
           req->contract_account, req->action_name, req->request_id));
     }
@@ -432,10 +432,10 @@ bos_oracle::get_provider_list(uint64_t service_id) {
 
   for (const auto &p : provisionstable) {
     
-    print("p.stake_amount.amount");
-    print(p.stake_amount.amount);
-    print("p.freeze_amount.amount");
-    print(p.freeze_amount.amount);
+    //print("p.stake_amount.amount");
+    //print(p.stake_amount.amount);
+    //print("p.freeze_amount.amount");
+    //print(p.freeze_amount.amount);
     if (p.status == provision_status::provision_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
       providers.push_back(std::make_tuple(p.account,p.stake_amount-p.freeze_amount));
     }

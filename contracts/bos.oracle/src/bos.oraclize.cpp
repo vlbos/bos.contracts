@@ -2,7 +2,7 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/time.hpp>
 #include <eosiolib/crypto.h>
-#include <eosiolib/print.h>
+// #include <eosiolib/print.h>
 #include "bos.oracle/bos.oracle.hpp"
 
 
@@ -10,6 +10,7 @@
   {
     require_auth(_self);
     auto itt = oraclizes_table.find(oracle.value);
+    
     eosio_assert(itt == oraclizes_table.end(), "Already known oracle");
 
     oraclizes_table.emplace(_self, [&](oraclizes &i) {

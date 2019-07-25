@@ -247,6 +247,7 @@ using namespace eosio;
 // (regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 // (deposit)(withdraw)
 // )
+
 struct transferx {
       name from;
       name to;

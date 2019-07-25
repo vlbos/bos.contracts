@@ -34,20 +34,22 @@ void bos_oracle::regservice(uint64_t service_id, name account,
                             uint64_t injection_method, uint64_t duration,
                             uint64_t provider_limit, uint64_t update_cycle,
                             time_point_sec update_start_time) {
-                              print("=====1");
+                              cout << 33333333;
+                              print(1234567);
+                              //print("=====1");
   require_auth(account);
   uint64_t new_service_id = service_id;
   data_services svctable(_self, _self.value);
  auto service_itr = svctable.find(service_id);
   if (service_itr == svctable.end()) { 
     //  if (0 == service_id) {
-     print("=====2");
+     //print("=====2");
     // add service
     svctable.emplace(_self, [&](auto &s) {
       s.service_id = svctable.available_primary_key()+(0==svctable.available_primary_key()?1:0);
-      print("$$$$$$$$$$$$$");
-      print(s.service_id);
-      print("**************");
+      //print("$$$$$$$$$$$$$");
+      //print(s.service_id);
+      //print("**************");
       s.service_price = service_price;
       s.fee_type = fee_type;
       s.data_format = data_format;
@@ -74,9 +76,9 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       
     });
   }
-    print("=====1");
+    //print("=====1");
   // transfer(account, provider_account, stake_amount, "");
-    print("=====1");
+    //print("=====1");
   // add provider
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
@@ -95,8 +97,8 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       p.total_stake_amount += asset(0,core_symbol());//stake_amount;
     });
   }
-    print("===service_id==");
-    print(new_service_id);
+    //print("===service_id==");
+    //print(new_service_id);
   data_service_provisions provisionstable(_self, new_service_id);
 
   auto provision_itr = provisionstable.find(account.value);
@@ -112,7 +114,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.public_information = "";
     p.stop_service =false;
   });
-    print("=====1");
+    //print("=====1");
   provider_services provservicestable(_self, account.value);
   uint64_t create_time_sec =
       static_cast<uint64_t>(update_start_time.sec_since_epoch());
@@ -123,7 +125,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     p.service_id = new_service_id;
     p.create_time = update_start_time;
   });
-    print("=====1");
+    //print("=====1");
     data_service_stakes svcstaketable(_self, _self.value);
   auto svcstake_itr = svcstaketable.find(new_service_id);
   if(svcstake_itr == svcstaketable.end())
@@ -278,7 +280,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
  */
 void bos_oracle::multipush(uint64_t service_id, name provider,
                            string data_json, bool is_request) {
-                             print("==========multipush");
+                             //print("==========multipush");
   require_auth(provider);
   check(service_status::service_in == get_service_status(service_id),
         "service and subscription must be available");
@@ -286,11 +288,11 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   auto push_data = [this](uint64_t service_id, name provider, name contract_account,
                       name action_name, uint64_t request_id,
                       string data_json) {
-                        print("====push_data========");
-                        print(contract_account);
-                        print("=======contract_account====");
-                         print(request_id);
-                         print("=======request_id=======");
+                        //print("====push_data========");
+                        //print(contract_account);
+                        //print("=======contract_account====");
+                         //print(request_id);
+                         //print("=======request_id=======");
     transaction t;
     t.actions.emplace_back(
         permission_level{_self, active_permission}, _self, "innerpush"_n,
@@ -303,17 +305,17 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
     t.send(deferred_id, _self,true);
   };
 
-     print("=======is_request==true= before====");
+     //print("=======is_request==true= before====");
   if (is_request) {
-     print("=======is_request==true=====");
+     //print("=======is_request==true=====");
     // request
     uint64_t request_id = get_request_by_last_push(service_id, provider);
     std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
         get_request_list(service_id, request_id);
-    print("=======is_request==for=====");
+    //print("=======is_request==for=====");
     for (const auto &rc : receive_contracts) {
-           print(request_id);
-                         print("=======request_id==true=====");
+           //print(request_id);
+                         //print("=======request_id==true=====");
       push_data(service_id, provider, std::get<0>(rc), std::get<1>(rc),
                std::get<2>(rc), data_json);
     }
@@ -333,9 +335,9 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 void bos_oracle::pushdata(uint64_t service_id, name provider,
                           name contract_account, name action_name,
                           uint64_t request_id, string data_json) {
-                            print("=====pushdata====");
-                        print(contract_account);
-                        print("====222===contract_account");
+                            //print("=====pushdata====");
+                        //print(contract_account);
+                        //print("====222===contract_account");
   require_auth(provider);
   //  action(permission_level{_self, "active"_n},
   //          _self, "innerpush"_n,
@@ -377,7 +379,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
 void bos_oracle::innerpush(uint64_t service_id, name provider,
                           name contract_account, name action_name,
                           uint64_t request_id, string data_json) {
-  print("======@@@@@@@@@@@@@@@@@@@@@@@@@@@@===innerpush====================");
+  //print("======@@@@@@@@@@@@@@@@@@@@@@@@@@@@===innerpush====================");
   require_auth(_self);
   check(service_status::service_in == get_service_status(service_id) &&
             subscription_status::subscription_subscribe ==
@@ -461,7 +463,7 @@ void bos_oracle::multipublish(uint64_t service_id, name provider,
 void bos_oracle::publishdata(uint64_t service_id, name provider,
                              uint64_t update_number, uint64_t request_id,
                              string data_json) {
-  print(" publishdata in");
+  //print(" publishdata in");
   require_auth(provider);
 
   transaction t;
@@ -478,8 +480,7 @@ void bos_oracle::publishdata(uint64_t service_id, name provider,
 void bos_oracle::innerpublish(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json) {
-  print(" innerpublish in");
-  return;
+  //print(" innerpublish in");
  name contract_account = _self;  // placeholder
  name action_name = _self;// placeholder
   require_auth(_self);
@@ -496,7 +497,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
   //   }
   // }
 
-  data_service_provision_logs logtable(_self, _self.value);
+  data_service_provision_logs logtable(_self, service_id);
   logtable.emplace(_self, [&](auto &l) {
     l.log_id = logtable.available_primary_key();
     l.service_id = service_id;
@@ -513,7 +514,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
   add_times(service_id, provider, contract_account, action_name,
             0 != request_id);
 
-  print("check publish before");
+  //print("check publish before");
   check_publish_service(service_id,update_number);
   // require_recipient(contract_account);
 }
@@ -551,10 +552,10 @@ void bos_oracle::claim(name account, name receive_account) {
 
   auto calc_income = [](uint64_t service_times, uint64_t provide_times,
                         uint64_t consumption) -> uint64_t {
-                          print("==========provide_times=================");
-                          print(provide_times);
-                           print("==========service_times=================");
-                            print(service_times);
+                          //print("==========provide_times=================");
+                          //print(provide_times);
+                           //print("==========service_times=================");
+                            //print(service_times);
 
     uint64_t income = 0;
      if (provide_times > 0 && service_times >= provide_times) {
@@ -690,7 +691,7 @@ void bos_oracle::unregservice(uint64_t service_id, name account,
  * @param amount 
  */
 void bos_oracle::starttimer() {
-  print("%%%%%%%%%%%%%%%%%%%%%%%%starttimer^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+  //print("%%%%%%%%%%%%%%%%%%%%%%%%starttimer^^^^^^^^^^^^^^^^^^^^^^^^^^^");
   require_auth(_self);
   // data_services svctable(_self, _self.value);
   // auto service_itr = svctable.find(service_id);
@@ -717,7 +718,7 @@ void bos_oracle::start_timer()
 
 void bos_oracle::check_publish_services()
 {
-  print("check_publish_service");
+  //print("check_publish_service");
   data_services svctable(_self, _self.value);
 
   std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> service_numbers = get_publish_services_update_number();
@@ -806,7 +807,7 @@ string bos_oracle::get_publish_data(uint64_t service_id,uint64_t update_number,u
 
   if(provider_limit<3)
   {
-    print("provider limit equal to zero in get_publish_data");
+    //print("provider limit equal to zero in get_publish_data");
     return "";
   }
 
@@ -844,16 +845,16 @@ string bos_oracle::get_publish_data(uint64_t service_id,uint64_t update_number,u
           if(d.second >  provider_count/2+1)
           {
               result = data_count.begin()->first;
-              print("get data that is greater than one half of providers  ");
+              //print("get data that is greater than one half of providers  ");
               break;
           }
     }
 
-     print("provider's data is not the same");
+     //print("provider's data is not the same");
   }
   else
   {
-    print("provider's count is less than provider's limit");
+    //print("provider's count is less than provider's limit");
   }
   
   
