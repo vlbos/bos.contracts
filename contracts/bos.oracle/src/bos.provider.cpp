@@ -7,7 +7,6 @@
 #include <eosiolib/transaction.hpp>
 using namespace eosio;
 using std::string;
-
 /**
  * @brief
  *
@@ -106,7 +105,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   provisionstable.emplace(_self, [&](auto &p) {
     p.service_id = new_service_id;
     p.account = account;
-    p.stake_amount = stake_amount;
+    p.stake_amount = asset(0, core_symbol());
     p.freeze_amount = asset(0, core_symbol());
     p.service_income = asset(0, core_symbol());
     p.status = provision_status::provision_reg;
@@ -462,7 +461,7 @@ void bos_oracle::multipublish(uint64_t service_id, name provider,
 void bos_oracle::publishdata(uint64_t service_id, name provider,
                              uint64_t update_number, uint64_t request_id,
                              string data_json) {
-
+  print(" publishdata in");
   require_auth(provider);
 
   transaction t;
@@ -479,6 +478,8 @@ void bos_oracle::publishdata(uint64_t service_id, name provider,
 void bos_oracle::innerpublish(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json) {
+  print(" innerpublish in");
+  return;
  name contract_account = _self;  // placeholder
  name action_name = _self;// placeholder
   require_auth(_self);
@@ -512,6 +513,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
   add_times(service_id, provider, contract_account, action_name,
             0 != request_id);
 
+  print("check publish before");
   check_publish_service(service_id,update_number);
   // require_recipient(contract_account);
 }
@@ -715,6 +717,7 @@ void bos_oracle::start_timer()
 
 void bos_oracle::check_publish_services()
 {
+  print("check_publish_service");
   data_services svctable(_self, _self.value);
 
   std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> service_numbers = get_publish_services_update_number();
@@ -880,6 +883,9 @@ std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_serv
         });
     }
   }
+
+
+  return service_numbers;
 }
 
 

@@ -69,16 +69,77 @@ public:
    create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
    create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
    create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources(N(provider1111), N(eosio),
+                                 core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(provider2222), N(eosio),
+                                 core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(provider3333), N(eosio),
+                                 core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(provider4444), N(eosio),
+                                 core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(provider5555), N(eosio),
+                                 core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(consumer1111), N(eosio),
+                                 core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(consumer2222), N(eosio),
+                                 core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(consumer3333), N(eosio),
+                                 core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(consumer4444), N(eosio),
+                                 core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(consumer5555), N(eosio),
+                                 core_sym::from_string("0.4500"), false);
 
+   create_account_with_resources(N(conconsumer1), N(eosio),
+                                 core_sym::from_string("110.4500"), false);
+   create_account_with_resources(N(conconsumer2), N(eosio),
+                                 core_sym::from_string("110.4500"), false);
+   create_account_with_resources(N(conconsumer3), N(eosio),
+                                 core_sym::from_string("110.4500"), false);
+   create_account_with_resources(N(conconsumer4), N(eosio),
+                                 core_sym::from_string("110.4500"), false);
+   create_account_with_resources(N(conconsumer5), N(eosio),
+                                 core_sym::from_string("110.4500"), false);
+ 
    transfer("eosio", "alice1111111", ("1000.0000"), "eosio");
    transfer("eosio", "bob111111111", ("1000.0000"), "eosio");
    transfer("eosio", "carol1111111", ("1000.0000"), "eosio");
+   transfer("eosio", "provider1111", ("1000.0000"), "eosio");
+   transfer("eosio", "provider2222", ("1000.0000"), "eosio");
+   transfer("eosio", "provider3333", ("1000.0000"), "eosio");
+   transfer("eosio", "provider4444", ("1000.0000"), "eosio");
+   transfer("eosio", "provider5555", ("1000.0000"), "eosio");
+   transfer("eosio", "consumer1111", ("1000.0000"), "eosio");
+   transfer("eosio", "consumer2222", ("1000.0000"), "eosio");
+   transfer("eosio", "consumer3333", ("1000.0000"), "eosio");
+   transfer("eosio", "consumer4444", ("1000.0000"), "eosio");
+   transfer("eosio", "consumer5555", ("1000.0000"), "eosio");
+
+   transfer("eosio", "conconsumer1", ("1000.0000"), "eosio");
+   transfer("eosio", "conconsumer2", ("1000.0000"), "eosio");
+   transfer("eosio", "conconsumer3", ("1000.0000"), "eosio");
+   transfer("eosio", "conconsumer4", ("1000.0000"), "eosio");
+   transfer("eosio", "conconsumer5", ("1000.0000"), "eosio");
+
    transfer("eosio", "alice", ("1000.0000"), "eosio");
    transfer("eosio", "bob", ("1000.0000"), "eosio");
    transfer("eosio", "carol", ("1000.0000"), "eosio");
    transfer("eosio", "dappuser.bos", ("1000.0000"), "eosio");
    transfer("eosio", "dappuser", ("1000.0000"), "eosio");
    transfer("eosio", "dapp", ("1000.0000"), "eosio");
+
+
+   set_code(N(conconsumer1), contracts::dappuser_wasm());
+   set_abi(N(conconsumer1), contracts::dappuser_abi().data());
+   set_code(N(conconsumer2), contracts::dappuser_wasm());
+   set_abi(N(conconsumer2), contracts::dappuser_abi().data());
+   set_code(N(conconsumer3), contracts::dappuser_wasm());
+   set_abi(N(conconsumer3), contracts::dappuser_abi().data());
+   set_code(N(conconsumer4), contracts::dappuser_wasm());
+   set_abi(N(conconsumer4), contracts::dappuser_abi().data());
+   set_code(N(conconsumer5), contracts::dappuser_wasm());
+   set_abi(N(conconsumer5), contracts::dappuser_abi().data());
+
    }
 
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
@@ -339,13 +400,13 @@ public:
 
    fc::variant get_transfer_freeze_delay( const uint64_t& service_id , const uint64_t& transfer_id)
    {
-      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(usagerecords), transfer_id );
+      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(freezedelays), transfer_id );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "transfer_freeze_delay", data, abi_serializer_max_time );
    }
 
    fc::variant get_risk_guarantee( const uint64_t& service_id , const uint64_t& risk_id)
    {
-      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(usagerecords), risk_id );
+      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(riskguarante), risk_id );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "risk_guarantee", data, abi_serializer_max_time );
    }
 
@@ -364,10 +425,13 @@ public:
    fc::variant get_service_freeze_stat(const uint64_t &service_id) {
      vector<char> data = get_row_by_account(N(oracle.bos), service_id,
                                             N(svcfrozestat), service_id);
-     return data.empty()
-                ? fc::variant()
-                : abi_ser.binary_to_variant("service_freeze_stat", data,
-                                            abi_serializer_max_time);
+     return data.empty() ? fc::variant()  : abi_ser.binary_to_variant("service_freeze_stat", data, abi_serializer_max_time);
+   }
+
+   fc::variant get_oracle_data(const uint64_t& service_id,
+                               const uint64_t& update_number) {
+     vector<char> data = get_row_by_account(N(oracle.bos), service_id, N(oracledata), update_number);
+     return data.empty() ? fc::variant()  : abi_ser.binary_to_variant("oracle_data_record", data, abi_serializer_max_time);
    }
 
 //provider
@@ -462,6 +526,44 @@ public:
            ( "data_json", data_json )
            ( "is_request", is_request )
       );
+   }
+
+ action_result publishdata(uint64_t service_id, name provider,
+                                  uint64_t update_number,
+                                   uint64_t request_id,const string& data_json){
+      return push_action( provider, N(publishdata), mvo()
+           ( "service_id", service_id )
+           ( "provider", provider )
+           ( "update_number", update_number )
+           ( "request_id", request_id)
+           ( "data_json", data_json )
+      );
+   }
+
+  action_result innerpublish(uint64_t service_id, name provider,
+                                  uint64_t update_number,
+                                   uint64_t request_id,const string& data_json){
+      return push_action( provider, N(innerpublish), mvo()
+           ( "service_id", service_id )
+           ( "provider", provider )
+           ( "update_number", update_number )
+           ( "request_id", request_id)
+           ( "data_json", data_json )
+      );
+   }
+
+   action_result multipublish(uint64_t service_id, name provider,
+                                  const string& data_json, bool is_request){
+      return push_action( provider, N(multipublish), mvo()
+           ( "service_id", service_id )
+           ( "provider", provider )
+           ( "data_json", data_json )
+           ( "is_request", is_request )
+      );
+   }
+
+   action_result starttimer(){
+      return push_action( N(oracle.bos), N(starttimer), mvo());
    }
 
    action_result addfeetypes(uint64_t service_id,
@@ -570,16 +672,21 @@ public:
 
 uint64_t reg_service(name account,time_point_sec update_start_time)
 {
+   return reg_service(0, account,update_start_time);
+}
+
+uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_start_time)
+{
 //  name account = N(alice);
- uint64_t service_id =0;
+//  uint64_t service_id =0;
   uint8_t fee_type = 1;
   uint8_t data_type = 1;
   uint8_t status = 0;
   uint8_t injection_method = 0;
   uint64_t acceptance = 0;
-  uint64_t duration = 1;
+  uint64_t duration = 30;
   uint64_t provider_limit = 3;
-  uint64_t update_cycle = 1;
+  uint64_t update_cycle = 300;
   uint64_t appeal_freeze_period = 0;
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
@@ -634,8 +741,13 @@ void add_fee_type(uint64_t service_id)
  // subscribe service
  void subscribe_service(uint64_t service_id,name account)
   {
+     subscribe_service(service_id,account,N(dappuser.bos));
+  }
+ // subscribe service
+ void subscribe_service(uint64_t service_id,name account,name contract_account)
+  {
    //  service_id = new_service_id;
-    name contract_account = N(dappuser.bos);
+   //  name contract_account = N(dappuser.bos);
     name action_name = N(receivejson);
     std::string publickey = "";
    //  name account = N(bob);
@@ -1076,6 +1188,99 @@ BOOST_FIXTURE_TEST_CASE( multipush_test, bos_oracle_tester ) try {
    
 
 } FC_LOG_AND_RETHROW()
+
+
+
+BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
+
+  /// reg service
+  name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(N(provider1111), update_start_time);
+  reg_service(service_id, N(provider2222), update_start_time);
+  reg_service(service_id, N(provider3333), update_start_time);
+  reg_service(service_id, N(provider4444), update_start_time);
+  reg_service(service_id, N(provider5555), update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(provider1111), core_sym::from_string("10.0000"));
+  stake_asset(service_id, N(provider2222), core_sym::from_string("10.0000"));
+  stake_asset(service_id, N(provider3333), core_sym::from_string("10.0000"));
+  stake_asset(service_id, N(provider4444), core_sym::from_string("10.0000"));
+  stake_asset(service_id, N(provider5555), core_sym::from_string("10.0000"));
+
+  subscribe_service(service_id, N(consumer1111), N(conconsumer1));
+  subscribe_service(service_id, N(consumer2222), N(conconsumer2));
+  subscribe_service(service_id, N(consumer3333), N(conconsumer3));
+  subscribe_service(service_id, N(consumer4444), N(conconsumer4));
+  subscribe_service(service_id, N(consumer5555), N(conconsumer5));
+
+  pay_service(service_id, N(conconsumer1), core_sym::from_string("10.0000"));
+  pay_service(service_id, N(conconsumer2), core_sym::from_string("10.0000"));
+  pay_service(service_id, N(conconsumer3), core_sym::from_string("10.0000"));
+  pay_service(service_id, N(conconsumer4), core_sym::from_string("10.0000"));
+  pay_service(service_id, N(conconsumer5), core_sym::from_string("10.0000"));
+
+  /// publish data
+   {
+     auto services = get_data_service(service_id);
+
+    uint64_t update_cycle = services["update_cycle"].as<uint64_t>();
+     BOOST_REQUIRE(update_cycle > 0);
+    uint64_t duration = services["duration"].as<uint64_t>();
+    BOOST_REQUIRE(duration > 0);
+    uint64_t update_number = update_start_time.sec_since_epoch()/update_cycle;
+    const string data_json = "publish test data json";
+    uint64_t request_id = 0;
+
+    auto data = publishdata(service_id, N(provider1111), update_number,
+                            request_id, data_json);
+    data = publishdata(service_id, N(provider2222), update_number, request_id,
+                       data_json);
+    data = publishdata(service_id, N(provider3333), update_number, request_id,
+                       data_json);
+    data = publishdata(service_id, N(provider4444), update_number, request_id,
+                       data_json);
+    data = publishdata(service_id, N(provider5555), update_number, request_id,
+                       data_json);
+
+   auto oracledata = get_oracle_data(service_id,update_number);
+
+    uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
+
+      BOOST_REQUIRE(update_number_from_api > 0);
+   }
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( multipublish_test, bos_oracle_tester ) try {
+
+  name account = N(alice);
+  time_point_sec update_start_time = time_point_sec(control->head_block_time());
+  uint64_t service_id = reg_service(account, update_start_time);
+
+  add_fee_type(service_id);
+  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+  subscribe_service(service_id, N(bob));
+  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+
+  /// multipublish
+  {
+     name provider = N(alice);
+    const string data_json = "multipush test data json";
+    bool is_request = false;
+
+    auto token = multipublish(service_id, provider, data_json, is_request);
+       
+     is_request = true;
+
+     token = multipublish(service_id, provider, data_json, is_request);
+   }
+
+   
+
+} FC_LOG_AND_RETHROW()
+
 
 BOOST_FIXTURE_TEST_CASE( addfeetype_test, bos_oracle_tester ) try {
 name account = N(alice);

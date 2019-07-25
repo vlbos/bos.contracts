@@ -98,7 +98,7 @@ typedef eosio::multi_index<"riskaccounts"_n, riskcontrol_account> riskcontrol_ac
 
 typedef eosio::multi_index<"servicestake"_n, data_service_stake> data_service_stakes;
 typedef eosio::multi_index<"freezedelays"_n, transfer_freeze_delay> transfer_freeze_delays;
-typedef eosio::multi_index<"riskguarant"_n, risk_guarantee> risk_guarantees;
+typedef eosio::multi_index<"riskguarante"_n, risk_guarantee> risk_guarantees;
 
 typedef eosio::multi_index<"freezelog"_n, account_freeze_log,indexed_by<"byaccount"_n, const_mem_fun<account_freeze_log, uint64_t, &account_freeze_log::by_account>>> account_freeze_logs;
 typedef eosio::multi_index<"freezestats"_n, account_freeze_stat> account_freeze_stats;
