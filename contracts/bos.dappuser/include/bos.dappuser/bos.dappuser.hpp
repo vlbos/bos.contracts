@@ -23,7 +23,8 @@ public:
   void receivejson(name self, name code);
 
   [[eosio::action]] void getdatax(uint64_t service_id,uint64_t update_number);
-
+  [[eosio::action]] void datax();
+  
   // @abi action
   [[eosio::action]]
   void setup(name oracle);

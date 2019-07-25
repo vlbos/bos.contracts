@@ -49,9 +49,19 @@ using std::string;
  void YOUR_CONTRACT_NAME::getdatax(uint64_t service_id,uint64_t update_number)
   {
     
-    oracle_data oracledatatable(_self,service_id);
+    oracle_data oracledatatable("oracle.bos"_n,service_id);
+     check (oracledatatable.begin()!= oracledatatable.end()," no  data found ");
       auto itr = oracledatatable.find(update_number);
       check (itr!= oracledatatable.end()," no update number found ");
+      print(itr->value.c_str());
+  }
+
+void YOUR_CONTRACT_NAME::datax()
+  {
+    
+    oracle_data oracledatatable(_self,1);
+      // auto itr = oracledatatable.find(update_number);
+      check (oracledatatable.begin()!= oracledatatable.end()," no 1 update number found ");
       // print(itr->value.c_str());
   }
 
@@ -98,7 +108,7 @@ using std::string;
       switch (action) {
         // NB: Add custom method in bracets after (setup) to use them as
         // endpoints
-        EOSIO_DISPATCH_HELPER(YOUR_CONTRACT_NAME, (getdatax)(setup))
+        EOSIO_DISPATCH_HELPER(YOUR_CONTRACT_NAME, (datax)(getdatax)(setup))
       }
     }
 

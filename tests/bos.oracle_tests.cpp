@@ -217,6 +217,15 @@ public:
       return asset( result, symbol(CORE_SYM) );
    }
 
+  ///dappuser.bos
+    void getdatax(uint64_t service_id,uint64_t update_number){
+      base_tester::push_action( N(dappuser.bos), N(getdatax),  N(dappuser.bos), mutable_variant_object()
+                                ("service_id",    service_id)
+                                ("update_number",      update_number )
+                                 );
+   }
+
+
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {
       string action_type_name = abi_ser.get_action_type(name);
 
@@ -639,14 +648,7 @@ public:
          ("memo", memo)
          );
    }
-   ///dappuser.bos
-    action_result getdatax(uint64_t service_id,    uint64_t update_number){
-      return push_action( N(conconsumer1), N(getdatax), mvo()
-           ( "service_id", service_id )
-           ( "update_number", update_number )
-      );
-   }
-
+ 
 uint64_t reg_service(name account,time_point_sec update_start_time)
 {
    return reg_service(0, account,update_start_time);
@@ -812,6 +814,7 @@ void add_fee_type(uint64_t service_id)
 
    abi_serializer abi_ser;
    abi_serializer token_abi_ser;
+   abi_serializer dapp_abi_ser;
 };
 
 BOOST_AUTO_TEST_SUITE(bos_oracle_tests)
@@ -1227,7 +1230,7 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
 
       BOOST_REQUIRE(update_number_from_api > 0);
 
-      auto ar = getdatax(service_id,update_number);
+    getdatax(service_id,update_number);
 
    }
 
