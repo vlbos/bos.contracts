@@ -27,16 +27,6 @@ public:
       create_accounts( { N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(oracle.bos),N(dappuser.bos),N(provider.bos),N(consumer.bos),N(riskctrl.bos)} );
       produce_blocks( 2 );
 
-//   produce_blocks( 100 );
-//       set_code( N(eosio.token), contracts::token_wasm());
-//       set_abi( N(eosio.token), contracts::token_abi().data() );
-//       {
-//          const auto& accnt = control->db().get<account_object,by_name>( N(eosio.token) );
-//          abi_def abi;
-//          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-//          token_abi_ser.set_abi(abi, abi_serializer_max_time);
-//       }
-
       set_code( N(oracle.bos), contracts::oracle_wasm() );
       set_abi( N(oracle.bos), contracts::oracle_abi().data() );
       set_code( N(dappuser.bos), contracts::dappuser_wasm() );
@@ -50,7 +40,7 @@ public:
       abi_ser.set_abi(abi, abi_serializer_max_time);
 
 
-      set_code( N(eosio.token), contracts::token_wasm() );
+   set_code( N(eosio.token), contracts::token_wasm() );
    set_abi( N(eosio.token), contracts::token_abi().data() );
 
    create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
@@ -238,20 +228,6 @@ public:
       return base_tester::push_action( std::move(act), uint64_t(signer));
    }
 
-   // auto push_action(  ) 
-   // {
-   //     auto auth = authority(eosio::testing::base_tester::get_public_key("alice", "active"));
-   // auth.accounts.push_back( permission_level_weight{{N(oracle.bos), config::eosio_code_name}, 1} );
-
-   //  return base_tester::push_action(N(eosio), N(updateauth), N(alice), mvo()
-   //    ( "account", "alice" )
-   //    ( "permission", "active" )
-   //    ( "parent", "owner" )
-   //    ( "auth", auth )
-   // );
-
-   // }
-
    auto push_permission_update_auth_action( const account_name& signer ) 
    {
        auto auth = authority(eosio::testing::base_tester::get_public_key(signer, "active"));
@@ -266,12 +242,6 @@ public:
 
    }
  
-   //  asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM} ) {
-   //    vector<char> data = get_row_by_account( N(eosio.token), act, N(accounts), balance_symbol.to_symbol_code().value );
-   //    return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
-   // }
-   
-
    //provider
    fc::variant get_data_service( const uint64_t& service_id )
    {
@@ -668,6 +638,13 @@ public:
          ("quantity", quantity)      
          ("memo", memo)
          );
+   }
+   ///dappuser.bos
+    action_result getdatax(uint64_t service_id,    uint64_t update_number){
+      return push_action( N(conconsumer1), N(getdatax), mvo()
+           ( "service_id", service_id )
+           ( "update_number", update_number )
+      );
    }
 
 uint64_t reg_service(name account,time_point_sec update_start_time)
@@ -1249,6 +1226,9 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
     uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
 
       BOOST_REQUIRE(update_number_from_api > 0);
+
+      auto ar = getdatax(service_id,update_number);
+
    }
 
 } FC_LOG_AND_RETHROW()

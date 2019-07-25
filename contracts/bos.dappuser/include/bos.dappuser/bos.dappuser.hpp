@@ -2,7 +2,7 @@
 #include <eosiolib/eosio.hpp>
 #include "bos.types.hpp"
 #include "tables/bos.dappuser.hpp"
-
+#include "tables/oracle_api.hpp"
 
 class [[eosio::contract("bos.dappuser")]] YOUR_CONTRACT_NAME : public eosio::contract
 {
@@ -21,6 +21,8 @@ public:
 
   void receive(name self, name code);
   void receivejson(name self, name code);
+
+  [[eosio::action]] void getdatax(uint64_t service_id,uint64_t update_number);
 
   // @abi action
   [[eosio::action]]
