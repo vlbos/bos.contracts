@@ -22,8 +22,7 @@ public:
   void receive(name self, name code);
   void receivejson(name self, name code);
 
-  [[eosio::action]] void getdatax(uint64_t service_id,uint64_t update_number);
-  [[eosio::action]] void datax();
+  [[eosio::action]] void fetchdata(name oracle,uint64_t service_id,uint64_t update_number);
   
   // @abi action
   [[eosio::action]]

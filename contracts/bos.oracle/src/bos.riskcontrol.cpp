@@ -46,11 +46,11 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
            switch (transfer_category) {
            case tc_service_stake:
              stake_asset(id, account, quantity);
-             transfer(_self, provider_account, quantity, memo);
+            //  transfer(_self, provider_account, quantity, memo);
              break;
            case tc_pay_service:
              pay_service(id, account, quantity);
-             transfer(_self, consumer_account, quantity, memo);
+            //  transfer(_self, consumer_account, quantity, memo);
              break;
            case tc_arbitration_stake:
             // stake_arbitration(id,account,quantity);

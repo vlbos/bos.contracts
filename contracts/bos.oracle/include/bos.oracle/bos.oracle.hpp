@@ -39,7 +39,7 @@ public:
   static constexpr eosio::name token_account{"eosio.token"_n};
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _bos_symbol = symbol(symbol_code("BOS"), 4);
-  static constexpr symbol _core_symbol = symbol(symbol_code("TST"), 4);
+  static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
   static constexpr double default_arbitration_correct_rate = 0.6f;
 
@@ -153,9 +153,12 @@ public:
   [[eosio::action]] void publishdata(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json);   
+
   [[eosio::action]] void innerpublish(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json);
+  [[eosio::action]] void autopublish(uint64_t service_id, name provider,
+                                     uint64_t request_id, string data_json);
   [[eosio::action]] void claim(name account, name receive_account);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
@@ -193,7 +196,8 @@ public:
       eosio::action_wrapper<"publishdata"_n, &bos_oracle::publishdata>;
   using innerpublish_action =
       eosio::action_wrapper<"innerpublish"_n, &bos_oracle::innerpublish>;
-
+  using autopublish_action =
+      eosio::action_wrapper<"autopublish"_n, &bos_oracle::autopublish>;
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
 

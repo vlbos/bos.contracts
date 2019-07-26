@@ -218,8 +218,9 @@ public:
    }
 
   ///dappuser.bos
-    void getdatax(uint64_t service_id,uint64_t update_number){
-      base_tester::push_action( N(dappuser.bos), N(getdatax),  N(dappuser.bos), mutable_variant_object()
+    void fetchdata(uint64_t service_id,uint64_t update_number){
+      base_tester::push_action( N(dappuser.bos), N(fetchdata),  N(dappuser.bos), mutable_variant_object()
+                                ("oracle",    "oracle.bos")
                                 ("service_id",    service_id)
                                 ("update_number",      update_number )
                                  );
@@ -1230,7 +1231,7 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
 
       BOOST_REQUIRE(update_number_from_api > 0);
 
-    getdatax(service_id,update_number);
+    fetchdata(service_id,update_number);
 
    }
 

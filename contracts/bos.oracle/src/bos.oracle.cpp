@@ -242,7 +242,7 @@ using namespace eosio;
 
 
 // EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-// (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(addfeetypes)(addfeetype)(claim)
+// (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(autopublish)(addfeetypes)(addfeetype)(claim)
 // (subscribe)(requestdata)(payservice)(starttimer)
 // (regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 // (deposit)(withdraw)
@@ -273,7 +273,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         // NB: Add custom method in bracets after () to use them as
         // endpoints
         EOSIO_DISPATCH_HELPER(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-(regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(addfeetypes)(addfeetype)(claim)
+(regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(autopublish)(addfeetypes)(addfeetype)(claim)
 (subscribe)(requestdata)(payservice)(starttimer)
 (regarbitrat)(complain)(uploadeviden)(uploadresult)(resparbitrat)(respcase)
 (deposit)(withdraw))

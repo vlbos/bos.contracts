@@ -399,6 +399,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider,
   logtable.emplace(_self, [&](auto &l) {
     l.log_id = logtable.available_primary_key();
     l.service_id = service_id;
+    l.account = provider;
     l.data_json = data_json;
     l.update_number = 0;
     l.status = 0;
@@ -458,6 +459,44 @@ void bos_oracle::multipublish(uint64_t service_id, name provider,
   }
 }
 
+void bos_oracle::autopublish(uint64_t service_id, name provider,
+                             uint64_t request_id,
+                             string data_json) {
+   data_services svctable(_self, _self.value);
+  auto service_itr = svctable.find(service_id);
+  check(service_itr != svctable.end(), "service does not exist");
+  
+  ///begin|____________________update cycle____________________________|
+  ///begin|____________________duration__|end
+  //begin = nowsec/update_cycle*update_cycles
+  //end = update_number * update_cycle +duration
+  uint64_t  update_cycle = service_itr->update_cycle;
+   check(update_cycle > 0, "update cycle could not greater than zero");
+  uint64_t duration  = service_itr->duration;
+   check(duration > 0 && duration <= update_cycle, "wrong duration value");
+  uint64_t now_sec = time_point_sec(now()).sec_since_epoch();
+  uint64_t  update_number = now_sec/update_cycle;
+  uint64_t end_sec = update_number * update_cycle +duration;
+  check( end_sec >= now_sec," push cycle is expired,wait until next ");
+  // {
+  //   print(" auto publishdata   if( end_sec < now_sec)");
+  //   return;
+  // }
+ 
+  print(" auto publishdata  in");
+  require_auth(provider);
+
+  transaction t;
+  t.actions.emplace_back(permission_level{_self, active_permission}, _self,
+                         "innerpublish"_n,
+                         std::make_tuple(service_id, provider, update_number, request_id, data_json));
+  t.delay_sec = 0;
+  uint128_t deferred_id =
+      (uint128_t(service_id) << 64) | update_number;
+  cancel_deferred(deferred_id);
+  t.send(deferred_id, _self, true);
+}
+
 void bos_oracle::publishdata(uint64_t service_id, name provider,
                              uint64_t update_number, uint64_t request_id,
                              string data_json) {
@@ -478,7 +517,7 @@ void bos_oracle::publishdata(uint64_t service_id, name provider,
 void bos_oracle::innerpublish(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json) {
-  //print(" innerpublish in");
+  print(" innerpublish in");
  name contract_account = _self;  // placeholder
  name action_name = _self;// placeholder
   require_auth(_self);
@@ -499,6 +538,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
   logtable.emplace(_self, [&](auto &l) {
     l.log_id = logtable.available_primary_key();
     l.service_id = service_id;
+    l.account = provider;
     l.data_json = data_json;
     l.update_number = update_number;
     l.status = 0;
@@ -512,7 +552,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
   add_times(service_id, provider, contract_account, action_name,
             0 != request_id);
 
-  //print("check publish before");
+  print("check publish before=",provider,"s=",service_id,"u=",update_number);
   check_publish_service(service_id,update_number);
   // require_recipient(contract_account);
 }
@@ -716,7 +756,7 @@ void bos_oracle::start_timer()
 
 void bos_oracle::check_publish_services()
 {
-  //print("check_publish_service");
+  print("check_publish_service");
   data_services svctable(_self, _self.value);
 
   std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> service_numbers = get_publish_services_update_number();
@@ -726,6 +766,7 @@ void bos_oracle::check_publish_services()
     string data_json = get_publish_data(std::get<0>(*it),std::get<1>(*it),std::get<2>(*it));
    if(!data_json.empty())
    {
+       print("if(!data_json.empty())");
      save_publish_data(std::get<0>(*it),std::get<1>(*it),data_json);
    }
   }
@@ -734,7 +775,7 @@ void bos_oracle::check_publish_services()
 
 void bos_oracle::check_publish_service(uint64_t service_id,uint64_t update_number)
 {
-    
+    print("check_publish_service");
 
   data_services svctable(_self, _self.value);
   auto service_itr = svctable.find(service_id);
@@ -744,12 +785,14 @@ void bos_oracle::check_publish_service(uint64_t service_id,uint64_t update_numbe
   uint64_t ppc = get_publish_provider_count(service_id, update_number);
   if(pc<service_itr->provider_limit || ppc < pc)
   {
+     print("check_publish_service  if(pc<service_itr->provider_limit || ppc < pc)",service_itr->provider_limit,"ppc=",ppc,",pc=",pc);
     return;
   }
  
   string data_json = get_publish_data(service_id,update_number,service_itr->provider_limit);
    if(!data_json.empty())
    {
+     print("check_publish_service  if(!data_json.empty())");
      save_publish_data(service_id,update_number,data_json);
    }
     
