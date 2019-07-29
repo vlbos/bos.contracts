@@ -36,7 +36,16 @@ enum memo_index : uint8_t { index_category,index_service , index_count};
 enum memo_index_deposit : uint8_t { deposit_category,deposit_from ,deposit_to,deposit_notify , deposit_count};
 enum arbitration_timer_type: uint8_t {
   appeal_timeout,
+  reappeal_timeout,
   resp_appeal_timeout,
   resp_arbitrate_timeout,
-  upload_result_timeout
+  upload_result_timeout,
+  resp_reappeal_timeout,
+
+  public_appeal_timeout,
+  public_reappeal_timeout,
+  public_resp_appeal_timeout,
+  public_resp_arbitrate_timeout,
+  public_upload_result_timeout,
+  public_resp_reappeal_timeout
 };
