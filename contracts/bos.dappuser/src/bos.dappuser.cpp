@@ -49,6 +49,7 @@ using std::string;
  void YOUR_CONTRACT_NAME::fetchdata(name oracle,uint64_t service_id,uint64_t update_number)
   {
     oracle_data oracledatatable(oracle,service_id);
+    print("update number =",update_number);
      check (oracledatatable.begin()!= oracledatatable.end()," no  data found ");
       auto itr = oracledatatable.find(update_number);
       check (itr!= oracledatatable.end()," no update number found ");

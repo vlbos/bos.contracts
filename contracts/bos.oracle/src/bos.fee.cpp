@@ -10,7 +10,7 @@ using std::string;
 /**
  * @brief 
  * 
- * @param service_id 
+ * @param service_id  
  * @return uint8_t 
  */
 uint8_t bos_oracle::get_service_status(uint64_t service_id) {

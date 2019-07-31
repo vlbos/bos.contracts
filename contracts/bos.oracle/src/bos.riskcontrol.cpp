@@ -46,15 +46,15 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
            switch (transfer_category) {
            case tc_service_stake:
              stake_asset(id, account, quantity);
-            //  transfer(_self, provider_account, quantity, memo);
+            oracle_transfer(_self, provider_account, quantity, memo,true);
              break;
            case tc_pay_service:
              pay_service(id, account, quantity);
-            //  transfer(_self, consumer_account, quantity, memo);
+            oracle_transfer(_self, consumer_account, quantity, memo,true);
              break;
            case tc_arbitration_stake:
             // stake_arbitration(id,account,quantity);
-            transfer(_self, arbitrat_account, quantity, memo);
+            oracle_transfer(_self, arbitrat_account, quantity, memo,true);
              break;
            default:
              check(false, "unknown  transfer category ");
@@ -72,7 +72,12 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
  * @param quantity
  * @param memo
  */
-void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
+void bos_oracle::transfer(name from, name to, asset quantity, string memo) 
+{
+  oracle_transfer( from,  to,  quantity,  memo,false) ;
+}
+
+void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo,bool is_deferred) {
   check(from != to, "cannot transfer to self");
   //  require_auth( from );
   check(is_account(to), "to account does not exist");
@@ -95,9 +100,24 @@ void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
   //  auto payer = has_auth( to ) ? to : from;
   //print("===quantity");
   quantity.print();
-  action(permission_level{from, "active"_n}, token_account, "transfer"_n,
+  
+  if(!is_deferred)
+  {
+ action(permission_level{from, "active"_n}, token_account, "transfer"_n,
          std::make_tuple(from, to, quantity, memo))
       .send();
+  }
+ else{
+    transaction t;
+    t.actions.emplace_back(
+        permission_level{from, active_permission}, token_account, "transfer"_n,
+        std::make_tuple(from, to, quantity, memo));
+    t.delay_sec = 0;
+    uint128_t deferred_id =
+        (uint128_t(to.value) << 64) | time_point_sec(now()).sec_since_epoch();
+    cancel_deferred(deferred_id);
+    t.send(deferred_id, _self,true);
+}
 
   // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from, active_permission}, {to, active_permission}},{from, to, quantity, memo});
 
