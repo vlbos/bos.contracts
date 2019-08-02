@@ -4,12 +4,11 @@
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 // #include <eosiolib/print.h>
+#include "bos.oracle/bos.util.hpp"
 #include <eosiolib/time.hpp>
 #include <eosiolib/transaction.hpp>
-#include "bos.oracle/bos.util.hpp"
 
-void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) 
- {
+void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
   print_f("On notify : % % % %", from, to, quantity, memo);
   if (memo.empty()) {
@@ -23,27 +22,21 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo)
 
   std::vector<std::string> parameters = bos_util::get_parameters(memo);
   check(parameters.size() > 0, "parse memo failed ");
-    uint64_t transfer_category =
+  uint64_t transfer_category =
       bos_util::convert_to_int(parameters[index_category]);
 
-  auto check_parameters_size = [&](uint64_t category){
-std::vector<uint8_t> index_counts = 
- {arbitrator_count,
-arbitrator_count,
-deposit_count,
-complain_count,
-arbitrator_count,
-resp_case_count,
-reappeal_count,
-reresp_case_count,
-};
-check(category>=0 &&  category < index_counts.size(), "unknown category");
+  auto check_parameters_size = [&](uint64_t category) {
+    std::vector<uint8_t> index_counts = {
+        arbitrator_count, arbitrator_count, deposit_count,  complain_count,
+        arbitrator_count, resp_case_count,  reappeal_count, reresp_case_count,
+    };
+    check(category >= 0 && category < index_counts.size(), "unknown category");
 
-check(parameters.size() == index_counts[category], "the parameters'size does not match ");
-};
+    check(parameters.size() == index_counts[category],
+          "the parameters'size does not match ");
+  };
 
-check_parameters_size(transfer_category);
-
+  check_parameters_size(transfer_category);
 
   auto s2name = [&](uint64_t index) -> name {
     if (index >= 0 && index < parameters.size()) {
@@ -52,9 +45,9 @@ check_parameters_size(transfer_category);
       print("index invalid", index, parameters.size());
     }
 
-    return name("s");
+    return name{};
   };
-  auto s2int = [&](uint64_t index)->uint64_t{
+  auto s2int = [&](uint64_t index) -> uint64_t {
     if (index >= 0 && index < parameters.size()) {
       return bos_util::convert_to_int(parameters[index]);
     } else {
@@ -64,9 +57,8 @@ check_parameters_size(transfer_category);
   };
 
   if (tc_deposit == transfer_category) {
-    call_deposit(s2name(static_cast<uint64_t>(index_from)), 
-    s2name(index_to), quantity, 
-    0!=s2int(index_notify));
+    call_deposit(s2name(static_cast<uint64_t>(index_from)), s2name(index_to),
+                 quantity, 0 != s2int(index_notify));
     transfer(_self, riskctrl_account, quantity, memo);
   } else {
 
@@ -81,37 +73,37 @@ check_parameters_size(transfer_category);
       oracle_transfer(_self, consumer_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_complain:
-      _complain(account, s2int(index_id), quantity, 
-      parameters[index_reason],
+      _complain(account, s2int(index_id), quantity, parameters[index_reason],
                 arbi_method_type::multiple_rounds);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_arbitrator:
-  
-      regarbitrat(account, eosio::public_key(), s2int(index_type), quantity, "");
+
+      regarbitrat(account, eosio::public_key(), s2int(index_type), quantity,
+                  "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_resp_case:
 
-      _respcase(account, s2int(index_id), quantity,s2int(index_round));
+      _respcase(account, s2int(index_id), quantity, s2int(index_round));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case ts_arbitration_stake_reappeal:
 
       _reappeal(account, s2int(index_arbi_id), s2int(index_id),
-       s2int(index_round), 0 != s2int(index_provider), quantity, 
-       parameters[index_reason]);
+                s2int(index_round), 0 != s2int(index_provider), quantity,
+                parameters[index_reason]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_reresp_case:
-      _rerespcase(account, s2int(index_id), quantity,s2int(index_round));
+      _rerespcase(account, s2int(index_id), quantity, s2int(index_round));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     default:
       //  check(false, "unknown  transfer category ");
       break;
     }
-         }
+  }
 }
 
 /**
@@ -122,12 +114,12 @@ check_parameters_size(transfer_category);
  * @param quantity
  * @param memo
  */
-void bos_oracle::transfer(name from, name to, asset quantity, string memo) 
-{
-  oracle_transfer( from,  to,  quantity,  memo,false) ;
+void bos_oracle::transfer(name from, name to, asset quantity, string memo) {
+  oracle_transfer(from, to, quantity, memo, false);
 }
 
-void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo,bool is_deferred) {
+void bos_oracle::oracle_transfer(name from, name to, asset quantity,
+                                 string memo, bool is_deferred) {
   check(from != to, "cannot transfer to self");
   //  require_auth( from );
   check(is_account(to), "to account does not exist");
@@ -148,42 +140,40 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo
   //          transfer_act.send( account, consumer_account, amount, memo );
 
   //  auto payer = has_auth( to ) ? to : from;
-  //print("===quantity");
+  // print("===quantity");
   quantity.print();
-  
-  if(!is_deferred)
-  {
- action(permission_level{from, "active"_n}, token_account, "transfer"_n,
-         std::make_tuple(from, to, quantity, memo))
-      .send();
-  }
- else{
+
+  if (!is_deferred) {
+    action(permission_level{from, "active"_n}, token_account, "transfer"_n,
+           std::make_tuple(from, to, quantity, memo))
+        .send();
+  } else {
     transaction t;
-    t.actions.emplace_back(
-        permission_level{from, active_permission}, token_account, "transfer"_n,
-        std::make_tuple(from, to, quantity, memo));
+    t.actions.emplace_back(permission_level{from, active_permission},
+                           token_account, "transfer"_n,
+                           std::make_tuple(from, to, quantity, memo));
     t.delay_sec = 0;
     uint128_t deferred_id =
         (uint128_t(to.value) << 64) | time_point_sec(now()).sec_since_epoch();
     cancel_deferred(deferred_id);
-    t.send(deferred_id, _self,true);
-}
+    t.send(deferred_id, _self, true);
+  }
 
-  // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from, active_permission}, {to, active_permission}},{from, to, quantity, memo});
-
+  // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from,
+  // active_permission}, {to, active_permission}},{from, to, quantity, memo});
 }
 
 /// from dapp user to dapp
-void bos_oracle::deposit(name from, name to,
-                         asset quantity, string memo, bool is_notify) {
-  //print("=================deposit");
+void bos_oracle::deposit(name from, name to, asset quantity, string memo,
+                         bool is_notify) {
+  // print("=================deposit");
   require_auth(_self);
-  call_deposit(  from,  to,  quantity,   is_notify);
+  call_deposit(from, to, quantity, is_notify);
 }
 
-void bos_oracle::call_deposit( name from, name to,
-                         asset quantity,  bool is_notify) {
-  
+void bos_oracle::call_deposit(name from, name to, asset quantity,
+                              bool is_notify) {
+
   // transfer(from, to, quantity, memo);
 
   // auto payer = has_auth(to) ? to : from;
@@ -214,7 +204,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   auto acc_idx = svcsubstable.get_index<"byaccount"_n>();
   auto svcsubs_itr = acc_idx.find(from.value);
   check(svcsubs_itr != acc_idx.end(), "account does not subscribe services");
-  
+
   // find stake
   data_service_stakes svcstaketable(_self, _self.value);
   auto svcstake_itr = svcstaketable.find(svcsubs_itr->service_id);
@@ -222,13 +212,13 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   // check(  svcstake_itr->total_stake_amount- svcstake_itr->freeze_amount >
   // quantity, " no service stake  found" );
   //
-  //print("========77777=subsr");
+  // print("========77777=subsr");
   uint64_t time_length = 1;
   if (svcstake_itr->amount - svcstake_itr->freeze_amount >= quantity) {
-    //print("=========subsr");
+    // print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
-    //print("======free===subsr");
+    // print("======free===subsr");
     // transfer(from, to, quantity, memo);
     add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
                time_length, quantity);
@@ -244,7 +234,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
 
     /// delay time length
 
-    //print("===delay======subsr");
+    // print("===delay======subsr");
     add_delay(svcsubs_itr->service_id, from, time_point_sec(now()), time_length,
               quantity);
 
@@ -300,7 +290,6 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   uint64_t average_amount = amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
   uint64_t real_freeze_amount = 0;
- 
 
   std::set<name> finish_providers;
   for (const auto &p : providers) {
@@ -350,7 +339,6 @@ bos_oracle::freeze_providers_amount(uint64_t service_id,
   uint64_t average_amount = freeze_amount.amount / providers.size();
   uint64_t unfreeze_amount = 0;
   uint64_t real_freeze_amount = 0;
- 
 
   std::set<name> finish_providers;
   for (const auto &p : providers) {
@@ -382,7 +370,8 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
 
   data_providers providertable(_self, _self.value);
   auto provider_itr = providertable.find(account.value);
-  check(provider_itr != providertable.end(), "no provider found in freeze asset");
+  check(provider_itr != providertable.end(),
+        "no provider found in freeze asset");
 
   data_service_provisions provisionstable(_self, service_id);
 
@@ -420,9 +409,10 @@ void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
   account_freeze_stats freezestatstable(_self, service_id);
   auto freeze_stats = freezestatstable.find(account.value);
   if (freeze_stats == freezestatstable.end()) {
-    freezestatstable.emplace(_self, [&](auto &f) { 
-       f.account = account;
-      f.amount = amount; });
+    freezestatstable.emplace(_self, [&](auto &f) {
+      f.account = account;
+      f.amount = amount;
+    });
   } else {
     freezestatstable.modify(freeze_stats, same_payer,
                             [&](auto &f) { f.amount += amount; });
@@ -431,9 +421,10 @@ void bos_oracle::add_freeze_stat(uint64_t service_id, name account,
   service_freeze_stats svcfreezestatstable(_self, service_id);
   auto svcfreeze_stats = svcfreezestatstable.find(service_id);
   if (svcfreeze_stats == svcfreezestatstable.end()) {
-    svcfreezestatstable.emplace(_self, [&](auto &s) { 
+    svcfreezestatstable.emplace(_self, [&](auto &s) {
       s.service_id = service_id;
-      s.amount = amount; });
+      s.amount = amount;
+    });
   } else {
     svcfreezestatstable.modify(svcfreeze_stats, same_payer,
                                [&](auto &s) { s.amount += amount; });
@@ -492,7 +483,7 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
  * @param value
  */
 void bos_oracle::sub_balance(name owner, asset value) {
-  //print("======================123789");
+  // print("======================123789");
   riskcontrol_accounts dapp_acnts(_self, owner.value);
 
   const auto &dapp =
@@ -503,23 +494,23 @@ void bos_oracle::sub_balance(name owner, asset value) {
 }
 
 void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
-  //print("======================789");
-  //print("<<<");
-  //print(value.symbol.code().raw());
-  //print(">>>");
-  //print("<<<");
-  //print(owner.value);
-  //print(">>>");
-  //print("<<<");
-  //print(_self.value);
-  //print(">>>");
+  // print("======================789");
+  // print("<<<");
+  // print(value.symbol.code().raw());
+  // print(">>>");
+  // print("<<<");
+  // print(owner.value);
+  // print(">>>");
+  // print("<<<");
+  // print(_self.value);
+  // print(">>>");
   riskcontrol_accounts dapp_acnts(_self, owner.value);
   auto dapp = dapp_acnts.find(value.symbol.code().raw());
   if (dapp == dapp_acnts.end()) {
-      //print("======================a789");
-    dapp_acnts.emplace(ram_payer, [&](auto &a) {  a.balance = value; });
+    // print("======================a789");
+    dapp_acnts.emplace(ram_payer, [&](auto &a) { a.balance = value; });
   } else {
-      //print("======================m789");
+    // print("======================m789");
     dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
   }
 }
