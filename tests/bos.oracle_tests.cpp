@@ -416,7 +416,7 @@ public:
 
 //provider
    action_result regservice(
-      uint64_t service_id, name account, asset stake_amount,
+      uint64_t service_id, name account, asset amount,
       asset service_price, uint64_t fee_type, std::string data_format,
       uint64_t data_type, std::string criteria, uint64_t acceptance,
       std::string declaration, uint64_t injection_method,
@@ -426,7 +426,7 @@ public:
       return push_action( account, N(regservice), mvo()
            ( "service_id", service_id)
            ( "account", account)
-           ( "stake_amount", stake_amount)
+           ( "amount", amount)
            ( "service_price", service_price)
            ( "fee_type", fee_type)
            ( "data_format", data_format)
@@ -462,12 +462,12 @@ public:
 
    action_result stakeasset( uint64_t service_id, 
                                      name account, 
-                                     asset stake_amount,
+                                     asset amount,
                                      string memo){
       return push_action( account, N(stakeasset), mvo()
            ( "service_id", service_id)
            ( "account", account)
-           ( "stake_amount", stake_amount)
+           ( "amount", amount)
            ( "memo", memo)
       );
    }
@@ -671,7 +671,7 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
   asset service_price = core_sym::from_string("1.0000");
-  asset stake_amount = core_sym::from_string("10.0000");
+  asset amount = core_sym::from_string("10.0000");
   asset risk_control_amount = core_sym::from_string("0.0000");
   asset pause_service_stake_amount = core_sym::from_string("0.0000");
   std::string data_format = "";
@@ -681,7 +681,7 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
   bool emergency_flag = false;
 //   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, stake_amount, service_price,
+  auto token = regservice(service_id, account, amount, service_price,
                           fee_type, data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
@@ -696,16 +696,16 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
 }
 
 /// stake asset
- void stake_asset(uint64_t service_id, name account, asset stake_amount)
+ void stake_asset(uint64_t service_id, name account, asset amount)
   {
 //  uint64_t service_id = new_service_id;
 //   name account = N(alice);
-//   asset stake_amount = core_sym::from_string("1.0000");
+//   asset amount = core_sym::from_string("1.0000");
   string memo = "";
 //   push_action();
    push_permission_update_auth_action(account);
-  auto token = stakeasset(service_id, account, stake_amount,memo);
-//   BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+  auto token = stakeasset(service_id, account, amount,memo);
+//   BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
   }
 
 /// add fee type
@@ -836,7 +836,7 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
   asset service_price = core_sym::from_string("1.0000");
-  asset stake_amount = core_sym::from_string("10.0000");
+  asset amount = core_sym::from_string("10.0000");
   asset risk_control_amount = core_sym::from_string("0.0000");
   asset pause_service_stake_amount = core_sym::from_string("0.0000");
   std::string data_format = "";
@@ -846,7 +846,7 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
   bool emergency_flag = false;
   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, stake_amount, service_price,
+  auto token = regservice(service_id, account, amount, service_price,
                           fee_type, data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
@@ -874,7 +874,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
       ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
       ("guarantee_id", guarantee_id)
       ("service_price", service_price)
-      ("stake_amount", core_sym::from_string("0.0000"))
+      ("amount", core_sym::from_string("0.0000"))
       ("risk_control_amount",  risk_control_amount)
       ("pause_service_stake_amount", pause_service_stake_amount)
       ("data_format", data_format)
@@ -886,7 +886,7 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
   );
 
 BOOST_TEST("" == "reg service after");
-//  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+//  BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
       // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
       // BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
     
@@ -914,14 +914,14 @@ BOOST_TEST("" == "reg service after");
   {
  uint64_t service_id = new_service_id;
   name account = N(alice);
-  asset stake_amount = core_sym::from_string("1.0000");
+  asset amount = core_sym::from_string("1.0000");
   string memo = "";
 //   push_action();
 BOOST_TEST("" == "push_permission_update_auth_action before");
    push_permission_update_auth_action(account);
    BOOST_TEST("" == "push_permission_update_auth_action");
-  auto token = stakeasset(service_id, account, stake_amount,memo);
-  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+  auto token = stakeasset(service_id, account, amount,memo);
+  BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
   }
 
   // subscribe service
@@ -1103,14 +1103,14 @@ BOOST_TEST("" == "====reg test true");
   {
  uint64_t service_id = new_service_id;
   name account = N(alice);
-  asset stake_amount = core_sym::from_string("1.0000");
+  asset amount = core_sym::from_string("1.0000");
   string memo = "";
 //   push_action();
 BOOST_TEST("" == "push_permission_update_auth_action before");
    push_permission_update_auth_action(account);
    BOOST_TEST("" == "push_permission_update_auth_action");
-  auto token = stakeasset(service_id, account, stake_amount,memo);
-  BOOST_TEST_REQUIRE( stake_amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
+  auto token = stakeasset(service_id, account, amount,memo);
+  BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
   }
  
 } FC_LOG_AND_RETHROW()

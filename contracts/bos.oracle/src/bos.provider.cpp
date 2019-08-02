@@ -10,7 +10,7 @@ using std::string;
  *
  * @param service_id
  * @param account
- * @param stake_amount
+ * @param amount
  * @param service_price
  * @param fee_type
  * @param data_format
@@ -25,7 +25,7 @@ using std::string;
  * @param update_start_time
  */
 void bos_oracle::regservice(uint64_t service_id, name account,
-                            asset stake_amount, asset service_price,
+                            asset amount, asset service_price,
                             uint64_t fee_type, std::string data_format,
                             uint64_t data_type, std::string criteria,
                             uint64_t acceptance, std::string declaration,
@@ -56,7 +56,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
       s.acceptance = acceptance;
       s.declaration = declaration;
       s.injection_method = injection_method;
-      s.stake_amount = asset(0,core_symbol());//stake_amount;
+      s.amount = asset(0,core_symbol());//amount;
       s.duration = duration;
       s.provider_limit = provider_limit;
       s.update_cycle = update_cycle;
@@ -75,7 +75,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     });
   }
     //print("=====1");
-  // transfer(account, provider_account, stake_amount, "");
+  // transfer(account, provider_account, amount, "");
     //print("=====1");
   // add provider
   data_providers providertable(_self, _self.value);
@@ -83,7 +83,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   if (provider_itr == providertable.end()) {
     providertable.emplace(_self, [&](auto &p) {
       p.account = account;
-      p.total_stake_amount = asset(0,core_symbol());//stake_amount;
+      p.total_stake_amount = asset(0,core_symbol());//amount;
       // p.pubkey = "";
       p.total_freeze_amount = asset(0, core_symbol());
       p.unconfirmed_amount = asset(0, core_symbol());
@@ -92,7 +92,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
     });
   } else {
     providertable.modify(provider_itr, same_payer, [&](auto &p) {
-      p.total_stake_amount += asset(0,core_symbol());//stake_amount;
+      p.total_stake_amount += asset(0,core_symbol());//amount;
     });
   }
     //print("===service_id==");
@@ -105,7 +105,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   provisionstable.emplace(_self, [&](auto &p) {
     p.service_id = new_service_id;
     p.account = account;
-    p.stake_amount = asset(0, core_symbol());
+    p.amount = asset(0, core_symbol());
     p.freeze_amount = asset(0, core_symbol());
     p.service_income = asset(0, core_symbol());
     p.status = provision_status::provision_reg;
@@ -130,7 +130,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   {
  svcstaketable.emplace(_self, [&](auto &ss) {
       ss.service_id = new_service_id;
-      ss.stake_amount = asset(0,core_symbol());//stake_amount;
+      ss.amount = asset(0,core_symbol());//amount;
       ss.freeze_amount = asset(0, core_symbol());
       ss.unconfirmed_amount = asset(0, core_symbol());
   });
@@ -139,7 +139,7 @@ void bos_oracle::regservice(uint64_t service_id, name account,
   {
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { 
-                           ss.stake_amount += asset(0,core_symbol());//stake_amount;
+                           ss.amount += asset(0,core_symbol());//amount;
                           });
   }
 
@@ -147,18 +147,18 @@ void bos_oracle::regservice(uint64_t service_id, name account,
 }
 
 void bos_oracle::unstakeasset(uint64_t service_id, name account,
-                              asset stake_amount, std::string memo) {
+                              asset amount, std::string memo) {
   require_auth(account);
-  stake_asset(service_id, account, -stake_amount);
+  stake_asset(service_id, account, -amount);
 }
 
 void bos_oracle::stakeasset(uint64_t service_id, name account,
-                            asset stake_amount, std::string memo) {
+                            asset amount, std::string memo) {
   require_auth(account);
-  check (stake_amount.amount > 0,"stake amount could not equal zero") ;
-  transfer(account, provider_account, stake_amount, "");
+  check (amount.amount > 0,"stake amount could not equal zero") ;
+  transfer(account, provider_account, amount, "");
   
-  stake_asset(service_id, account, stake_amount);
+  stake_asset(service_id, account, amount);
 }
 
 /**
@@ -166,13 +166,13 @@ void bos_oracle::stakeasset(uint64_t service_id, name account,
  *
  * @param service_id
  * @param account
- * @param stake_amount
+ * @param amount
  */
 void bos_oracle::stake_asset(uint64_t service_id, name account,
-                             asset stake_amount) {
+                             asset amount) {
  
-  // if (stake_amount.amount > 0) {
-  //    transfer(account, provider_account, stake_amount, "");
+  // if (amount.amount > 0) {
+  //    transfer(account, provider_account, amount, "");
   // }
 
   data_providers providertable(_self, _self.value);
@@ -185,24 +185,24 @@ void bos_oracle::stake_asset(uint64_t service_id, name account,
   check(provision_itr != provisionstable.end(),
         "account does not subscribe services");
 
-  if (stake_amount.amount < 0) {
+  if (amount.amount < 0) {
     check(provider_itr->total_stake_amount >=
-              asset(std::abs(stake_amount.amount), core_symbol()),
+              asset(std::abs(amount.amount), core_symbol()),
           "");
-    check(provision_itr->stake_amount >=
-              asset(std::abs(stake_amount.amount), core_symbol()),
+    check(provision_itr->amount >=
+              asset(std::abs(amount.amount), core_symbol()),
           "");
   }
 
   providertable.modify(provider_itr, same_payer,
-                       [&](auto &p) { p.total_stake_amount += stake_amount; });
+                       [&](auto &p) { p.total_stake_amount += amount; });
 
   provisionstable.modify(provision_itr, same_payer,
-                         [&](auto &p) { p.stake_amount += stake_amount; });
+                         [&](auto &p) { p.amount += amount; });
 
-  if (stake_amount.amount < 0) {
+  if (amount.amount < 0) {
     transfer(provider_account, account,
-             asset(std::abs(stake_amount.amount), core_symbol()), "");
+             asset(std::abs(amount.amount), core_symbol()), "");
   }
 
 
@@ -211,14 +211,14 @@ void bos_oracle::stake_asset(uint64_t service_id, name account,
   if(svcstake_itr == svcstaketable.end())
   {
  svcstaketable.emplace(_self, [&](auto &ss) {
-      ss.stake_amount = stake_amount;
+      ss.amount = amount;
       ss.freeze_amount = asset(0, core_symbol());
   });
   }
   else
   {
     svcstaketable.modify(svcstake_itr, same_payer,
-                         [&](auto &ss) { ss.stake_amount += stake_amount; });
+                         [&](auto &ss) { ss.amount += amount; });
   }
 
 
@@ -639,7 +639,7 @@ void bos_oracle::claim(name account, name receive_account) {
   providertable.modify(provider_itr, same_payer,
                        [&](auto &p) { p.claim_amount += new_income; });
 
-  transfer(consumer_account, account, new_income, "claim");
+  transfer(consumer_account, receive_account, new_income, "claim");
   
 }
 
@@ -704,11 +704,11 @@ void bos_oracle::unregservice(uint64_t service_id, name account,
     provservicestable.erase(provservice_itr);
 
     asset freeze_amount = asset(0, core_symbol()); /// calculates  unfinish code
-    asset stake_amount = asset(0, core_symbol());
+    asset amount = asset(0, core_symbol());
     check(asset(0, core_symbol()) == freeze_amount,
           "freeze amount must equal zero");
 
-    transfer(provider_account, account, stake_amount, "");
+    transfer(provider_account, account, amount, "");
   }
 
 
@@ -819,7 +819,7 @@ uint64_t bos_oracle::get_provider_count(uint64_t service_id) {
   uint64_t  providers_count = 0;
   
   for (const auto &p : provisionstable) {
-     if (p.status == provision_status::provision_reg && p.stake_amount.amount-p.freeze_amount.amount > 0) {
+     if (p.status == provision_status::provision_reg && p.amount.amount-p.freeze_amount.amount > 0) {
       providers_count++;
     }
   }

@@ -24,7 +24,7 @@ using std::string;
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_stake{
   uint64_t          service_id;
-  asset stake_amount;
+  asset amount;
   asset freeze_amount;
   asset unconfirmed_amount;
 

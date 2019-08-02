@@ -10,58 +10,108 @@
 
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) 
  {
-        //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
-         print_f("On notify : % % % %", from, to, quantity, memo);
-         if(memo.empty())
-         {
-           //print("memo is empty on trasfer");
-           return;
+  //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
+  print_f("On notify : % % % %", from, to, quantity, memo);
+  if (memo.empty()) {
+    // print("memo is empty on trasfer");
+    return;
+  }
+
+  //  check(quantity.amount>100, "amount could not be less than 100");
+  //
+  // check(find(to) != end, "no account's business found ");
+
+  std::vector<std::string> parameters = bos_util::get_parameters(memo);
+  check(parameters.size() > 0, "parse memo failed ");
+    uint64_t transfer_category =
+      bos_util::convert_to_int(parameters[index_category]);
+
+  auto check_parameters_size = [&](uint64_t category){
+std::vector<uint8_t> index_counts = 
+ {arbitrator_count,
+arbitrator_count,
+deposit_count,
+complain_count,
+arbitrator_count,
+resp_case_count,
+reappeal_count,
+reresp_case_count,
+};
+check(category>=0 &&  category < index_counts.size(), "unknown category");
+
+check(parameters.size() == index_counts[category], "the parameters'size does not match ");
+};
+
+check_parameters_size(transfer_category);
+
+
+  auto s2name = [&](uint64_t index) -> name {
+    if (index >= 0 && index < parameters.size()) {
+      return name(parameters[index]);
+    } else {
+      print("index invalid", index, parameters.size());
+    }
+
+    return name("s");
+  };
+  auto s2int = [&](uint64_t index)->uint64_t{
+    if (index >= 0 && index < parameters.size()) {
+      return bos_util::convert_to_int(parameters[index]);
+    } else {
+      print("index invalid", index, parameters.size());
+    }
+    return 0;
+  };
+
+  if (tc_deposit == transfer_category) {
+    call_deposit(s2name(static_cast<uint64_t>(index_from)), 
+    s2name(index_to), quantity, 
+    0!=s2int(index_notify));
+    transfer(_self, riskctrl_account, quantity, memo);
+  } else {
+
+    name account = from;
+    switch (transfer_category) {
+    case tc_service_stake:
+      stake_asset(s2int(index_id), account, quantity);
+      oracle_transfer(_self, provider_account, quantity, memo, true);
+      break;
+    case tc_pay_service:
+      pay_service(s2int(index_id), account, quantity);
+      oracle_transfer(_self, consumer_account, quantity, memo, true);
+      break;
+    case tc_arbitration_stake_complain:
+      _complain(account, s2int(index_id), quantity, 
+      parameters[index_reason],
+                arbi_method_type::multiple_rounds);
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    case tc_arbitration_stake_arbitrator:
+  
+      regarbitrat(account, eosio::public_key(), s2int(index_type), quantity, "");
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    case tc_arbitration_stake_resp_case:
+
+      _respcase(account, s2int(index_id), quantity,s2int(index_round));
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    case ts_arbitration_stake_reappeal:
+
+      _reappeal(account, s2int(index_arbi_id), s2int(index_id),
+       s2int(index_round), 0 != s2int(index_provider), quantity, 
+       parameters[index_reason]);
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    case tc_arbitration_stake_reresp_case:
+      _rerespcase(account, s2int(index_id), quantity,s2int(index_round));
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    default:
+      //  check(false, "unknown  transfer category ");
+      break;
+    }
          }
-
-//  check(quantity.amount>100, "amount could not be less than 100");
-//
-// check(find(to) != end, "no account's business found ");
-
-           std::vector<std::string> parameters = bos_util::get_parameters(memo);
-        check(parameters.size()>0, "parse memo failed ");
-         uint64_t transfer_category =
-             bos_util::convert_to_int(parameters[memo_index::index_category]);
-         if (tc_deposit == transfer_category) {
-           check(parameters.size() == memo_index_deposit::deposit_count,
-                 "wrong deposit's memo format  ");
-                     name  deposit_from =
-             name(parameters[memo_index_deposit::deposit_from]);
-                name  deposit_to =
-             name(parameters[memo_index_deposit::deposit_to]);
-             uint64_t deposit_notify = bos_util::convert_to_int(parameters[memo_index_deposit::deposit_notify]);
-
-             call_deposit(deposit_from, deposit_to, quantity, deposit_notify);
-             transfer(_self, riskctrl_account, quantity, memo);
-         } else {
-           check(parameters.size() == memo_index::index_count,
-                 "wrong memo format ");
-           uint64_t id =
-               bos_util::convert_to_int(parameters[memo_index::index_service]);
-           name account = from;
-           switch (transfer_category) {
-           case tc_service_stake:
-             stake_asset(id, account, quantity);
-            oracle_transfer(_self, provider_account, quantity, memo,true);
-             break;
-           case tc_pay_service:
-             pay_service(id, account, quantity);
-            oracle_transfer(_self, consumer_account, quantity, memo,true);
-             break;
-           case tc_arbitration_stake:
-            // stake_arbitration(id,account,quantity);
-            oracle_transfer(_self, arbitrat_account, quantity, memo,true);
-             break;
-           default:
-             check(false, "unknown  transfer category ");
-             break;
-           }
-         }
-
 }
 
 /**
@@ -174,7 +224,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   //
   //print("========77777=subsr");
   uint64_t time_length = 1;
-  if (svcstake_itr->stake_amount - svcstake_itr->freeze_amount >= quantity) {
+  if (svcstake_itr->amount - svcstake_itr->freeze_amount >= quantity) {
     //print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
                          [&](auto &ss) { ss.freeze_amount += quantity; });

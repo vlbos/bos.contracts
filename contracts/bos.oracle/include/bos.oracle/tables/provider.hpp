@@ -22,7 +22,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t exceeded_risk_control_freeze_period;
   uint64_t guarantee_id;
   asset service_price;
-  asset stake_amount;
+  asset amount;
   asset risk_control_amount;
   asset pause_service_stake_amount;
   std::string data_format;
@@ -62,7 +62,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] provider_service {
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
   uint64_t service_id;
   name account;
-  asset stake_amount;
+  asset amount;
   asset freeze_amount;
   asset service_income;
   uint64_t status;
