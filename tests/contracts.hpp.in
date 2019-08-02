@@ -22,6 +22,12 @@ struct contracts {
    static std::vector<uint8_t> personal_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/personal.bos/personal.bos.wasm"); }
    static std::string          personal_wast() { return read_wast("${CMAKE_BINARY_DIR}/../contracts/personal.bos/personal.bos.wast"); }
    static std::vector<char>    personal_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/personal.bos/personal.bos.abi"); }
+   static std::vector<uint8_t> oracle_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/bos.oracle.wasm"); }
+   static std::string          oracle_wast() { return read_wast("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/bos.oracle.wast"); }
+   static std::vector<char>    oracle_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/bos.oracle.abi"); }
+   static std::vector<uint8_t> dappuser_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/bos.dappuser/bos.dappuser.wasm"); }
+   static std::string          dappuser_wast() { return read_wast("${CMAKE_BINARY_DIR}/../contracts/bos.dappuser/bos.dappuser.wast"); }
+   static std::vector<char>    dappuser_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/bos.dappuser/bos.dappuser.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
