@@ -11,7 +11,7 @@
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
   print_f("On notify : % % % %", from, to, quantity, memo);
-  if (memo.empty()) {
+  if (from ==_self || memo.empty()) {
     // print("memo is empty on trasfer");
     return;
   }

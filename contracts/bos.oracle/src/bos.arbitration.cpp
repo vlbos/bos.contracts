@@ -171,16 +171,16 @@ void bos_oracle::_respcase( name respondent, uint64_t arbitration_id, asset amou
     auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
     auto arbipro_iter = arbiprocess_tb.find( process_id );
     if ( arbipro_iter == arbiprocess_tb.end() ) {
-        uint64_t processid = 0;
+        uint64_t processid = arbitration_id<<8|process_id;
         // 第一次应诉, 创建第1个仲裁过程
         arbiprocess_tb.emplace( get_self(), [&]( auto& p ) {
-            p.process_id = arbiprocess_tb.available_primary_key();
+            p.process_id = processid;//arbiprocess_tb.available_primary_key();
             p.arbitration_id = arbitration_id;
             p.num_id = 1; // 仲裁过程为第一轮
             p.required_arbitrator = pow(2, p.num_id) + 1; // 每一轮需要的仲裁员的个数
             p.add_respondent(respondent);
             p.arbi_method = arbi_iter->arbi_method;
-            processid = p.process_id;
+            // processid = p.process_id;
         } );
         // 随机选择仲裁员
         random_chose_arbitrator(arbitration_id, process_id, arbi_iter->service_id, 3);
