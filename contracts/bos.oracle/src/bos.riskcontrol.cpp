@@ -25,18 +25,28 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   uint64_t transfer_category =
       bos_util::convert_to_int(parameters[index_category]);
 
-  auto check_parameters_size = [&](uint64_t category) {
+  auto check_parameters_size = [&](uint64_t category) -> bool {
     std::vector<uint8_t> index_counts = {
         arbitrator_count, arbitrator_count, deposit_count,  complain_count,
         arbitrator_count, resp_case_count,  reappeal_count, reresp_case_count,
     };
-    check(category >= 0 && category < index_counts.size(), "unknown category");
+    // check(category >= 0 && category < index_counts.size(), "unknown category");
 
-    check(parameters.size() == index_counts[category],
-          "the parameters'size does not match ");
+    // check(parameters.size() == index_counts[category],
+    //       "the parameters'size does not match ");
+
+    if (category >= 0 && category < index_counts.size() &&
+        parameters.size() == index_counts[category]) {
+      return true;
+    }
+
+    return false;
   };
 
-  check_parameters_size(transfer_category);
+  if (!check_parameters_size(transfer_category)) {
+    print("unknown category");
+    return;
+  }
 
   auto s2name = [&](uint64_t index) -> name {
     if (index >= 0 && index < parameters.size()) {
@@ -74,7 +84,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       break;
     case tc_arbitration_stake_complain:
       _complain(account, s2int(index_id), quantity, parameters[index_reason],
-                arbi_method_type::multiple_rounds);
+                arbi_method_type::multiple_rounds,parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_arbitrator:
@@ -85,22 +95,27 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       break;
     case tc_arbitration_stake_resp_case:
 
-      _respcase(account, s2int(index_id), quantity, s2int(index_round));
+      _respcase(account, s2int(index_id), quantity, s2int(index_round),parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case ts_arbitration_stake_reappeal:
 
       _reappeal(account, s2int(index_arbi_id), s2int(index_id),
                 s2int(index_round), 0 != s2int(index_provider), quantity,
-                parameters[index_reason]);
+                parameters[index_reason],parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_reresp_case:
-      _rerespcase(account, s2int(index_id), quantity, s2int(index_round));
+      _rerespcase(account, s2int(index_id), quantity, s2int(index_round),parameters[index_evidence]);
+      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+      break;
+    case tc_risk_guarantee:
+      add_guarantee( s2int(index_id),account, quantity, s2int(index_duration));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     default:
       //  check(false, "unknown  transfer category ");
+      print("unknown  transfer category ");
       break;
     }
   }
@@ -457,8 +472,7 @@ std::tuple<asset, asset> bos_oracle::get_freeze_stat(uint64_t service_id,
  * @return uint64_t
  */
 uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
-                                   time_point_sec start_time, uint64_t duration,
-                                   asset amount, uint64_t status) {
+                                   asset amount, uint64_t duration) {
   risk_guarantees guaranteetable(_self, _self.value);
 
   uint64_t risk_id = 0;
@@ -466,9 +480,9 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
     g.risk_id = guaranteetable.available_primary_key();
     g.account = account;
     g.amount = amount;
-    g.start_time = start_time;
+    g.start_time = time_point_sec(now());
     g.duration = duration;
-    g.status = status;
+    g.status = 0;
     //  g.sig = sig;
     risk_id = g.risk_id;
   });
@@ -514,3 +528,4 @@ void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
     dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
   }
 }
+

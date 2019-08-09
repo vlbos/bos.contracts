@@ -40,9 +40,9 @@ using std::string;
     //   ethbtc.set(p, _self);
     //   return;
     // }
-    //print("#################");
-    //print(p.c_str());
-    //print("!!!!!!!!!!!!!!!!!!");
+    // print("#################");
+    // print(p.c_str());
+    // print("!!!!!!!!!!!!!!!!!!");
     // eosio_assert(false, p.c_str());
   }
 

@@ -143,7 +143,7 @@ public:
                                    string data_json, bool is_request);
 
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
-                                  name contract_account, name action_name,
+                                  uint64_t update_number,
                                   uint64_t request_id, string data_json);
   [[eosio::action]] void innerpush(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
@@ -240,15 +240,29 @@ public:
   /// bos.riskctrl begin
   ///
   ///
-  [[eosio::action]] void deposit( name from, name to,
-                                 asset quantity, string memo, bool is_notify);
+
+  
+  /**
+   * @brief 
+   * 
+   * @param from 
+   * @param to 
+   * @param quantity 
+   * @param memo 
+   * @param is_notify 
+   */
+  [[eosio::action]] void deposit( name from, name to,asset quantity, string memo, bool is_notify);
   [[eosio::action]] void withdraw(uint64_t service_id, name from, name to,
                                   asset quantity, string memo);
+
+
+
 
   using deposit_action =
       eosio::action_wrapper<"deposit"_n, &bos_oracle::deposit>;
   using withdraw_action =
       eosio::action_wrapper<"withdraw"_n, &bos_oracle::withdraw>;
+
   ///
   ///
   /// bos.riskctrl end
@@ -260,19 +274,19 @@ public:
   ///
     [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info );
 
-    [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
+    [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence );
 
-    [[eosio::action]] void respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id );
+    [[eosio::action]] void respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id , std::string evidence );
 
     [[eosio::action]] void acceptarbi( name arbitrator,  uint64_t arbitration_id, uint64_t process_id );
 
-    [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, std::string evidence );
+    [[eosio::action]] void uploadeviden( name applicant, uint64_t arbitration_id, uint64_t process_id,std::string evidence );
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
-    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason );
+    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence );
     
-    [[eosio::action]] void rerespcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id);
+    [[eosio::action]] void rerespcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id, std::string evidence );
     
     [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type);
 
@@ -344,8 +358,7 @@ std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_services_update_
                  uint64_t duration, asset amount);
 
   uint64_t add_guarantee(uint64_t service_id, name account,
-                         time_point_sec start_time, uint64_t duration,
-                         asset amount, uint64_t status);
+                         asset amount             ,        uint64_t duration);
   void sub_balance(name owner, asset value);
   void add_balance(name owner, asset value, name ram_payer);
 
@@ -359,10 +372,10 @@ std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_services_update_
 
 /// arbitration
     void _regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info );
-    void _complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method );
-    void _respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id );
-    void _reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason );
-    void _rerespcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id);
+    void _complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method, std::string evidence  );
+    void _respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id, std::string evidence  );
+    void _reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence );
+    void _rerespcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence );
 
     void handle_arbitration(uint64_t arbitration_id);
     void handle_arbitration_result(uint64_t arbitration_id);

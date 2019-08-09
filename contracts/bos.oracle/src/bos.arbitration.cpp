@@ -46,12 +46,12 @@ void bos_oracle::_regarbitrat( name account, public_key pubkey, uint8_t type, as
 /**
  * 申诉者申诉
  */
-void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method ) {
+void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence) {
     require_auth( applicant );
-    _complain(  applicant,  service_id,  amount,  reason,  arbi_method ) ;
+    _complain(  applicant,  service_id,  amount,  reason,  arbi_method ,evidence) ;
 }
 
-void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method ) {
+void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence) {
    
     check( arbi_method == arbi_method_type::public_arbitration || arbi_method_type::multiple_rounds, "`arbi_method` can only be 1 or 2." );
 
@@ -145,17 +145,22 @@ void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, s
     }
     check(hasProvider, "no provider");
     timeout_deferred(arbi_id, 0,arbitration_timer_type::resp_appeal_timeout, eosio::hours(10).to_seconds());
+
+    if(!evidence.empty())
+    {
+        uploadeviden(  applicant, arbi_id,  1, evidence );
+    }
 }
 
 /**
  * (数据提供者/数据使用者)应诉
  */
-void bos_oracle::respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id) {
+void bos_oracle::respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence) {
     require_auth( respondent );
-    _respcase(  respondent,  arbitration_id,  amount, process_id);
+    _respcase(  respondent,  arbitration_id,  amount, process_id,evidence);
 }
 
-void bos_oracle::_respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id) {
+void bos_oracle::_respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence) {
    
     // 检查仲裁案件状态
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
@@ -191,11 +196,17 @@ void bos_oracle::_respcase( name respondent, uint64_t arbitration_id, asset amou
             p.add_respondent(respondent);
         } );
     }
+
+
+      if(!evidence.empty())
+    {
+        uploadeviden(  respondent, arbitration_id,  process_id, evidence );
+    }
 }
 
-void bos_oracle::uploadeviden( name applicant, uint64_t process_id, std::string evidence ) {
+void bos_oracle::uploadeviden( name applicant, uint64_t arbitration_id,uint64_t process_id, std::string evidence ) {
     require_auth( applicant );
-    auto arbiprocess_tb = arbitration_processs( get_self(), get_self().value );
+    auto arbiprocess_tb = arbitration_processs( get_self(), arbitration_id);
     auto arbipro_iter = arbiprocess_tb.find( process_id );
     check( arbipro_iter != arbiprocess_tb.end(), "Can not find such process.");
 
@@ -325,13 +336,13 @@ void bos_oracle::acceptarbi( name arbitrator,  uint64_t arbitration_id, uint64_t
  * 再申诉, 申诉者可以为数据提供者或者数据使用者
  */
 void bos_oracle::reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id,
-    uint64_t process_id, bool is_provider, asset amount, std::string reason ) {
+    uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence) {
     // 检查再申诉服务状态
     require_auth( applicant );
-    _reappeal(  applicant,  arbitration_id,  service_id, process_id,  is_provider,  amount,  reason ) ;
+    _reappeal(  applicant,  arbitration_id,  service_id, process_id,  is_provider,  amount,  reason ,evidence) ;
     }
 
-void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount,  std::string reason ) {
+void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount,  std::string reason , std::string evidence) {
     // 检查再申诉服务状态
 
     // 检查仲裁案件
@@ -400,17 +411,22 @@ void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t se
 
     // 等待对方应诉
     timeout_deferred(arbitration_id, process_id, arbitration_timer_type::resp_appeal_timeout, eosio::hours(10).to_seconds());
+
+      if(!evidence.empty())
+    {
+        uploadeviden(  applicant, arbitration_id,  process_id, evidence );
+    }
 }
 
 /**
  * 再次应诉
  * last_process_id 上一轮的仲裁过程ID
  */
-void bos_oracle::rerespcase( name respondent, uint64_t arbitration_id, asset amount, uint64_t last_process_id) {
+void bos_oracle::rerespcase( name respondent, uint64_t arbitration_id, asset amount, uint64_t last_process_id, std::string evidence) {
     require_auth( respondent );
-    _rerespcase(  respondent,  arbitration_id,  amount, last_process_id);
+    _rerespcase(  respondent,  arbitration_id,  amount, last_process_id,evidence);
 }
-void bos_oracle::_rerespcase( name respondent, uint64_t arbitration_id,  asset amount,uint64_t last_process_id) {
+void bos_oracle::_rerespcase( name respondent, uint64_t arbitration_id,  asset amount,uint64_t last_process_id, std::string evidence) {
     // 检查仲裁案件状态
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
     auto arbi_iter = arbicaseapp_tb.find( arbitration_id );
@@ -445,6 +461,11 @@ void bos_oracle::_rerespcase( name respondent, uint64_t arbitration_id,  asset a
     } );
     // 随机选择仲裁员
     random_chose_arbitrator(arbitration_id, process_id, arbi_iter->service_id, required_arbitrator);
+
+    if(!evidence.empty())
+    {
+        uploadeviden(  respondent, arbitration_id,  process_id, evidence );
+    }
 }
 
 /**

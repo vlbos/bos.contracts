@@ -33,14 +33,14 @@ enum injection_method : uint8_t {
 enum transfer_type : uint8_t { tt_freeze , tt_delay };
 enum transfer_category : uint8_t { tc_service_stake , tc_pay_service,tc_deposit,
 tc_arbitration_stake_complain,tc_arbitration_stake_arbitrator,tc_arbitration_stake_resp_case,
-ts_arbitration_stake_reappeal,tc_arbitration_stake_reresp_case };
+ts_arbitration_stake_reappeal,tc_arbitration_stake_reresp_case,tc_risk_guarantee};
 const uint8_t  index_category = 0;
 const uint8_t  index_from = 1;
 const uint8_t  index_to = 2;
 const uint8_t  index_notify = 3;
 const uint8_t  deposit_count = 4;
 
-const uint8_t  index_key = 2;
+const uint8_t  index_evidence = 3;
 const uint8_t  index_info = 3;
 const uint8_t  complain_count = 5;
 
@@ -48,27 +48,30 @@ const uint8_t  index_type = 1;
 const uint8_t  arbitrator_count = 2;
 
 
-const uint8_t  resp_case_count = 3;
-
-
-
+const uint8_t  resp_case_count = 4;
 
 const uint8_t  index_id = 1;
 const uint8_t  index_round = 2;
-const uint8_t  index_provider = 3;
-const uint8_t  index_reason = 4;
-const uint8_t  index_arbi_id = 5;
-const uint8_t  reappeal_count = 6;
+const uint8_t  index_provider = 4;
+const uint8_t  index_reason = 5;
+const uint8_t  index_arbi_id = 6;
+const uint8_t  reappeal_count = 7;
 
-const uint8_t  reresp_case_count = 4;
+const uint8_t  reresp_case_count = 5;
+
+const uint8_t  index_duration= 2;
+const uint8_t  risk_guarantee_case_count = 4;
+
+
 
 // enum class memo_index : uint8_t { index_category,index_id ,index_count};
 // enum class memo_index_deposit : uint8_t { deposit_category,deposit_from ,deposit_to,deposit_notify , index_count};
-// enum class memo_index_complain : uint8_t { complain_category,index_id ,index_key,index_info,index_reason,index_count};
+// enum class memo_index_complain : uint8_t { complain_category,index_id ,index_evidence,index_info,index_reason,index_count};
 // enum class memo_index_arbitrator : uint8_t { arbitrator_category,index_type ,index_count};
-// enum class memo_index_resp_case : uint8_t { resp_case_category,index_id ,index_round,index_count};
-// enum class memo_index_reappeal : uint8_t { reappeal_category,index_id ,index_round,index_provider,index_reason,index_arbi_id ,index_count};
-// enum class memo_index_reresp_case : uint8_t { reresp_case_category,index_id ,index_round,index_provider,index_count};
+// enum class memo_index_resp_case : uint8_t { resp_case_category,index_id ,index_round,index_evidence,index_count};
+// enum class memo_index_reappeal : uint8_t { reappeal_category,index_id ,index_round,index_evidence,index_provider,index_reason,index_arbi_id ,index_count};
+// enum class memo_index_reresp_case : uint8_t { reresp_case_category,index_id ,index_round,index_evidence,index_provider,index_count};
+// enum class memo_index_risk_guarantee : uint8_t { risk_guarantee_category,index_id ,index_duration,index_count};
 enum arbitration_timer_type: uint8_t {
   appeal_timeout,
   reappeal_timeout,

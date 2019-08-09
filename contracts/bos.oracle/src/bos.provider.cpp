@@ -188,10 +188,10 @@ void bos_oracle::stake_asset(uint64_t service_id, name account,
   if (amount.amount < 0) {
     check(provider_itr->total_stake_amount >=
               asset(std::abs(amount.amount), core_symbol()),
-          "");
+          "total stake amount should be greater than unstake asset amount");
     check(provision_itr->amount >=
               asset(std::abs(amount.amount), core_symbol()),
-          "");
+          "service stake amount should be greater than unstake asset amount");
   }
 
   providertable.modify(provider_itr, same_payer,
@@ -248,6 +248,11 @@ void bos_oracle::addfeetypes(uint64_t service_id,
 void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
                             asset service_price) {
   require_auth(_self);
+
+  data_services svctable(get_self(), get_self().value);
+    auto svc_iter = svctable.find(service_id);
+    check(svc_iter != svctable.end(), "no service id");
+    
   data_service_fees feetable(_self, service_id);
   check(fee_type >= fee_type::fee_times && fee_type < fee_type::fee_type_count,
         "unknown fee type");
@@ -331,12 +336,42 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
 }
 
 void bos_oracle::pushdata(uint64_t service_id, name provider,
-                          name contract_account, name action_name,
+                          uint64_t update_number,
                           uint64_t request_id, string data_json) {
+
+
                             //print("=====pushdata====");
                         //print(contract_account);
                         //print("====222===contract_account");
   require_auth(provider);
+
+  data_services svctable(get_self(), get_self().value);
+  auto svc_iter = svctable.find(service_id);
+  check(svc_iter != svctable.end(), "no service id");
+
+  if (svc_iter->data_type == data_type::data_deterministic) {
+    publishdata(service_id, provider, update_number, request_id, data_json);
+  } else {
+    multipublish(service_id, provider, data_json, false);
+  }
+
+
+  // s.data_type = data_type;
+  //     s.injection_method = injection_method;
+
+// enum data_type : uint8_t {
+//   data_deterministic,
+//   data_non_deterministic
+// };
+
+// enum injection_method : uint8_t {
+//   chain_direct,
+//   chain_indirect,
+//   chain_outside
+// };
+
+
+
   //  action(permission_level{_self, "active"_n},
   //          _self, "innerpush"_n,
   //          std::make_tuple(aservice_id,  provider,
@@ -352,16 +387,16 @@ void bos_oracle::pushdata(uint64_t service_id, name provider,
       //                      request_id, data_json );
       // }
 
- transaction t;
-    t.actions.emplace_back(
-        permission_level{_self, active_permission}, _self, "innerpush"_n,
-        std::make_tuple(service_id, provider, contract_account, action_name,
-                        request_id, data_json));
-    t.delay_sec = 0;
-    uint128_t deferred_id =
-        (uint128_t(service_id) << 64) | contract_account.value;
-    cancel_deferred(deferred_id);
-    t.send(deferred_id, _self,true);
+//  transaction t;
+//     t.actions.emplace_back(
+//         permission_level{_self, active_permission}, _self, "innerpush"_n,
+//         std::make_tuple(service_id, provider, contract_account, action_name,
+//                         request_id, data_json));
+//     t.delay_sec = 0;
+//     uint128_t deferred_id =
+//         (uint128_t(service_id) << 64) | contract_account.value;
+//     cancel_deferred(deferred_id);
+//     t.send(deferred_id, _self,true);
 
                           }
 /**
@@ -929,8 +964,6 @@ std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_serv
 
   return service_numbers;
 }
-
-
 
 
 // } // namespace bosoracle

@@ -275,7 +275,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         EOSIO_DISPATCH_HELPER(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
 (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(autopublish)(addfeetypes)(addfeetype)(claim)
 (subscribe)(requestdata)(payservice)(starttimer)
-(regarbitrat)(complain)(uploadeviden)(uploadresult)(acceptarbi)(respcase)
+(regarbitrat)(complain)(uploadeviden)(uploadresult)(acceptarbi)(respcase)(unstakearbi)(claimarbi)
 (deposit)(withdraw))
       }
     }
