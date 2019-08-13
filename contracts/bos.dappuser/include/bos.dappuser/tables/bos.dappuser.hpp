@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include "bos.dappuser/bos.types.hpp"
 #include "bos.oraclized.hpp"
 

@@ -1,9 +1,9 @@
 #include <string>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/action.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/system.h>
+#include <eosio/eosio.hpp>
+#include <eosio/action.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/time.hpp>
+#include <eosio/system.hpp>
 
 #include "bos.dappuser/bos.dappuser.hpp"
 
@@ -13,8 +13,8 @@ using std::string;
 
   void YOUR_CONTRACT_NAME::receive(name self, name code)
   {
-    eosio_assert(known_master != "undefined"_n, "Contract didn't setupped yet");
-    eosio_assert(code == known_master, "Unkown master contract");
+    check(known_master != "undefined"_n, "Contract didn't setupped yet");
+    check(code == known_master, "Unkown master contract");
     auto payload = unpack_action_data<push_data>();
 
     if (strcmp(payload.task.c_str(), "c0fe86756e446503eed0d3c6a9be9e6276018fead3cd038932cf9cc2b661d9de") == 0)
@@ -24,14 +24,14 @@ using std::string;
       return;
     }
 
-    eosio_assert(true, "Unknown task received");
+    check(true, "Unknown task received");
   }
 
   void YOUR_CONTRACT_NAME::receivejson(name self, name code)
   {
     
-    // eosio_assert(known_master != "undefined"_n, "Contract didn't setupped yet");
-    // eosio_assert(code == known_master, "Unkown master contract");
+    // check(known_master != "undefined"_n, "Contract didn't setupped yet");
+    // check(code == known_master, "Unkown master contract");
     auto payload = unpack_action_data<push_json>();
 
     // if (strcmp(payload.task.c_str(), "c0fe86756e446503eed0d3c6a9be9e6276018fead3cd038932cf9cc2b661d9de") == 0)
@@ -43,7 +43,7 @@ using std::string;
     // print("#################");
     // print(p.c_str());
     // print("!!!!!!!!!!!!!!!!!!");
-    // eosio_assert(false, p.c_str());
+    // check(false, p.c_str());
   }
 
  void YOUR_CONTRACT_NAME::fetchdata(name oracle,uint64_t service_id,uint64_t update_number)
@@ -86,7 +86,7 @@ using std::string;
     if (action == "onerror"_n.value) {
       /* onerror is only valid if it is for the "eosio" code account and
        * authorized by "eosio"'s "active permission */
-      eosio_assert(
+      check(
           code == "eosio"_n.value,
           "onerror action's are only valid from the \"eosio\" system account");
     }
@@ -107,7 +107,7 @@ using std::string;
       thiscontract.receive(name(receiver), name(code));
     }
 
-    if (code != self.value && action == "innerpush"_n.value) {
+    if (code != self.value && action == "oraclepush"_n.value) {
       thiscontract.receivejson(name(receiver), name(code));
     }
 

@@ -1,6 +1,6 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
 #include "bos.oracle/bos.constants.hpp"
 #include "bos.oracle/bos.functions.hpp"
 #include "bos.oracle/bos.types.hpp"

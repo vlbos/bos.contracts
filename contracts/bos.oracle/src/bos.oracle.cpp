@@ -2,20 +2,12 @@
 
   bos_oracle
 
-  Author: Guillaume "Gnome" Babin-Tremblay - EOS Titan
-  
-  Website: https://eostitan.com
-  Email: guillaume@eostitan.com
-
-  Github: https://github.com/eostitan/bos_oracle/
-  
-  Published under MIT License
 
 */
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/fixedpoint.hpp>
-#include <eosiolib/chain.h>
+#include <eosio/eosio.hpp>
+// #include <eosio/fixedpoint.hpp>
+// #include <eosio/chain.h>
 #include "bos.oracle/bos.oracle.hpp"
 #include "bos.oraclize.cpp"
 #include "bos.provider.cpp"
@@ -40,17 +32,17 @@ using namespace eosio;
         else itr++;
     }
 
-    capi_name producers[21] = { {} };
-    uint32_t bytes_populated = get_active_producers(producers, sizeof(name)*21);
+    // // capi_name producers[21] = { {} };
+    // uint32_t bytes_populated = 0;//get_active_producers(producers, sizeof(name)*21);
     
    
 
-    //Account is oracle if account is an active producer
-    for(int i = 0; i < 21; i=i+1 ) {
-      if (producers[i] == owner.value){
-        return true;
-      }
-    }
+    // //Account is oracle if account is an active producer
+    // for(int i = 0; i < 21; i=i+1 ) {
+    //   if (producers[i] == owner.value){
+    //     return true;
+    //   }
+    // }
 
     return false;
 
@@ -64,10 +56,10 @@ using namespace eosio;
     auto itr = store.find(owner.value);
     if (itr != store.end()) {
 
-      uint64_t ctime = current_time();
+      uint64_t ctime = eosio::current_time_point().sec_since_epoch();
       auto last = store.get(owner.value);
 
-      eosio_assert(last.timestamp + one_minute <= ctime, "can only call every 60 seconds");
+      check(last.timestamp + one_minute <= ctime, "can only call every 60 seconds");
 
       store.modify( itr, get_self(), [&]( auto& s ) {
         s.timestamp = ctime;
@@ -78,7 +70,7 @@ using namespace eosio;
 
       store.emplace(get_self(), [&](auto& s) {
         s.owner = owner;
-        s.timestamp = current_time();
+        s.timestamp = current_time_point().sec_since_epoch();
         s.count = 0;
       });
 
@@ -117,7 +109,7 @@ using namespace eosio;
           s.id = primary_key;
           s.owner = owner;
           s.value = value;
-          s.timestamp = current_time();
+          s.timestamp = current_time_point().sec_since_epoch();
         });
 
         //Get index sorted by value
@@ -154,7 +146,7 @@ using namespace eosio;
           s.owner = owner;
           s.value = value;
           s.average = avg;
-          s.timestamp = current_time();
+          s.timestamp = current_time_point().sec_since_epoch();
         });
 
       }
@@ -170,7 +162,7 @@ using namespace eosio;
         s.owner = owner;
         s.value = value;
         s.average = avg;
-        s.timestamp = current_time();
+        s.timestamp = current_time_point().sec_since_epoch();
       });
 
     }
@@ -183,8 +175,8 @@ using namespace eosio;
     
     require_auth(owner);
 
-    eosio_assert(value >= val_min && value <= val_max, "value outside of allowed range");
-    eosio_assert(check_oracle(owner), "account is not an active producer or approved oracle");
+    check(value >= val_min && value <= val_max, "value outside of allowed range");
+    check(check_oracle(owner), "account is not an active producer or approved oracle");
     
     check_last_push(owner);
     update_eosusd_oracle(owner, value);
@@ -242,7 +234,7 @@ using namespace eosio;
 
 
 // EOSIO_DISPATCH(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-// (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(autopublish)(addfeetypes)(addfeetype)(claim)
+// (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(oraclepush)(addfeetypes)(addfeetype)(claim)
 // (subscribe)(requestdata)(payservice)(starttimer)
 // (regarbitrat)(complain)(uploadeviden)(uploadresult)(acceptarbi)(respcase)
 // (deposit)(withdraw)
@@ -262,7 +254,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
   if (action == "onerror"_n.value) {
     /* onerror is only valid if it is for the "eosio" code account and
      * authorized by "eosio"'s "active permission */
-    eosio_assert(
+    check(
         code == "eosio"_n.value,
         "onerror action's are only valid from the \"eosio\" system account");
   }
@@ -273,9 +265,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
         // NB: Add custom method in bracets after () to use them as
         // endpoints
         EOSIO_DISPATCH_HELPER(bos_oracle, (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-(regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(autopublish)(addfeetypes)(addfeetype)(claim)
-(subscribe)(requestdata)(payservice)(starttimer)
-(regarbitrat)(complain)(uploadeviden)(uploadresult)(acceptarbi)(respcase)(unstakearbi)(claimarbi)
+(regservice)(unregservice)(execaction)(unstakeasset)(innerpush)(pushdata)(innerpublish)(oraclepush)(addfeetypes)(addfeetype)(claim)
+(subscribe)(requestdata)(starttimer)
+(uploadeviden)(uploadresult)(acceptarbi)(unstakearbi)(claimarbi)
 (deposit)(withdraw))
       }
     }

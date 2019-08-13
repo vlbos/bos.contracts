@@ -1,12 +1,12 @@
 
 #include "bos.oracle/bos.oracle.hpp"
-#include <eosiolib/action.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-// #include <eosiolib/print.h>
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+// #include <eosio/print.h>
 #include "bos.oracle/bos.util.hpp"
-#include <eosiolib/time.hpp>
-#include <eosiolib/transaction.hpp>
+#include <eosio/time.hpp>
+#include <eosio/transaction.hpp>
 
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
@@ -89,7 +89,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       break;
     case tc_arbitration_stake_arbitrator:
 
-      regarbitrat(account, eosio::public_key(), s2int(index_type), quantity,
+      _regarbitrat(account, eosio::public_key(), s2int(index_type), quantity,
                   "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
@@ -169,7 +169,7 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity,
                            std::make_tuple(from, to, quantity, memo));
     t.delay_sec = 0;
     uint128_t deferred_id =
-        (uint128_t(to.value) << 64) | time_point_sec(now()).sec_since_epoch();
+        (uint128_t(to.value) << 64) | time_point_sec(eosio::current_time_point()).sec_since_epoch();
     cancel_deferred(deferred_id);
     t.send(deferred_id, _self, true);
   }
@@ -235,7 +235,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
     // print("======free===subsr");
     // transfer(from, to, quantity, memo);
-    add_freeze(svcsubs_itr->service_id, from, time_point_sec(now()),
+    add_freeze(svcsubs_itr->service_id, from, time_point_sec(eosio::current_time_point()),
                time_length, quantity);
   } else {
     // risk guarantee
@@ -250,7 +250,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
     /// delay time length
 
     // print("===delay======subsr");
-    add_delay(svcsubs_itr->service_id, from, time_point_sec(now()), time_length,
+    add_delay(svcsubs_itr->service_id, from, time_point_sec(eosio::current_time_point()), time_length,
               quantity);
 
     // transaction t;
@@ -325,19 +325,19 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   unfreeze_amount = freeze_providers_amount(
       service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
 
-  add_freeze_delay(service_id, account, time_point_sec(now()), duration,
+  add_freeze_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration,
                    amount - asset(unfreeze_amount, core_symbol()),
                    transfer_type::tt_freeze);
 
   // delay
-  add_delay(service_id, account, time_point_sec(now()), duration, amount);
+  add_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration, amount);
 }
 
 void bos_oracle::add_delay(uint64_t service_id, name account,
                            time_point_sec start_time, uint64_t duration,
                            asset amount) {
 
-  add_freeze_delay(service_id, account, time_point_sec(now()), duration, amount,
+  add_freeze_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration, amount,
                    transfer_type::tt_delay);
 }
 
@@ -412,7 +412,7 @@ void bos_oracle::add_freeze_log(uint64_t service_id, name account,
     t.service_id = service_id;
     t.account = account;
     t.amount = amount;
-    t.update_time = time_point_sec(now());
+    t.update_time = time_point_sec(eosio::current_time_point());
   });
 
   add_freeze_stat(service_id, account, amount);
@@ -480,7 +480,7 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
     g.risk_id = guaranteetable.available_primary_key();
     g.account = account;
     g.amount = amount;
-    g.start_time = time_point_sec(now());
+    g.start_time = time_point_sec(eosio::current_time_point());
     g.duration = duration;
     g.status = 0;
     //  g.sig = sig;

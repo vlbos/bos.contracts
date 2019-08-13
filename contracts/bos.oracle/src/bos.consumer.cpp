@@ -4,12 +4,12 @@
  */
 
 #include "bos.oracle/bos.oracle.hpp"
-#include <eosiolib/asset.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/transaction.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/time.hpp>
+#include <eosio/transaction.hpp>
 #include <string>
 using namespace eosio;
 // namespace eosio {
@@ -60,7 +60,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
       c.account = account;
       // c.pubkey = publickey;
       c.status = consumer_status::consumer_on;
-      c.create_time = time_point_sec(now());
+      c.create_time = time_point_sec(eosio::current_time_point());
     });
   }
 
@@ -82,7 +82,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     subs.consumption = asset(0, core_symbol());
     subs.month_consumption = asset(0, core_symbol());
     subs.balance =  subs.payment - subs.consumption-subs.month_consumption ;
-    subs.subscription_time = time_point_sec(now());
+    subs.subscription_time = time_point_sec(eosio::current_time_point());
     subs.last_payment_time = time_point_sec();
     subs.status = subscription_status::subscription_subscribe;
   });
@@ -121,7 +121,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
     r.contract_account = contract_account;
     r.action_name = action_name;
     r.requester = requester;
-    r.request_time = time_point_sec(now());
+    r.request_time = time_point_sec(eosio::current_time_point());
     r.request_content = request_content;
     r.status = request_status::reqeust_valid;
   });

@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 
 /// provider
 enum service_status : uint8_t { service_in, service_cancel, service_pause, service_freeze,service_emergency };
@@ -25,8 +25,8 @@ enum data_type : uint8_t {
 };
 
 enum injection_method : uint8_t {
-  chain_direct,
   chain_indirect,
+  chain_direct,
   chain_outside
 };
 

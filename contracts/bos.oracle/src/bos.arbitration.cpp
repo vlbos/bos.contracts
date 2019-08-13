@@ -3,11 +3,11 @@
  *  @copyright defined in eos/LICENSE
  */
 
-#include <eosiolib/asset.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/time.hpp>
 #include <string>
 #include "bos.oracle/bos.oracle.hpp"
 #include "bos.oracle/bos.util.hpp"
@@ -20,10 +20,10 @@ using std::string;
 /**
  * 注册仲裁员
  */
-void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info ) {
-    require_auth( account );
-    _regarbitrat(  account,  pubkey,  type,  amount,  public_info );
-}
+// void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info ) {
+//     require_auth( account );
+//     _regarbitrat(  account,  pubkey,  type,  amount,  public_info );
+// }
 
 void bos_oracle::_regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info ) {
     check( type == arbitrator_type::profession || type == arbitrator_type::amateur, "Arbitrator type can only be 1 or 2." );
@@ -46,10 +46,10 @@ void bos_oracle::_regarbitrat( name account, public_key pubkey, uint8_t type, as
 /**
  * 申诉者申诉
  */
-void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence) {
-    require_auth( applicant );
-    _complain(  applicant,  service_id,  amount,  reason,  arbi_method ,evidence) ;
-}
+// void bos_oracle::complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence) {
+//     require_auth( applicant );
+//     _complain(  applicant,  service_id,  amount,  reason,  arbi_method ,evidence) ;
+// }
 
 void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence) {
    
@@ -83,7 +83,7 @@ void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, s
         p.status = complainant_status::wait_for_accept;
         p.is_sponsor = is_sponsor;
         p.applicant = applicant;
-        p.appeal_time = time_point_sec(now());
+        p.appeal_time = time_point_sec(eosio::current_time_point());
         p.reason = reason;
         appeal_id = p.appeal_id;
     } );
@@ -94,7 +94,7 @@ void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, s
 
     // add_freeze
     const uint64_t duration = eosio::days(1).to_seconds();
-    add_delay(service_id, applicant, time_point_sec(now()), duration, amount);
+    add_delay(service_id, applicant, time_point_sec(eosio::current_time_point()), duration, amount);
 
     // Arbitration case application
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
@@ -112,7 +112,7 @@ void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, s
             p.evidence_info = reason;
             p.arbi_step = arbi_step_type::arbi_init; // 仲裁状态为初始化状态, 等待应诉
             p.required_arbitrator = 5;
-            p.deadline = time_point_sec(now() + 3600);
+            p.deadline = time_point_sec(eosio::current_time_point() + eosio::hours(1));
             p.add_applicant(applicant); // 增加申诉者
         } );
     } else {
@@ -155,10 +155,10 @@ void bos_oracle::_complain( name applicant, uint64_t service_id, asset amount, s
 /**
  * (数据提供者/数据使用者)应诉
  */
-void bos_oracle::respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence) {
-    require_auth( respondent );
-    _respcase(  respondent,  arbitration_id,  amount, process_id,evidence);
-}
+// void bos_oracle::respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence) {
+//     require_auth( respondent );
+//     _respcase(  respondent,  arbitration_id,  amount, process_id,evidence);
+// }
 
 void bos_oracle::_respcase( name respondent, uint64_t arbitration_id, asset amount,uint64_t process_id, std::string evidence) {
    
@@ -324,7 +324,7 @@ void bos_oracle::acceptarbi( name arbitrator,  uint64_t arbitration_id, uint64_t
             upload_result_timeout_deferred(arbitrator, arbitration_id, 0, arbitration_timer_type::upload_result_timeout, eosio::hours(10).to_seconds());
         }
     } else {
-        if (arbiprocess_iter->arbiresp_deadline.utc_seconds < now()) {
+        if (arbiprocess_iter->arbiresp_deadline.utc_seconds < eosio::time_point_sec(eosio::current_time_point()).utc_seconds) {
             // 如果仲裁员没有在指定时间内应诉, 那么继续选择仲裁员
             auto arbi_to_chose = arbiprocess_iter->required_arbitrator - arbiprocess_iter->arbitrators.size();
             random_chose_arbitrator(arbitration_id, process_id, arbi_iter->service_id, arbi_to_chose);
@@ -335,12 +335,12 @@ void bos_oracle::acceptarbi( name arbitrator,  uint64_t arbitration_id, uint64_t
 /**
  * 再申诉, 申诉者可以为数据提供者或者数据使用者
  */
-void bos_oracle::reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id,
-    uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence) {
-    // 检查再申诉服务状态
-    require_auth( applicant );
-    _reappeal(  applicant,  arbitration_id,  service_id, process_id,  is_provider,  amount,  reason ,evidence) ;
-    }
+// void bos_oracle::reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id,
+//     uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence) {
+//     // 检查再申诉服务状态
+//     require_auth( applicant );
+//     _reappeal(  applicant,  arbitration_id,  service_id, process_id,  is_provider,  amount,  reason ,evidence) ;
+//     }
 
 void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount,  std::string reason , std::string evidence) {
     // 检查再申诉服务状态
@@ -379,14 +379,14 @@ void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t se
         p.is_provider = is_provider;
         p.arbitration_id = arbitration_id;
         p.applicant = applicant;
-        p.appeal_time = time_point_sec(now());
+        p.appeal_time = time_point_sec(eosio::current_time_point());
         p.reason = reason;
         appeal_id = p.appeal_id;
     } );
 
     // add_freeze
     const uint64_t duration = eosio::days(1).to_seconds();
-    add_delay(service_id, applicant, time_point_sec(now()), duration, amount);
+    add_delay(service_id, applicant, time_point_sec(eosio::current_time_point()), duration, amount);
 
     if(!is_provider) {
         // 如果是数据使用者再申诉, 那么通知所有的数据提供者
@@ -422,10 +422,11 @@ void bos_oracle::_reappeal( name applicant, uint64_t arbitration_id, uint64_t se
  * 再次应诉
  * last_process_id 上一轮的仲裁过程ID
  */
-void bos_oracle::rerespcase( name respondent, uint64_t arbitration_id, asset amount, uint64_t last_process_id, std::string evidence) {
-    require_auth( respondent );
-    _rerespcase(  respondent,  arbitration_id,  amount, last_process_id,evidence);
-}
+// void bos_oracle::rerespcase( name respondent, uint64_t arbitration_id, asset amount, uint64_t last_process_id, std::string evidence) {
+//     require_auth( respondent );
+//     _rerespcase(  respondent,  arbitration_id,  amount, last_process_id,evidence);
+// }
+
 void bos_oracle::_rerespcase( name respondent, uint64_t arbitration_id,  asset amount,uint64_t last_process_id, std::string evidence) {
     // 检查仲裁案件状态
     auto arbicaseapp_tb = arbicaseapps( get_self(), get_self().value );
@@ -564,7 +565,7 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint64_t pro
                 p.add_random_arbitrator(arbitrator);
                 if (arbitrators_set.size() == arbi_to_chose) {
                     // 刚好选择完毕仲裁员, 那么设置这些仲裁员需要在指定时间内应诉的时间
-                    p.arbiresp_deadline = time_point_sec(now() + arbiresp_deadline);
+                    p.arbiresp_deadline = time_point_sec(eosio::current_time_point()) + eosio::days(arbiresp_deadline_days);
                 }
             } );
         }
@@ -1045,7 +1046,7 @@ void bos_oracle::pay_arbitration_fee(uint64_t arbitration_id, const std::vector<
         a.record_id = id;
         a.account = account;
         a.amount = amount;
-        a.stake_time = time_point_sec(now());
+        a.stake_time = time_point_sec(eosio::current_time_point());
       });
       }
       else

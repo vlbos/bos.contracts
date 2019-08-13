@@ -1,8 +1,8 @@
 #include <string>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/crypto.h>
-// #include <eosiolib/print.h>
+#include <eosio/eosio.hpp>
+#include <eosio/time.hpp>
+#include <eosio/crypto.hpp>
+// #include <eosio/print.h>
 #include "bos.oracle/bos.oracle.hpp"
 
 
@@ -11,7 +11,7 @@
     require_auth(_self);
     auto itt = oraclizes_table.find(oracle.value);
     
-    eosio_assert(itt == oraclizes_table.end(), "Already known oracle");
+    check(itt == oraclizes_table.end(), "Already known oracle");
 
     oraclizes_table.emplace(_self, [&](oraclizes &i) {
       i.account = oracle;
@@ -22,7 +22,7 @@
   {
     require_auth(_self);
     auto itt = oraclizes_table.find(oracle.value);
-    eosio_assert(itt != oraclizes_table.end(), "Unknown oracle");
+    check(itt != oraclizes_table.end(), "Unknown oracle");
 
     oraclizes_table.erase(itt);
   }
@@ -32,7 +32,7 @@
   {
     require_auth(administrator);
     auto itt = requests.find(pack_hash(get_full_hash(task, memo, contract)));
-    eosio_assert(itt == requests.end() || itt->mode != REPEATABLE_REQUEST, "Already repeatable request");
+    check(itt == requests.end() || itt->mode != REPEATABLE_REQUEST, "Already repeatable request");
     set(request{task,
                 memo,
                 args,
@@ -50,8 +50,8 @@
     require_auth(administrator);
     uint64_t id = pack_hash(get_full_hash(task, memo, contract));
     auto itt = requests.find(id);
-    eosio_assert(itt != requests.end(), "Unknown request");
-    eosio_assert(itt->mode != DISABLED_REQUEST, "Non-active request");
+    check(itt != requests.end(), "Unknown request");
+    check(itt->mode != DISABLED_REQUEST, "Non-active request");
 
     request changed(*itt);
     changed.mode = DISABLED_REQUEST;
@@ -63,7 +63,7 @@
   {
     require_auth(administrator);
     auto itt = requests.find(pack_hash(get_full_hash(task, memo, contract)));
-    eosio_assert(itt == requests.end() || itt->mode != ONCE_REQUEST, "Already repeatable request");
+    check(itt == requests.end() || itt->mode != ONCE_REQUEST, "Already repeatable request");
     set(request{task,
                 memo,
                 args,
@@ -81,10 +81,10 @@
     require_auth(oracle);
     uint64_t id = pack_hash(get_full_hash(task, memo, contract));
     auto itt = requests.find(id);
-    eosio_assert(itt != requests.end(), "Unknown request");
+    check(itt != requests.end(), "Unknown request");
 
-    eosio_assert(itt->mode != DISABLED_REQUEST, "Disabled request push");
-    eosio_assert(now() >= itt->timestamp + itt->update_each, "Too early to update");
+    check(itt->mode != DISABLED_REQUEST, "Disabled request push");
+    check(eosio::current_time_point().sec_since_epoch() >= itt->timestamp + itt->update_each, "Too early to update");
     // carbon-copy call
     require_recipient(itt->contract);
 
@@ -93,7 +93,7 @@
     {
       changed.mode = DISABLED_REQUEST;
     }
-    changed.timestamp = now();
+    changed.timestamp = eosio::current_time_point().sec_since_epoch();
     set(changed, _self);
   }
 

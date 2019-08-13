@@ -4,11 +4,11 @@
  */
 #pragma once
 
-#include <eosiolib/asset.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/time.hpp>
 #include <string>
 #include "bos.oracle/bos.types.hpp"
 #include "bos.oracle/bos.constants.hpp"

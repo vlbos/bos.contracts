@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include "bos.dappuser/bos.types.hpp"
 
 using namespace eosio;
@@ -41,12 +41,12 @@ public:
 
   bool fresh()
   {
-    return exists() && get().best_before > now();
+    return exists() && get().best_before > eosio::current_time_point().sec_since_epoch();
   }
 
   bool require_update()
   {
-    return exists() && get().update_after < now();
+    return exists() && get().update_after < eosio::current_time_point().sec_since_epoch();
   }
 
   T value()
@@ -79,11 +79,11 @@ public:
     auto itr = _t.find(pk_value);
     if (itr != _t.end())
     {
-      _t.modify(itr, bill_to_account, [&](row &r) { r.value = data{now() + BestBeforeOffset, now() + UpdateOffset, value}; });
+      _t.modify(itr, bill_to_account, [&](row &r) { r.value = data{eosio::current_time_point().sec_since_epoch() + BestBeforeOffset, eosio::current_time_point().sec_since_epoch() + UpdateOffset, value}; });
     }
     else
     {
-      _t.emplace(bill_to_account, [&](row &r) { r.value = data{now() + BestBeforeOffset, now() + UpdateOffset, value}; });
+      _t.emplace(bill_to_account, [&](row &r) { r.value = data{eosio::current_time_point().sec_since_epoch() + BestBeforeOffset, eosio::current_time_point().sec_since_epoch() + UpdateOffset, value}; });
     }
   }
 

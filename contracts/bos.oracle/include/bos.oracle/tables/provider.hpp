@@ -2,7 +2,7 @@
 #include "bos.oracle/bos.constants.hpp"
 #include "bos.oracle/bos.functions.hpp"
 #include "bos.oracle/bos.types.hpp"
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 
 using namespace eosio;
 // using std::string;
@@ -104,6 +104,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   uint64_t by_number() const {
     return update_number;
   }
+  uint64_t by_request() const {
+    return request_id;
+  }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] push_record {
@@ -164,7 +167,9 @@ typedef eosio::multi_index<
     indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t,
                                           &data_service_provision_log::by_time>>,
     indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                         &data_service_provision_log::by_number>>>
+                                         &data_service_provision_log::by_number>>,
+    indexed_by<"byrequest"_n, const_mem_fun<data_service_provision_log, uint64_t,
+                                         &data_service_provision_log::by_request>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;

@@ -1,22 +1,12 @@
 #pragma once
 /*
 
-  bos_oracle
 
-  Author: Guillaume "Gnome" Babin-Tremblay - EOS Titan
-  
-  Website: https://eostitan.com
-  Email: guillaume@eostitan.com
-
-  Github: https://github.com/eostitan/bos_oracle/
-  
-  Published under MIT License
 
 */
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/fixedpoint.hpp>
-#include <eosiolib/chain.h>
+#include <eosio/eosio.hpp>
+
 
 
 using namespace eosio;

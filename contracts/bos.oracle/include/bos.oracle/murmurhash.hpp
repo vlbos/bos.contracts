@@ -1,7 +1,7 @@
 #ifndef MURMURHASH_2
 #define MURMURHASH_2
 
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 
 uint32_t murmur_hash2(const char *data, size_t len)
 {

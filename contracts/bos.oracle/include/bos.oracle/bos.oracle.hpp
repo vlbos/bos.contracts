@@ -3,14 +3,7 @@
 
   bos_oracle
 
-  Author: Guillaume "Gnome" Babin-Tremblay - EOS Titan
-
-  Website: https://eostitan.com
-  Email: guillaume@eostitan.com
-
-  Github: https://github.com/eostitan/bos_oracle/
-
-  Published under MIT License
+ 
 
 */
 
@@ -24,10 +17,7 @@
 #include "bos.oracle/tables/singletons.hpp"
 #include "bos.oracle/tables/arbitration.hpp"
 
-#include <eosiolib/chain.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/fixedpoint.hpp>
-
+#include <eosio/eosio.hpp>
 using namespace eosio;
 
 class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
@@ -40,9 +30,10 @@ public:
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
-  static constexpr uint64_t arbiresp_deadline = 3600 * 24; // 仲裁员响应的截止时间
+  static constexpr uint64_t arbiresp_deadline_days= 1; // 仲裁员响应的截止时间 天
   static constexpr double default_arbitration_correct_rate = 0.6f;
-  
+  static time_point_sec current_time_point_sec();
+
   using contract::contract;
   bos_oracle(name receiver, name code, datastream<const char *> ds)
       : contract(receiver, code, ds), requests(_self, _self.value),
@@ -139,8 +130,7 @@ public:
   [[eosio::action]] void addfeetype(uint64_t service_id, uint8_t fee_type,
                                     asset service_price);
 
-  [[eosio::action]] void multipush(uint64_t service_id, name provider,
-                                   string data_json, bool is_request);
+ 
 
   [[eosio::action]] void pushdata(uint64_t service_id, name provider,
                                   uint64_t update_number,
@@ -148,17 +138,13 @@ public:
   [[eosio::action]] void innerpush(uint64_t service_id, name provider,
                                   name contract_account, name action_name,
                                   uint64_t request_id, string data_json);
-  [[eosio::action]] void multipublish(uint64_t service_id, name provider,
-                           string data_json, bool is_request);
-  [[eosio::action]] void publishdata(uint64_t service_id, name provider,
-                          uint64_t update_number,
-                          uint64_t request_id, string data_json);   
-
+  
   [[eosio::action]] void innerpublish(uint64_t service_id, name provider,
                           uint64_t update_number,
                           uint64_t request_id, string data_json);
-  [[eosio::action]] void autopublish(uint64_t service_id, name provider,
-                                     uint64_t request_id, string data_json);
+
+  [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number,
+                                     uint64_t request_id, string data_json,name contract_account);
   [[eosio::action]] void claim(name account, name receive_account);
 
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
@@ -170,9 +156,6 @@ public:
   using regservice_action =
       eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
 
-  using stakeasset_action =
-      eosio::action_wrapper<"stakeasset"_n, &bos_oracle::stakeasset>;
-
   using unstakeasset_action =
       eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
 
@@ -181,23 +164,15 @@ public:
   using addfeetype_action =
       eosio::action_wrapper<"addfeetype"_n, &bos_oracle::addfeetype>;
 
-  using multipush_action =
-      eosio::action_wrapper<"multipush"_n, &bos_oracle::multipush>;
-
-  using pushdata_action =
+   using pushdata_action =
       eosio::action_wrapper<"pushdata"_n, &bos_oracle::pushdata>;
   using innerpush_action =
       eosio::action_wrapper<"innerpush"_n, &bos_oracle::innerpush>;
 
-  using multipublish_action =
-      eosio::action_wrapper<"multipublish"_n, &bos_oracle::multipublish>;
-
-  using publishdata_action =
-      eosio::action_wrapper<"publishdata"_n, &bos_oracle::publishdata>;
   using innerpublish_action =
       eosio::action_wrapper<"innerpublish"_n, &bos_oracle::innerpublish>;
-  using autopublish_action =
-      eosio::action_wrapper<"autopublish"_n, &bos_oracle::autopublish>;
+  using unipublish_action =
+      eosio::action_wrapper<"oraclepush"_n, &bos_oracle::oraclepush>;
   using claim_action =
       eosio::action_wrapper<"claim"_n, &bos_oracle::addfeetype>;
 
@@ -272,11 +247,11 @@ public:
  /// bos.arbitration begin
   ///
   ///
-    [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info );
+    // [[eosio::action]] void regarbitrat( name account, public_key pubkey, uint8_t type, asset amount, std::string public_info );
 
-    [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence );
+    // [[eosio::action]] void complain( name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method , std::string evidence );
 
-    [[eosio::action]] void respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id , std::string evidence );
+    // [[eosio::action]] void respcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id , std::string evidence );
 
     [[eosio::action]] void acceptarbi( name arbitrator,  uint64_t arbitration_id, uint64_t process_id );
 
@@ -284,9 +259,9 @@ public:
 
     [[eosio::action]] void uploadresult( name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id );
 
-    [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence );
+    // [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason , std::string evidence );
     
-    [[eosio::action]] void rerespcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id, std::string evidence );
+    // [[eosio::action]] void rerespcase( name respondent, uint64_t arbitration_id,asset amount, uint64_t process_id, std::string evidence );
     
     [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type);
 
@@ -327,13 +302,27 @@ private:
                                    const std::set<name> &available_providers,
                                    asset freeze_amount);
 
+  void multipush(uint64_t service_id, name provider,
+                                   string data_json, bool is_request);
+                                   
+  void multipublish(uint64_t service_id, uint64_t update_number,
+                             uint64_t request_id,
+                           string data_json);
+  void publishdata(uint64_t service_id, name provider,
+                          uint64_t update_number,
+                          uint64_t request_id, string data_json);   
+
 void start_timer();
 void check_publish_services();
-void check_publish_service(uint64_t service_id,uint64_t update_number);
-void save_publish_data(uint64_t service_id,uint64_t update_number,string  value);
+void check_publish_service(uint64_t service_id,uint64_t update_number,uint64_t request_id);
+void save_publish_data(uint64_t service_id,uint64_t update_number,uint64_t request_id,string  value,name provider);
 uint64_t get_provider_count(uint64_t service_id);
-uint64_t get_publish_provider_count(uint64_t service_id,uint64_t update_number);
-string get_publish_data(uint64_t service_id,uint64_t update_number,uint64_t  provider_limit);
+
+
+uint64_t get_publish_provider_count(uint64_t service_id,uint64_t update_number,uint64_t request_id);
+
+
+string get_publish_data(uint64_t service_id,uint64_t update_number,uint64_t  provider_limit,uint64_t request_id);
 std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_services_update_number();
 
   /// consumer

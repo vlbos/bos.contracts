@@ -3,21 +3,12 @@
 
   bos_oracle
 
-  Author: Guillaume "Gnome" Babin-Tremblay - EOS Titan
-  
-  Website: https://eostitan.com
-  Email: guillaume@eostitan.com
 
-  Github: https://github.com/eostitan/bos_oracle/
-  
-  Published under MIT License
 
 */
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/fixedpoint.hpp>
-#include <eosiolib/chain.h>
-
+#include <eosio/eosio.hpp>
+// 
 
 using namespace eosio;
 
@@ -25,15 +16,17 @@ using namespace eosio;
 
   struct [[eosio::table,eosio::contract("bos.oracle")]] oracle_data_record {
     uint64_t update_number;
+    uint64_t request_id;
     string value;
     uint64_t timestamp;
+    name provider;
 
-    uint64_t primary_key() const {return update_number;}
+    uint64_t primary_key() const {return timestamp;}
 
-    EOSLIB_SERIALIZE( oracle_data_record, (update_number)(value)(timestamp))
-
+    EOSLIB_SERIALIZE(oracle_data_record, (update_number)(request_id)(value)(timestamp)(provider))
   };
 
+  
   //Multi index types definition
   typedef eosio::multi_index<"oracledata"_n, oracle_data_record> oracle_data;
 

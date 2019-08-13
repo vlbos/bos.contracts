@@ -1,6 +1,6 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/crypto.h>
+#include <eosio/eosio.hpp>
+#include <eosio/crypto.hpp>
 #include "murmurhash.hpp"
 
 
