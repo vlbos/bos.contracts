@@ -303,7 +303,7 @@ private:
                                    asset freeze_amount);
 
   void multipush(uint64_t service_id, name provider,
-                                   string data_json, bool is_request);
+                                   string data_json, uint64_t request_id);
                                    
   void multipublish(uint64_t service_id, uint64_t update_number,
                              uint64_t request_id,
@@ -323,7 +323,8 @@ uint64_t get_publish_provider_count(uint64_t service_id,uint64_t update_number,u
 
 
 string get_publish_data(uint64_t service_id,uint64_t update_number,uint64_t  provider_limit,uint64_t request_id);
-std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_services_update_number();
+std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_service_update_number();
+std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> get_publish_service_request();
 
   /// consumer
   void pay_service(uint64_t service_id, name contract_account, asset amount);

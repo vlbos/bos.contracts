@@ -282,7 +282,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type,
  * @param is_request
  */
 void bos_oracle::multipush(uint64_t service_id, name provider,
-                           string data_json, bool is_request) {
+                           string data_json, uint64_t request_id) {
                              //print("==========multipush");
   require_auth(provider);
   check(service_status::service_in == get_service_status(service_id),
@@ -309,19 +309,18 @@ void bos_oracle::multipush(uint64_t service_id, name provider,
   };
 
      //print("=======is_request==true= before====");
-  if (is_request) {
+  if (0!=request_id) {
      //print("=======is_request==true=====");
     // request
-    uint64_t request_id = get_request_by_last_push(service_id, provider);
-    std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
-        get_request_list(service_id, request_id);
+    // uint64_t request_id = get_request_by_last_push(service_id, provider);
+   data_service_requests reqtable(_self, service_id);
+    auto req_itr = reqtable.find(request_id);
+    check(req_itr != reqtable.end(), "request id could not be found");
+
     //print("=======is_request==for=====");
-    for (const auto &rc : receive_contracts) {
            //print(request_id);
                          //print("=======request_id==true=====");
-      push_data(service_id, provider, std::get<0>(rc), std::get<1>(rc),
-               std::get<2>(rc), data_json);
-    }
+      push_data(service_id, provider,  req_itr->contract_account, req_itr->action_name, request_id,data_json);
   } else {
 
     // subscription
@@ -494,9 +493,8 @@ void bos_oracle::multipublish(uint64_t service_id, uint64_t update_number,
     t.send(deferred_id, _self,true);
   };
 
-  // if (is_request) {
-  //   request
-  //   uint64_t request_id = get_request_by_last_push(service_id, provider);
+  // if (0 !=request_id) {
+  //   // uint64_t request_id = get_request_by_last_push(service_id, provider);
   //   std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
   //       get_request_list(service_id, request_id);
   //   for (const auto &rc : receive_contracts) {
@@ -815,19 +813,15 @@ void bos_oracle::start_timer()
 
 void bos_oracle::check_publish_services() {
   print("check_publish_service");
-  data_services svctable(_self, _self.value);
 
   std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> service_numbers =
-      get_publish_services_update_number();
+      get_publish_service_update_number();
 
   for (auto it = service_numbers.begin(); it != service_numbers.end(); ++it) {
-    string data_json =
-        get_publish_data(std::get<0>(*it), std::get<1>(*it), std::get<2>(*it),0);
-    if (!data_json.empty()) {
-      print("if(!data_json.empty())");
-      save_publish_data(std::get<0>(*it), 0,std::get<1>(*it), data_json,name());
-    }
+    check_publish_service(std::get<0>(*it), std::get<1>(*it), 0);
   }
+
+  get_publish_service_request();
 }
 
 void bos_oracle::check_publish_service(uint64_t service_id,uint64_t update_number,uint64_t request_id)
@@ -1009,9 +1003,10 @@ auto update_number_itr_lower = update_number_idx.lower_bound(id);
 
 
 
-std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_services_update_number()
+std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_service_update_number()
 {
   std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> service_numbers;
+  std::vector<std::tuple<uint64_t,uint64_t,time_point_sec>> update_service_numbers;
 
  data_services svctable(_self, _self.value);
   for (auto &s : svctable) {
@@ -1023,16 +1018,46 @@ std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_serv
     uint32_t now_sec = time_point_sec(eosio::current_time_point()).sec_since_epoch();
     if (s.update_cycle * update_number + s.duration <now_sec) {
       service_numbers.push_back(std::make_tuple(s.service_id, update_number,s.provider_limit));
-      svctable.modify(s, _self, [&](auto &ss) { 
-        ss.last_update_number = time_point_sec(eosio::current_time_point()).sec_since_epoch()/s.update_cycle;
-        ss.update_start_time = time_point_sec(ss.last_update_number*s.update_cycle); 
-        });
+      update_service_numbers.push_back(std::make_tuple(s.service_id, 
+      now_sec/s.update_cycle,
+      time_point_sec(now_sec/s.update_cycle*s.update_cycle)));
     }
   }
 
+  for (auto &u : update_service_numbers) {
+    auto itr = svctable.find(std::get<0>(u));
+    if (itr != svctable.end()) {
+      svctable.modify(itr, _self, [&](auto &ss) {
+        ss.last_update_number = std::get<1>(u);
+        ss.update_start_time = std::get<2>(u);
+      });
+    }
+  }
 
   return service_numbers;
 }
 
+std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> bos_oracle::get_publish_service_request()
+{
+  std::vector<std::tuple<uint64_t,uint64_t,uint64_t>> service_requests;
+
+auto check_request = [&](uint64_t service_id) {
+    std::vector<std::tuple<name, name, uint64_t>> receive_contracts =
+        get_request_list(service_id, 0);
+    for (const auto &rc : receive_contracts) {
+      check_publish_service(service_id, 0, std::get<2>(rc));
+    }
+  };
+
+ data_services svctable(_self, _self.value);
+  for (auto &s : svctable) {
+    if (s.status != service_status::service_in ) {
+      continue;
+    }
+    check_request(s.service_id);
+  }
+
+  return service_requests;
+}
 
 // } // namespace bosoracle

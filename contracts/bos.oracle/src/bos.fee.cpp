@@ -45,6 +45,7 @@ uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
   return request_id;
 }
 
+
 /**
  * @brief
  *
@@ -345,29 +346,46 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
   // print("=-=============get_request_list in===========");
   static constexpr int64_t request_time_deadline = 2; // 2 hours
   std::vector<std::tuple<name, name, uint64_t>> receive_contracts;
+  std::vector<uint64_t> ids;
   data_service_requests reqtable(_self, service_id);
   auto request_time_idx = reqtable.get_index<"bytime"_n>();
   auto lower = request_time_idx.begin();
   auto upper = request_time_idx.end();
-  if (0 != request_id) {
-    auto req_itr = reqtable.find(request_id);
-    check(req_itr != reqtable.end(), "request id could not be found");
+  // if (0 != request_id) {
+  //   auto req_itr = reqtable.find(request_id);
+  //   check(req_itr != reqtable.end(), "request id could not be found");
 
-    lower = request_time_idx.lower_bound(
-        static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
-  }
+  //   lower = request_time_idx.lower_bound(
+  //       static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
+  //   upper = request_time_idx.upper_bound(
+  //       static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
+  // }
+
   // print("=-=============get_request_list while before===========");
   while (lower != upper) {
     // print("=-=============get_request_list while (lower !=
     // upper)===========");
     auto req = lower++;
     if (req->status == request_status::reqeust_valid &&
-        time_point_sec(eosio::current_time_point()) - req->request_time <
+        time_point_sec(eosio::current_time_point()) - req->request_time >
             eosio::hours(request_time_deadline)) {
       // print("=-=============get_request_list while  if===========");
       receive_contracts.push_back(std::make_tuple(
           req->contract_account, req->action_name, req->request_id));
+
+          ids.push_back(req->request_id);
     }
+  }
+
+  for(auto& id:ids)
+  {
+      data_service_requests reqtable(_self, service_id);
+    auto req_itr = reqtable.find(request_id);
+    check(req_itr != reqtable.end(), "request id could not be found");
+       reqtable.modify(req_itr, _self, [&](auto &r) {
+      r.status = request_status::reqeust_finish;
+
+    });
   }
 
   return receive_contracts;

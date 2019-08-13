@@ -15,7 +15,7 @@ enum transfer_status : uint8_t { transfer_start,transfer_finish,transfer_failed 
 
 enum usage_type : uint8_t { usage_request,usage_subscribe };
 
-enum request_status : uint8_t { reqeust_valid, request_cancel };
+enum request_status : uint8_t { reqeust_valid, request_cancel,reqeust_finish };
 
 enum fee_type : uint8_t { fee_times, fee_month, fee_type_count };
 
