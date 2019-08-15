@@ -19,15 +19,15 @@ using eosio::public_key;
 using std::string;
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param publickey 
- * @param account 
- * @param amount 
- * @param memo 
+ * @brief
+ *
+ * @param service_id
+ * @param contract_account
+ * @param action_name
+ * @param publickey
+ * @param account
+ * @param amount
+ * @param memo
  */
 void bos_oracle::subscribe(uint64_t service_id, name contract_account,
                            name action_name, std::string publickey,
@@ -43,7 +43,6 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
   //       );
   require_auth(account);
   // require_auth(contract_account);
-
 
   // asset price_by_month =
   //     get_price_by_fee_type(service_id, fee_type::fee_month);
@@ -78,10 +77,10 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     subs.account = account;
     subs.contract_account = contract_account;
     subs.action_name = action_name;
-    subs.payment = asset(0, core_symbol());//amount;
+    subs.payment = asset(0, core_symbol()); // amount;
     subs.consumption = asset(0, core_symbol());
     subs.month_consumption = asset(0, core_symbol());
-    subs.balance =  subs.payment - subs.consumption-subs.month_consumption ;
+    subs.balance = subs.payment - subs.consumption - subs.month_consumption;
     subs.subscription_time = time_point_sec(eosio::current_time_point());
     subs.last_payment_time = time_point_sec();
     subs.status = subscription_status::subscription_subscribe;
@@ -89,18 +88,18 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
 }
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param requester 
- * @param request_content 
+ * @brief
+ *
+ * @param service_id
+ * @param contract_account
+ * @param action_name
+ * @param requester
+ * @param request_content
  */
 void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                              name action_name, name requester,
                              std::string request_content) {
-                               //print("======requestdata");
+  // print("======requestdata");
   require_auth(requester);
 
   /// check service available subscription status subscribe
@@ -110,13 +109,13 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
                                         action_name),
         "service and subscription must be available");
 
-  fee_service(service_id, contract_account, action_name,
-              fee_type::fee_times);
+  fee_service(service_id, contract_account, action_name, fee_type::fee_times);
 
   data_service_requests reqtable(_self, service_id);
 
   reqtable.emplace(_self, [&](auto &r) {
-    r.request_id = reqtable.available_primary_key()+(0==reqtable.available_primary_key()?1:0);
+    r.request_id = reqtable.available_primary_key() +
+                   (0 == reqtable.available_primary_key() ? 1 : 0);
     r.service_id = service_id;
     r.contract_account = contract_account;
     r.action_name = action_name;
@@ -125,46 +124,42 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
     r.request_content = request_content;
     r.status = request_status::reqeust_valid;
   });
-  
-  
 }
 
-
 /**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param account 
- * @param amount 
- * @param memo 
+ * @brief
+ *
+ * @param service_id
+ * @param contract_account
+ * @param action_name
+ * @param account
+ * @param amount
+ * @param memo
  */
-void bos_oracle::payservice(uint64_t service_id, name contract_account, asset amount, std::string memo) {
- require_auth(contract_account);
+void bos_oracle::payservice(uint64_t service_id, name contract_account,
+                            asset amount, std::string memo) {
+  require_auth(contract_account);
   check(amount.amount > 0, "amount must be greater than zero");
- transfer(contract_account, consumer_account, amount, "");
- pay_service( service_id,  contract_account,  amount);
+  transfer(contract_account, consumer_account, amount, "");
+  pay_service(service_id, contract_account, amount);
 }
 
 /**
- * @brief 
- * 
- * @param service_id 
- * @param contract_account 
- * @param action_name 
- * @param account 
- * @param amount 
- * @param memo 
+ * @brief
+ *
+ * @param service_id
+ * @param contract_account
+ * @param action_name
+ * @param account
+ * @param amount
+ * @param memo
  */
-void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset amount) {
+void bos_oracle::pay_service(uint64_t service_id, name contract_account,
+                             asset amount) {
 
- 
   // require_auth(contract_account);
- 
-  
 
-  data_service_subscriptions substable(_self,service_id);
+  data_service_subscriptions substable(_self, service_id);
 
   // auto id =
   //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
@@ -186,7 +181,5 @@ void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset a
   // cancel_deferred(deferred_id);
   // t.send(deferred_id, _self);
 }
-
-
 
 // } /// namespace eosio

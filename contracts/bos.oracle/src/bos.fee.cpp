@@ -45,7 +45,6 @@ uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
   return request_id;
 }
 
-
 /**
  * @brief
  *
@@ -373,18 +372,16 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
       receive_contracts.push_back(std::make_tuple(
           req->contract_account, req->action_name, req->request_id));
 
-          ids.push_back(req->request_id);
+      ids.push_back(req->request_id);
     }
   }
 
-  for(auto& id:ids)
-  {
-      data_service_requests reqtable(_self, service_id);
+  for (auto &id : ids) {
+    data_service_requests reqtable(_self, service_id);
     auto req_itr = reqtable.find(request_id);
     check(req_itr != reqtable.end(), "request id could not be found");
-       reqtable.modify(req_itr, _self, [&](auto &r) {
+    reqtable.modify(req_itr, _self, [&](auto &r) {
       r.status = request_status::reqeust_finish;
-
     });
   }
 

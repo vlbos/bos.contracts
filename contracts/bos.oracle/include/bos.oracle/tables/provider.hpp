@@ -56,7 +56,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_service {
   uint64_t service_id;
   time_point_sec create_time;
-  uint64_t primary_key() const { return static_cast<uint64_t>(create_time.sec_since_epoch()); }
+  uint64_t primary_key() const {
+    return static_cast<uint64_t>(create_time.sec_since_epoch());
+  }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
@@ -101,12 +103,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   uint64_t by_time() const {
     return static_cast<uint64_t>(-update_time.sec_since_epoch());
   }
-  uint64_t by_number() const {
-    return update_number;
-  }
-  uint64_t by_request() const {
-    return request_id;
-  }
+  uint64_t by_number() const { return update_number; }
+  uint64_t by_request() const { return request_id; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] push_record {
@@ -137,7 +135,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
   }
 };
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
+struct [
+    [eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
   uint64_t service_id;
   name account;
   name contract_account;
@@ -161,15 +160,17 @@ typedef eosio::multi_index<"svcprovision"_n, data_service_provision>
 
 typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply>
     svc_provision_cancel_applys;
- 
+
 typedef eosio::multi_index<
     "provisionlog"_n, data_service_provision_log,
     indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                          &data_service_provision_log::by_time>>,
-    indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                         &data_service_provision_log::by_number>>,
-    indexed_by<"byrequest"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                         &data_service_provision_log::by_request>>>
+                                         &data_service_provision_log::by_time>>,
+    indexed_by<"bynumber"_n,
+               const_mem_fun<data_service_provision_log, uint64_t,
+                             &data_service_provision_log::by_number>>,
+    indexed_by<"byrequest"_n,
+               const_mem_fun<data_service_provision_log, uint64_t,
+                             &data_service_provision_log::by_request>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;

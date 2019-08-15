@@ -3,4 +3,3 @@
 using std::vector;
 
 typedef std::vector<char> bytes;
-

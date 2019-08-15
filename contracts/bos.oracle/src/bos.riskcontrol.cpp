@@ -11,7 +11,7 @@
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
   print_f("On notify : % % % %", from, to, quantity, memo);
-  if (from ==_self || memo.empty()) {
+  if (from == _self || memo.empty()) {
     // print("memo is empty on trasfer");
     return;
   }
@@ -30,7 +30,8 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
         arbitrator_count, arbitrator_count, deposit_count,  complain_count,
         arbitrator_count, resp_case_count,  reappeal_count, reresp_case_count,
     };
-    // check(category >= 0 && category < index_counts.size(), "unknown category");
+    // check(category >= 0 && category < index_counts.size(), "unknown
+    // category");
 
     // check(parameters.size() == index_counts[category],
     //       "the parameters'size does not match ");
@@ -84,33 +85,35 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       break;
     case tc_arbitration_stake_complain:
       _complain(account, s2int(index_id), quantity, parameters[index_reason],
-                arbi_method_type::multiple_rounds,parameters[index_evidence]);
+                arbi_method_type::multiple_rounds, parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_arbitrator:
 
       _regarbitrat(account, eosio::public_key(), s2int(index_type), quantity,
-                  "");
+                   "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_resp_case:
 
-      _respcase(account, s2int(index_id), quantity, s2int(index_round),parameters[index_evidence]);
+      _respcase(account, s2int(index_id), quantity, s2int(index_round),
+                parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case ts_arbitration_stake_reappeal:
 
       _reappeal(account, s2int(index_arbi_id), s2int(index_id),
                 s2int(index_round), 0 != s2int(index_provider), quantity,
-                parameters[index_reason],parameters[index_evidence]);
+                parameters[index_reason], parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_reresp_case:
-      _rerespcase(account, s2int(index_id), quantity, s2int(index_round),parameters[index_evidence]);
+      _rerespcase(account, s2int(index_id), quantity, s2int(index_round),
+                  parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_risk_guarantee:
-      add_guarantee( s2int(index_id),account, quantity, s2int(index_duration));
+      add_guarantee(s2int(index_id), account, quantity, s2int(index_duration));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     default:
@@ -169,7 +172,8 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity,
                            std::make_tuple(from, to, quantity, memo));
     t.delay_sec = 0;
     uint128_t deferred_id =
-        (uint128_t(to.value) << 64) | time_point_sec(eosio::current_time_point()).sec_since_epoch();
+        (uint128_t(to.value) << 64) |
+        time_point_sec(eosio::current_time_point()).sec_since_epoch();
     cancel_deferred(deferred_id);
     t.send(deferred_id, _self, true);
   }
@@ -235,8 +239,9 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
                          [&](auto &ss) { ss.freeze_amount += quantity; });
     // print("======free===subsr");
     // transfer(from, to, quantity, memo);
-    add_freeze(svcsubs_itr->service_id, from, time_point_sec(eosio::current_time_point()),
-               time_length, quantity);
+    add_freeze(svcsubs_itr->service_id, from,
+               time_point_sec(eosio::current_time_point()), time_length,
+               quantity);
   } else {
     // risk guarantee
     //    data_services datasvctable( _self, _self.value );
@@ -246,11 +251,11 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
     // {
     //    //risk delay
     // }
-
     /// delay time length
 
     // print("===delay======subsr");
-    add_delay(svcsubs_itr->service_id, from, time_point_sec(eosio::current_time_point()), time_length,
+    add_delay(svcsubs_itr->service_id, from,
+              time_point_sec(eosio::current_time_point()), time_length,
               quantity);
 
     // transaction t;
@@ -325,20 +330,23 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
   unfreeze_amount = freeze_providers_amount(
       service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
 
-  add_freeze_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration,
+  add_freeze_delay(service_id, account,
+                   time_point_sec(eosio::current_time_point()), duration,
                    amount - asset(unfreeze_amount, core_symbol()),
                    transfer_type::tt_freeze);
 
   // delay
-  add_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration, amount);
+  add_delay(service_id, account, time_point_sec(eosio::current_time_point()),
+            duration, amount);
 }
 
 void bos_oracle::add_delay(uint64_t service_id, name account,
                            time_point_sec start_time, uint64_t duration,
                            asset amount) {
 
-  add_freeze_delay(service_id, account, time_point_sec(eosio::current_time_point()), duration, amount,
-                   transfer_type::tt_delay);
+  add_freeze_delay(service_id, account,
+                   time_point_sec(eosio::current_time_point()), duration,
+                   amount, transfer_type::tt_delay);
 }
 
 uint64_t
@@ -528,4 +536,3 @@ void bos_oracle::add_balance(name owner, asset value, name ram_payer) {
     dapp_acnts.modify(dapp, same_payer, [&](auto &a) { a.balance += value; });
   }
 }
-

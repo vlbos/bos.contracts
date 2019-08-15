@@ -40,20 +40,29 @@ using std::string;
     //   ethbtc.set(p, _self);
     //   return;
     // }
-    // print("#################");
-    // print(p.c_str());
-    // print("!!!!!!!!!!!!!!!!!!");
+    print("#################");
+    print(p.c_str());
+    print("!!!!!!!!!!!!!!!!!!");
     // check(false, p.c_str());
   }
 
- void YOUR_CONTRACT_NAME::fetchdata(name oracle,uint64_t service_id,uint64_t update_number)
+ void YOUR_CONTRACT_NAME::fetchdata(name oracle,uint64_t service_id,uint64_t update_number,uint64_t request_id)
   {
     oracle_data oracledatatable(oracle,service_id);
     print("update number =",update_number);
      check (oracledatatable.begin()!= oracledatatable.end()," no  data found ");
-      auto itr = oracledatatable.find(update_number);
-      check (itr!= oracledatatable.end()," no update number found ");
-      print(itr->value.c_str());
+     auto number_idx = oracledatatable.get_index<"bynumber"_n>();
+     auto request_idx = oracledatatable.get_index<"byrequest"_n>();
+
+     if (0 != update_number) {
+       auto itr = number_idx.find(update_number);
+       check(itr != number_idx.end(), " no update number found ");
+       print(itr->value.c_str());
+     } else {
+       auto itr = request_idx.find(request_id);
+       check(itr != request_idx.end(), " no request id  found ");
+       print(itr->value.c_str());
+     }
   }
 
   // @abi action
