@@ -11,10 +11,8 @@
 #include "bos.oracle/tables/consumer.hpp"
 #include "bos.oracle/tables/oracle.hpp"
 #include "bos.oracle/tables/oracle_api.hpp"
-#include "bos.oracle/tables/oraclize.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
-#include "bos.oracle/tables/singletons.hpp"
 
 #include <eosio/eosio.hpp>
 using namespace eosio;
@@ -38,7 +36,7 @@ public:
   bos_oracle(name receiver, name code, datastream<const char *> ds)
       : contract(receiver, code, ds){
   }
-  ~bos_oracle() { _oracle_fee.set(_fee_state, _self); }
+  ~bos_oracle() {  }
 
   /// bos.provider begin
   ///
@@ -172,8 +170,6 @@ public:
   /// bos.arbitration end
 
 private:
-  oracle_fee_singleton _oracle_fee;
-  bos_oracle_fee _fee_state;
 
   // provider
   void stake_asset(uint64_t service_id, name account, asset amount);

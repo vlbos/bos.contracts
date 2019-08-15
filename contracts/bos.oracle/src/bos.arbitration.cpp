@@ -8,9 +8,10 @@
 #include <eosio/asset.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
-#include <eosio/singleton.hpp>
+#include <eosio/transaction.hpp>
 #include <eosio/time.hpp>
 #include <string>
+#include <cmath>
 // namespace eosio {
 
 using eosio::asset;

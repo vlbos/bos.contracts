@@ -135,8 +135,11 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
   }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
+/**
+ * @brief 
+ * 
+ */
+struct [[eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
   uint64_t service_id;
   name account;
   name contract_account;
@@ -153,36 +156,24 @@ typedef eosio::multi_index<"dataservices"_n, data_service> data_services;
 
 typedef eosio::multi_index<"servicefees"_n, data_service_fee> data_service_fees;
 typedef eosio::multi_index<"providers"_n, data_provider> data_providers;
-typedef eosio::multi_index<"provservices"_n, provider_service>
-    provider_services;
-typedef eosio::multi_index<"svcprovision"_n, data_service_provision>
-    data_service_provisions;
+typedef eosio::multi_index<"provservices"_n, provider_service> provider_services;
+typedef eosio::multi_index<"svcprovision"_n, data_service_provision> data_service_provisions;
 
-typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply>
-    svc_provision_cancel_applys;
+typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply> svc_provision_cancel_applys;
 
-typedef eosio::multi_index<
-    "provisionlog"_n, data_service_provision_log,
-    indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t,
-                                         &data_service_provision_log::by_time>>,
-    indexed_by<"bynumber"_n,
-               const_mem_fun<data_service_provision_log, uint64_t,
-                             &data_service_provision_log::by_number>>,
-    indexed_by<"byrequest"_n,
-               const_mem_fun<data_service_provision_log, uint64_t,
-                             &data_service_provision_log::by_request>>>
+typedef eosio::multi_index<"provisionlog"_n, data_service_provision_log,
+                           indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_time>>,
+                           indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_number>>,
+                           indexed_by<"byrequest"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_request>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;
 
-typedef eosio::multi_index<"ppushrecords"_n, provider_push_record>
-    provider_push_records;
+typedef eosio::multi_index<"ppushrecords"_n, provider_push_record> provider_push_records;
 
-typedef eosio::multi_index<"apushrecords"_n, action_push_record>
-    action_push_records;
+typedef eosio::multi_index<"apushrecords"_n, action_push_record> action_push_records;
 
-typedef eosio::multi_index<"papushrecord"_n, provider_action_push_record>
-    provider_action_push_records;
+typedef eosio::multi_index<"papushrecord"_n, provider_action_push_record> provider_action_push_records;
 
 // //   ///bos.oraclize end
 // };

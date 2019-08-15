@@ -87,24 +87,16 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] riskcontrol_account {
   uint64_t primary_key() const { return balance.symbol.code().raw(); }
 };
 
-typedef eosio::multi_index<"riskaccounts"_n, riskcontrol_account>
-    riskcontrol_accounts;
+typedef eosio::multi_index<"riskaccounts"_n, riskcontrol_account> riskcontrol_accounts;
 
-typedef eosio::multi_index<"servicestake"_n, data_service_stake>
-    data_service_stakes;
-typedef eosio::multi_index<"freezedelays"_n, transfer_freeze_delay>
-    transfer_freeze_delays;
+typedef eosio::multi_index<"servicestake"_n, data_service_stake> data_service_stakes;
+typedef eosio::multi_index<"freezedelays"_n, transfer_freeze_delay> transfer_freeze_delays;
 typedef eosio::multi_index<"riskguarante"_n, risk_guarantee> risk_guarantees;
 
-typedef eosio::multi_index<
-    "freezelog"_n, account_freeze_log,
-    indexed_by<"byaccount"_n, const_mem_fun<account_freeze_log, uint64_t,
-                                            &account_freeze_log::by_account>>>
-    account_freeze_logs;
-typedef eosio::multi_index<"freezestats"_n, account_freeze_stat>
-    account_freeze_stats;
-typedef eosio::multi_index<"svcfrozestat"_n, service_freeze_stat>
-    service_freeze_stats;
+typedef eosio::multi_index<"freezelog"_n, account_freeze_log, 
+indexed_by<"byaccount"_n, const_mem_fun<account_freeze_log, uint64_t, &account_freeze_log::by_account>>> account_freeze_logs;
+typedef eosio::multi_index<"freezestats"_n, account_freeze_stat> account_freeze_stats;
+typedef eosio::multi_index<"svcfrozestat"_n, service_freeze_stat> service_freeze_stats;
 // };
 
 // } /// namespace eosio

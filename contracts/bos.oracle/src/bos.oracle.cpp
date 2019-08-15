@@ -12,10 +12,8 @@
 #include "bos.consumer.cpp"
 #include "bos.fee.cpp"
 #include "bos.oracle/bos.oracle.hpp"
-#include "bos.oraclize.cpp"
 #include "bos.provider.cpp"
 #include "bos.riskcontrol.cpp"
-#include "bos.stat.cpp"
 
 using namespace eosio;
 
@@ -52,9 +50,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       // endpoints
       EOSIO_DISPATCH_HELPER(
           bos_oracle,
-          (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(
-              disable)(push)(regservice)(unregservice)(execaction)(
-              unstakeasset)(innerpush)(pushdata)(innerpublish)(oraclepush)(
+         (regservice)(unregservice)(execaction)(unstakeasset)(innerpush)(pushdata)(innerpublish)(oraclepush)(
               addfeetypes)(addfeetype)(claim)(subscribe)(requestdata)(
               starttimer)(uploadeviden)(uploadresult)(acceptarbi)(unstakearbi)(
               claimarbi)(deposit)(withdraw))

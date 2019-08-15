@@ -31,8 +31,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_consumer {
   uint64_t primary_key() const { return account.value; }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] data_service_subscription {
+struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_subscription {
   uint64_t service_id;
   name contract_account;
   name action_name;
@@ -68,8 +67,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_request {
   }
 };
 
-struct [
-    [eosio::table, eosio::contract("bos.oracle")]] data_service_usage_record {
+struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_usage_record {
   uint64_t usage_id;
   uint64_t request_id;
   name contract_account;
@@ -92,24 +90,15 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] service_consumption {
 };
 
 typedef eosio::multi_index<"dataconsumer"_n, data_consumer> data_consumers;
-typedef eosio::multi_index<    "subscription"_n, data_service_subscription,
-    indexed_by<"byaccount"_n,
-               const_mem_fun<data_service_subscription, uint64_t,
-                             &data_service_subscription::by_account>>,
-    indexed_by<"bytime"_n, const_mem_fun<data_service_subscription, uint64_t,
-                                         &data_service_subscription::by_time>>>
-    data_service_subscriptions;
+typedef eosio::multi_index<"subscription"_n, data_service_subscription,
+                           indexed_by<"byaccount"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_account>>,
+                           indexed_by<"bytime"_n, const_mem_fun<data_service_subscription, uint64_t, &data_service_subscription::by_time>>>    data_service_subscriptions;
 
-typedef eosio::multi_index<
-    "request"_n, data_service_request,
-    indexed_by<"bytime"_n, const_mem_fun<data_service_request, uint64_t,
-                                         &data_service_request::by_time>>>
-    data_service_requests;
+typedef eosio::multi_index<"request"_n, data_service_request,
+                           indexed_by<"bytime"_n, const_mem_fun<data_service_request, uint64_t, &data_service_request::by_time>>>    data_service_requests;
 
-typedef eosio::multi_index<"usagerecords"_n, data_service_usage_record>
-    data_service_usage_records;
-typedef eosio::multi_index<"consumptions"_n, service_consumption>
-    service_consumptions;
+typedef eosio::multi_index<"usagerecords"_n, data_service_usage_record> data_service_usage_records;
+typedef eosio::multi_index<"consumptions"_n, service_consumption> service_consumptions;
 // };
 
 // } /// namespace eosio

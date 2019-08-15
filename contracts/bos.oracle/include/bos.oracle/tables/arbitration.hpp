@@ -183,6 +183,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] stake_record {
 
   uint64_t primary_key() const { return record_id; }
 };
+
+
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_income_account {
   name account;
   asset income;
@@ -193,21 +195,15 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_income_accoun
 typedef eosio::multi_index<"complainants"_n, complainant, indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
 typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp, indexed_by<"svc"_n, const_mem_fun<arbicaseapp, uint64_t, &arbicaseapp::by_svc>>> arbicaseapps;
-typedef eosio::multi_index<
-    "arbiprocess"_n, arbitration_process,
-    indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t,
-                                       &arbitration_process::by_arbi>>>
-    arbitration_processs;
-typedef eosio::multi_index<
-    "arbiresults"_n, arbitration_result,
-    indexed_by<"arbi"_n, const_mem_fun<arbitration_result, uint64_t,
-                                       &arbitration_result::by_arbi>>>
+typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t,
+                                       &arbitration_process::by_arbi>>> arbitration_processs;
+
+typedef eosio::multi_index<"arbiresults"_n, arbitration_result,indexed_by<"arbi"_n, const_mem_fun<arbitration_result, uint64_t,&arbitration_result::by_arbi>>>
     arbitration_results;
+
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
 
-typedef eosio::multi_index<
-    "arbistakeacc"_n, arbitration_stake_account,
-    indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t,
+typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account, indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t,
                                        &arbitration_stake_account::by_type>>>
     arbitration_stake_accounts;
 
