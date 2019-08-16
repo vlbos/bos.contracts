@@ -167,6 +167,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {
   uint64_t primary_key() const { return service_id; }
 };
 
+/**
+ * @brief 申诉，应诉者仲裁抵押金额  scope arbitration id
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account {
   name account;
   asset balance; /// stake amount
@@ -175,6 +179,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account
   uint64_t by_type() const { return (is_provider ? 0 : 1); }
 };
 
+/**
+ * @brief 抵押 记录
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] stake_record {
   uint64_t record_id;
   name account;
@@ -184,7 +192,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] stake_record {
   uint64_t primary_key() const { return record_id; }
 };
 
-
+/**
+ * @brief 仲裁收入表
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_income_account {
   name account;
   asset income;

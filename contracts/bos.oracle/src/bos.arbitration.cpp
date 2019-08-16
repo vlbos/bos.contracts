@@ -158,11 +158,11 @@ void bos_oracle::_complain(name applicant, uint64_t service_id, asset amount,
     }
   }
   check(hasProvider, "no provider");
-  timeout_deferred(arbi_id, 0, arbitration_timer_type::resp_appeal_timeout,
-                   eosio::hours(10).to_seconds());
+  // timeout_deferred(arbi_id, 0, arbitration_timer_type::resp_appeal_timeout,
+  //                  eosio::hours(10).to_seconds());
 
   if (!evidence.empty()) {
-    uploadeviden(applicant, arbi_id, 1, evidence);
+    // uploadeviden(applicant, arbi_id, 1, evidence);
   }
 }
 

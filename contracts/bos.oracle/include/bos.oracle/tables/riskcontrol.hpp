@@ -66,6 +66,11 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] account_freeze_log {
   uint64_t by_account() const { return account.value; }
 };
 
+
+/**
+ * @brief 服务提供者账户 冻结余额    scope 服务ID
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] account_freeze_stat {
   name account;
   asset amount;
@@ -73,6 +78,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] account_freeze_stat {
   uint64_t primary_key() const { return account.value; }
 };
 
+/**
+ * @brief 服务 冻结余额    scope 服务ID
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] service_freeze_stat {
   uint64_t service_id;
   asset amount;
@@ -80,6 +89,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] service_freeze_stat {
   uint64_t primary_key() const { return service_id; }
 };
 
+/**
+ * @brief 风控账户余额   scope  数据使用者账户account.value
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] riskcontrol_account {
 
   asset balance;

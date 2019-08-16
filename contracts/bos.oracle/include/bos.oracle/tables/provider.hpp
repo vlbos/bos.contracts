@@ -107,13 +107,21 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   uint64_t by_request() const { return request_id; }
 };
 
+/**
+ * @brief 按服务分组 数据次数  scope service_id
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] push_record {
   uint64_t service_id;
-  uint64_t times;
-  uint64_t month_times;
+  uint64_t times;   ///提供数据次数
+  uint64_t month_times;  ///提供数据次数 按月
   uint64_t primary_key() const { return service_id; }
 };
 
+/**
+ * @brief 按数据提供者分组 数据提供次数  scope service_id
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_push_record {
   uint64_t service_id;
   name account;
@@ -123,6 +131,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] provider_push_record {
   uint64_t primary_key() const { return account.value; }
 };
 
+/**
+ * @brief  数据使用者合约账户分组  按数据提供次数  scope service_id
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
   uint64_t service_id;
   name contract_account;
@@ -136,7 +148,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
 };
 
 /**
- * @brief 
+ * @brief 以提供者，使用者为分组  数据提供次数  scope service_id
  * 
  */
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
