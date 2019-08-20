@@ -19,41 +19,6 @@ using eosio::public_key;
 using eosio::time_point_sec;
 using std::string;
 
-enum arbitrator_status : uint8_t { stoped = 0, serving = 1 };
-
-enum arbitrator_type : uint8_t { profession = 1, amateur = 2 };
-
-enum complainant_status : uint8_t {
-  wait_for_accept = 1,
-  accepted = 2,
-  failed = 3,
-  success = 4
-};
-
-enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };
-
-enum arbi_step_type : uint64_t {
-  arbi_init = 1,
-  arbi_responded,
-  arbi_choosing_arbitrator,
-  arbi_started,
-  arbi_end,
-  arbi_timeout,
-  arbi_reappeal,
-  arbi_reappeal_timeout_end,
-  arbi_public_init,
-  arbi_public_responded,
-  arbi_public_choosing_arbitrator,
-  arbi_public_started,
-  arbi_public_end,
-  arbi_public_timeout
-};
-
-enum final_winner_type : uint64_t {
-  consumer,
-  provider
-
-};
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] complainant {
   uint64_t appeal_id;
@@ -76,7 +41,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] complainant {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
   name account;
-  public_key pubkey;
   uint8_t type;
   uint8_t status;
   double correct_rate;
@@ -160,6 +124,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_result {
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {
+  uint64_t award_id;
   uint64_t service_id;
   uint64_t arbitration_id;
   std::string arbitrator_evidence;

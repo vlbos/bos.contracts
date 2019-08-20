@@ -9,7 +9,7 @@ using namespace eosio;
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t service_id;
-  uint8_t fee_type;
+  // uint8_t fee_type;
   uint8_t data_type;
   uint8_t status;
   uint8_t injection_method;
@@ -21,15 +21,15 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t appeal_freeze_period;
   uint64_t exceeded_risk_control_freeze_period;
   uint64_t guarantee_id;
-  asset service_price;
+  // asset service_price;
   asset amount;
   asset risk_control_amount;
   asset pause_service_stake_amount;
   std::string data_format;
   std::string criteria;
   std::string declaration;
-  bool freeze_flag;
-  bool emergency_flag;
+  // bool freeze_flag;
+  // bool emergency_flag;
   time_point_sec update_start_time;
   uint64_t primary_key() const { return service_id; }
 };
@@ -44,7 +44,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_fee {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
   name account;
-  public_key pubkey;
   asset total_stake_amount;
   asset total_freeze_amount;
   asset unconfirmed_amount;
@@ -52,7 +51,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
   time_point_sec last_claim_time;
   uint64_t primary_key() const { return account.value; }
 };
-
+/**
+ * @brief 提供者分组 注册服务汇总   scoipe 提供者账户
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_service {
   uint64_t service_id;
   time_point_sec create_time;
@@ -67,9 +69,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision {
   asset amount;
   asset freeze_amount;
   asset service_income;
-  uint64_t status;
+  uint8_t status;
   std::string public_information;
-  bool stop_service;
+  // bool stop_service;
 
   uint64_t primary_key() const { return account.value; }
   // uint64_t bysvcid() const { return service_id; }
@@ -79,9 +81,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_appl
   uint64_t apply_id;
   uint64_t service_id;
   name provider;
-  uint64_t status;
+  uint8_t status;
   time_point_sec apply_time;
-  time_point_sec cancel_time;
+  // time_point_sec cancel_time;
   time_point_sec finish_time;
 
   uint64_t primary_key() const { return provider.value; }
@@ -93,11 +95,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   std::string data_json;
   name account;
   name contract_account;
-  name action_name;
   uint64_t request_id;
   time_point_sec update_time;
   uint64_t update_number;
-  uint64_t status;
+  uint8_t status;
 
   uint64_t primary_key() const { return log_id; }
   uint64_t by_time() const {
@@ -108,7 +109,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
 };
 
 /**
- * @brief 按服务分组 数据次数  scope service_id
+ * @brief 按服务分组 数据次数  
  * 
  */
 struct [[eosio::table, eosio::contract("bos.oracle")]] push_record {
@@ -123,7 +124,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] push_record {
  * 
  */
 struct [[eosio::table, eosio::contract("bos.oracle")]] provider_push_record {
-  uint64_t service_id;
   name account;
   uint64_t times;
   uint64_t month_times;
@@ -131,38 +131,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] provider_push_record {
   uint64_t primary_key() const { return account.value; }
 };
 
-/**
- * @brief  数据使用者合约账户分组  按数据提供次数  scope service_id
- * 
- */
-struct [[eosio::table, eosio::contract("bos.oracle")]] action_push_record {
-  uint64_t service_id;
-  name contract_account;
-  name action_name;
-  uint64_t times;
-  uint64_t month_times;
-
-  uint64_t primary_key() const {
-    return get_hash_key(get_nn_hash(contract_account, action_name));
-  }
-};
-
-/**
- * @brief 以提供者，使用者为分组  数据提供次数  scope service_id
- * 
- */
-struct [[eosio::table, eosio::contract("bos.oracle")]] provider_action_push_record {
-  uint64_t service_id;
-  name account;
-  name contract_account;
-  name action_name;
-  uint64_t times;
-  uint64_t month_times;
-
-  uint64_t primary_key() const {
-    return get_hash_key(get_nnn_hash(account, contract_account, action_name));
-  }
-};
 
 typedef eosio::multi_index<"dataservices"_n, data_service> data_services;
 
@@ -183,9 +151,7 @@ typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;
 
 typedef eosio::multi_index<"ppushrecords"_n, provider_push_record> provider_push_records;
 
-typedef eosio::multi_index<"apushrecords"_n, action_push_record> action_push_records;
 
-typedef eosio::multi_index<"papushrecord"_n, provider_action_push_record> provider_action_push_records;
 
 // //   ///bos.oraclize end
 // };

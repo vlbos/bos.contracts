@@ -28,11 +28,10 @@ struct  push_json
   uint64_t service_id;
   name provider;
   name contract_account;
-  name action_name;
   uint64_t request_id;
   string data_json;
  
-  EOSLIB_SERIALIZE(push_json, (service_id)(provider)(contract_account)(action_name)(request_id)(data_json))
+  EOSLIB_SERIALIZE(push_json, (service_id)(provider)(contract_account)(request_id)(data_json))
 };
 
 struct price

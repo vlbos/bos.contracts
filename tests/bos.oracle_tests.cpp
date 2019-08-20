@@ -226,7 +226,6 @@ public:
                                  );
    }
 
-
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {
       string action_type_name = abi_ser.get_action_type(name);
 
@@ -312,20 +311,7 @@ public:
       vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(ppushrecords), account );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "provider_push_record", data, abi_serializer_max_time );
    }
-
-   fc::variant get_action_push_record( const uint64_t& service_id, uint64_t key)
-   {
-      // uint64_t key = get_hash_key(get_nn_hash( contract_account, action_name);
-      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(apushrecords), key );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "action_push_record", data, abi_serializer_max_time );
-   }
-
-   fc::variant get_provider_action_push_record( const uint64_t& service_id , uint64_t key )
-   {
-      //   uint64_t key = get_hash_key(get_nnn_hash(account, contract_account, action_name);
-      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(papushrecord), key );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "provider_action_push_record", data, abi_serializer_max_time );
-   }
+  
 //consumer
    fc::variant get_data_consumer(  const name& account)
    {
@@ -335,7 +321,6 @@ public:
 
    fc::variant get_data_service_subscription( const uint64_t& service_id, const name& contract_account )
    {
-      // uint64_t key = get_hash_key(get_nn_hash( contract_account, action_name);
       vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(subscription), contract_account );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "data_service_subscription", data, abi_serializer_max_time );
    }
@@ -346,13 +331,7 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "data_service_request", data, abi_serializer_max_time );
    }
 
-   fc::variant get_data_service_usage_record( const uint64_t& service_id , const uint64_t& usage_id)
-   {
-      vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(usagerecords), usage_id );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "data_service_usage_record", data, abi_serializer_max_time );
-   }
-
-
+  
    fc::variant get_service_consumptions( const uint64_t& service_id )
    {
       vector<char> data = get_row_by_account( N(oracle.bos), service_id, N(consumptions), service_id );
@@ -417,7 +396,7 @@ public:
 //provider
    action_result regservice(
       uint64_t service_id, name account, asset amount,
-      asset service_price, uint64_t fee_type, std::string data_format,
+     std::string data_format,
       uint64_t data_type, std::string criteria, uint64_t acceptance,
       std::string declaration, uint64_t injection_method,
       uint64_t duration, uint64_t provider_limit, uint64_t update_cycle,
@@ -427,8 +406,6 @@ public:
            ( "service_id", service_id)
            ( "account", account)
            ( "amount", amount)
-           ( "service_price", service_price)
-           ( "fee_type", fee_type)
            ( "data_format", data_format)
            ( "data_type", data_type)
            ( "criteria", criteria)
@@ -444,7 +421,7 @@ public:
 
    action_result unregservice(uint64_t service_id,
                                       name account,
-                                      uint64_t status) {
+                                      uint8_t status) {
       return push_action(  account, N(unregservice), mvo()
            ( "service_id", service_id)
            ( "account", account)
@@ -473,50 +450,38 @@ public:
    }
 
    action_result pushdata(uint64_t service_id, name provider,
-                                  name contract_account, name action_name,
+                                  name contract_account, 
                                    uint64_t request_id,const string& data_json){
       return push_action( provider, N(pushdata), mvo()
            ( "service_id", service_id )
            ( "provider", provider )
            ( "contract_account", contract_account )
-           ( "action_name", action_name )
            ( "request_id", request_id)
            ( "data_json", data_json )
       );
    }
 
   action_result innerpush(uint64_t service_id, name provider,
-                                  name contract_account, name action_name,
+                                  name contract_account, 
                                    uint64_t request_id,const string& data_json){
       return push_action( provider, N(innerpush), mvo()
            ( "service_id", service_id )
            ( "provider", provider )
            ( "contract_account", contract_account )
-           ( "action_name", action_name )
            ( "request_id", request_id)
            ( "data_json", data_json )
       );
    }
 
-   action_result multipush(uint64_t service_id, name provider,
-                                  const string& data_json, bool is_request){
-      return push_action( provider, N(multipush), mvo()
-           ( "service_id", service_id )
-           ( "provider", provider )
-           ( "data_json", data_json )
-           ( "is_request", is_request )
-      );
-   }
-
- action_result publishdata(uint64_t service_id, name provider,
+ action_result oraclepush(uint64_t service_id, 
                                   uint64_t update_number,
-                                   uint64_t request_id,const string& data_json){
-      return push_action( provider, N(publishdata), mvo()
+                                   uint64_t request_id,const string& data_json, name contract_account){
+      return push_action(  N(oracle.bos), N(oraclepush), mvo()
            ( "service_id", service_id )
-           ( "provider", provider )
            ( "update_number", update_number )
            ( "request_id", request_id)
            ( "data_json", data_json )
+           ( "contract_account", contract_account )
       );
    }
 
@@ -532,16 +497,7 @@ public:
       );
    }
 
-   action_result multipublish(uint64_t service_id, name provider,
-                                  const string& data_json, bool is_request){
-      return push_action( provider, N(multipublish), mvo()
-           ( "service_id", service_id )
-           ( "provider", provider )
-           ( "data_json", data_json )
-           ( "is_request", is_request )
-      );
-   }
-
+ 
    action_result starttimer(){
       return push_action( N(oracle.bos), N(starttimer), mvo());
    }
@@ -574,14 +530,11 @@ public:
    }
 //consumer
    action_result subscribe(uint64_t service_id, name contract_account,
-                           name action_name, std::string publickey,
                            name account, asset amount, std::string memo) {
      return push_action(
          account, N(subscribe),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
-         ("action_name", action_name)
-         ("publickey", publickey)
          ("account", account)
          ("amount", amount)
          ("memo", memo)
@@ -589,13 +542,12 @@ public:
    }
 
    action_result requestdata(uint64_t service_id, name contract_account,
-                                     name action_name, name requester,
+                                     name requester,
                                      std::string request_content) {
      return push_action(
          requester, N(requestdata),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
-         ("action_name", action_name)
          ("requester", requester)
          ("request_content", request_content)
          );
@@ -614,12 +566,11 @@ public:
 
 
    action_result starttimer(uint64_t service_id, name contract_account,
-                                    name action_name, asset amount) {
+                                     asset amount) {
      return push_action(
          N(oracle.bos), N(starttimer),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
-         ("action_name", action_name)
          ("amount", amount)
          );
    }
@@ -659,7 +610,6 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
 {
 //  name account = N(alice);
 //  uint64_t service_id =0;
-  uint8_t fee_type = 1;
   uint8_t data_type = 1;
   uint8_t status = 0;
   uint8_t injection_method = 0;
@@ -670,19 +620,15 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
   uint64_t appeal_freeze_period = 0;
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
-  asset service_price = core_sym::from_string("1.0000");
   asset amount = core_sym::from_string("10.0000");
   asset risk_control_amount = core_sym::from_string("0.0000");
   asset pause_service_stake_amount = core_sym::from_string("0.0000");
   std::string data_format = "";
   std::string criteria = "";
   std::string declaration = "";
-  bool freeze_flag = false;
-  bool emergency_flag = false;
 //   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, amount, service_price,
-                          fee_type, data_format, data_type, criteria,
+  auto token = regservice(service_id, account, amount,  data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
 
@@ -728,12 +674,10 @@ void add_fee_type(uint64_t service_id)
   {
    //  service_id = new_service_id;
    //  name contract_account = N(dappuser.bos);
-    name action_name = N(receivejson);
-    std::string publickey = "";
    //  name account = N(bob);
     asset amount = core_sym::from_string("10.0000");
     std::string memo = "";
-    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+    auto subs = subscribe(service_id, contract_account, 
                           account, amount, memo);
 
     }
@@ -756,34 +700,23 @@ void add_fee_type(uint64_t service_id)
    // service_id = new_service_id;
    // name provider = N(alice);
    name contract_account = N(dappuser.bos);
-   name action_name = N(receivejson);
    const string data_json = "test data json";
    // uint64_t request_id = 0;
 
-   auto data = pushdata(service_id, provider, contract_account, action_name,
+   auto data = pushdata(service_id, provider, contract_account, 
                          request_id, data_json);
    }
 
- /// multipush
- void multi_push(uint64_t service_id,name provider,bool is_request)
-   {
-   //   uint64_t service_id = new_service_id;
-   //   name provider = N(alice);
-     const string data_json = "multipush request test data json";
-   //   bool is_request = true;
 
-     auto token = multipush(service_id, provider, data_json, is_request);
-   }
 
  /// request data
    void request_data(uint64_t service_id,name account)
    {
    //   service_id = new_service_id;
      name contract_account = N(dappuser.bos);
-     name action_name = N(alice);
    //   name account = N(bob);
      std::string request_content = "request once";
-     auto req = requestdata(service_id, contract_account, action_name, account,
+     auto req = requestdata(service_id, contract_account,  account,
                             request_content);
    }
 
@@ -824,7 +757,6 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
 
  name account = N(alice);
  uint64_t service_id =0;
-  uint8_t fee_type = 1;
   uint8_t data_type = 1;
   uint8_t status = 0;
   uint8_t injection_method = 0;
@@ -835,19 +767,17 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
   uint64_t appeal_freeze_period = 0;
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
-  asset service_price = core_sym::from_string("1.0000");
   asset amount = core_sym::from_string("10.0000");
   asset risk_control_amount = core_sym::from_string("0.0000");
   asset pause_service_stake_amount = core_sym::from_string("0.0000");
   std::string data_format = "";
   std::string criteria = "";
   std::string declaration = "";
-  bool freeze_flag = false;
-  bool emergency_flag = false;
+//   bool freeze_flag = false;
+//   bool emergency_flag = false;
   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, amount, service_price,
-                          fee_type, data_format, data_type, criteria,
+  auto token = regservice(service_id, account, amount, data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
 BOOST_TEST("" == "reg service after");
@@ -862,7 +792,6 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
   auto services = get_data_service(new_service_id);
   REQUIRE_MATCHING_OBJECT(services,mvo()
       ("service_id", service_id)
-      ("fee_type", fee_type)
       ("data_type", data_type)
       ("status", status)
       ("injection_method", injection_method)
@@ -873,15 +802,12 @@ BOOST_TEST_REQUIRE( new_service_id == get_provider_service(account,create_time_s
       ("appeal_freeze_period",appeal_freeze_period)
       ("exceeded_risk_control_freeze_period",exceeded_risk_control_freeze_period)
       ("guarantee_id", guarantee_id)
-      ("service_price", service_price)
       ("amount", core_sym::from_string("0.0000"))
       ("risk_control_amount",  risk_control_amount)
       ("pause_service_stake_amount", pause_service_stake_amount)
       ("data_format", data_format)
       ("criteria", criteria)
       ("declaration", declaration)
-      ( "freeze_flag", freeze_flag)
-      ("emergency_flag",  emergency_flag)
       ("update_start_time",  update_start_time)
   );
 
@@ -928,12 +854,10 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
   {
     service_id = new_service_id;
     name contract_account = N(dappuser.bos);
-    name action_name = N(receivejson);
-    std::string publickey = "";
     name account = N(bob);
     asset amount = core_sym::from_string("0.0000");
     std::string memo = "";
-    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+    auto subs = subscribe(service_id, contract_account,  
                           account, amount, memo);
 
     auto consumer = get_data_consumer(account);
@@ -945,7 +869,6 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
         get_data_service_subscription(service_id, contract_account);
      BOOST_TEST("" == "ss");
     BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
-    BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
    BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
    }
 
@@ -967,55 +890,31 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
    service_id = new_service_id;
    name provider = N(alice);
    name contract_account = N(dappuser.bos);
-   name action_name = N(receivejson);
    const string data_json = "test data json";
    uint64_t request_id = 0;
 
-   auto data = pushdata(service_id, provider, contract_account, action_name,
+   auto data = pushdata(service_id, provider, contract_account, 
                          request_id, data_json);
    }
 
 BOOST_TEST("" == "====pushdata");
-  produce_blocks(1);
-   /// multipush
-   {
-     uint64_t service_id = new_service_id;
-     name provider = N(alice);
-     const string data_json = "multipush test data json";
-     bool is_request = false;
-
-     auto token = multipush(service_id, provider, data_json, is_request);
-     
-   }
 
    produce_blocks(1);
 
-BOOST_TEST("" == "====multipush false");
    /// request data
    {
      service_id = new_service_id;
      name contract_account = N(dappuser.bos);
-     name action_name = N(alice);
      name account = N(bob);
      std::string request_content = "request once";
-     auto req = requestdata(service_id, contract_account, action_name, account,
+     auto req = requestdata(service_id, contract_account,  account,
                             request_content);
    }
    produce_blocks(1);
 
 BOOST_TEST("" == "====requestdata");
-   /// multipush
-   {
-     uint64_t service_id = new_service_id;
-     name provider = N(alice);
-     const string data_json = "multipush request test data json";
-     bool is_request = true;
-
-     auto token = multipush(service_id, provider, data_json, is_request);
-   }
 
    produce_blocks(1);
-BOOST_TEST("" == "====multipush true");
    /// deposit
    {
      uint64_t service_id = new_service_id;
@@ -1131,42 +1030,12 @@ pay_service(service_id, N(dappuser.bos),core_sym::from_string("10.0000"));
    {
    name provider = N(alice);
    name contract_account = N(dappuser.bos);
-   name action_name = N(receivejson);
    const string data_json = "test data json";
    uint64_t request_id = 0;
 
-   auto data = pushdata(service_id, provider, contract_account, action_name,
+   auto data = pushdata(service_id, provider, contract_account, 
                          request_id, data_json);
    }
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( multipush_test, bos_oracle_tester ) try {
-
-  name account = N(alice);
-  time_point_sec update_start_time = time_point_sec(control->head_block_time());
-  uint64_t service_id = reg_service(account, update_start_time);
-
-  add_fee_type(service_id);
-  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
-  subscribe_service(service_id, N(bob));
-  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
-
-  /// multipush
-  {
-     name provider = N(alice);
-    const string data_json = "multipush test data json";
-    bool is_request = false;
-
-    auto token = multipush(service_id, provider, data_json, is_request);
-     
-  
-     is_request = true;
-
-     token = multipush(service_id, provider, data_json, is_request);
-   }
-
-   
 
 } FC_LOG_AND_RETHROW()
 
@@ -1214,15 +1083,15 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
     const string data_json = "publish test data json";
     uint64_t request_id = 0;
 
-    auto data = publishdata(service_id, N(provider1111), update_number,
+    auto data = pushdata(service_id, N(provider1111), update_number,
                             request_id, data_json);
-    data = publishdata(service_id, N(provider2222), update_number, request_id,
+    data = pushdata(service_id, N(provider2222), update_number, request_id,
                        data_json);
-    data = publishdata(service_id, N(provider3333), update_number, request_id,
+    data = pushdata(service_id, N(provider3333), update_number, request_id,
                        data_json);
-    data = publishdata(service_id, N(provider4444), update_number, request_id,
+    data = pushdata(service_id, N(provider4444), update_number, request_id,
                        data_json);
-    data = publishdata(service_id, N(provider5555), update_number, request_id,
+    data = pushdata(service_id, N(provider5555), update_number, request_id,
                        data_json);
 
    auto oracledata = get_oracle_data(service_id,update_number);
@@ -1237,33 +1106,6 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( multipublish_test, bos_oracle_tester ) try {
-
-  name account = N(alice);
-  time_point_sec update_start_time = time_point_sec(control->head_block_time());
-  uint64_t service_id = reg_service(account, update_start_time);
-
-  add_fee_type(service_id);
-  stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
-  subscribe_service(service_id, N(bob));
-  pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
-
-  /// multipublish
-  {
-     name provider = N(alice);
-    const string data_json = "multipush test data json";
-    bool is_request = false;
-
-    auto token = multipublish(service_id, provider, data_json, is_request);
-       
-     is_request = true;
-
-     token = multipublish(service_id, provider, data_json, is_request);
-   }
-
-   
-
-} FC_LOG_AND_RETHROW()
 
 
 BOOST_FIXTURE_TEST_CASE( addfeetype_test, bos_oracle_tester ) try {
@@ -1300,12 +1142,10 @@ stake_asset(service_id,N(alice),core_sym::from_string("10.0000"));
    // subscribe service
   {
     name contract_account = N(dappuser.bos);
-    name action_name = N(receivejson);
-    std::string publickey = "";
     name account = N(bob);
     asset amount = core_sym::from_string("0.0000");
     std::string memo = "";
-    auto subs = subscribe(service_id, contract_account, action_name, publickey,
+    auto subs = subscribe(service_id, contract_account, 
                           account, amount, memo);
 
     auto consumer = get_data_consumer(account);
@@ -1317,7 +1157,6 @@ stake_asset(service_id,N(alice),core_sym::from_string("10.0000"));
         get_data_service_subscription(service_id, contract_account);
     BOOST_TEST("" == "ss");
     BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
-    BOOST_TEST_REQUIRE(action_name == subscription["action_name"].as<name>());
     BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
    }
 
@@ -1338,10 +1177,9 @@ BOOST_FIXTURE_TEST_CASE( requestdata_test, bos_oracle_tester ) try {
      /// request data
    {
      name contract_account = N(dappuser.bos);
-     name action_name = N(alice);
      name account = N(bob);
      std::string request_content = "request once";
-     auto req = requestdata(service_id, contract_account, action_name, account,
+     auto req = requestdata(service_id, contract_account,  account,
                             request_content);
    }
 
@@ -1379,8 +1217,6 @@ BOOST_FIXTURE_TEST_CASE( claim_test, bos_oracle_tester ) try {
   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
   request_data(service_id,N(bob));
   push_data(service_id,N(alice),0);
-  multi_push(service_id,N(alice),false);
-  multi_push(service_id,N(alice),true);
  _deposit(service_id,N(bob));
  _withdraw(service_id,N(bob));
 
@@ -1436,8 +1272,6 @@ BOOST_FIXTURE_TEST_CASE( withdraw_test, bos_oracle_tester ) try {
   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
   request_data(service_id,N(bob));
   push_data(service_id,N(alice),0);
-  multi_push(service_id,N(alice),false);
-  multi_push(service_id,N(alice),true);
  _deposit(service_id,N(bob));
 
   /// withdraw

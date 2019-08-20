@@ -41,20 +41,20 @@ public:
   ///
   ///
   //
-  [[eosio::action]] void regservice(uint64_t service_id, name account, asset amount, asset service_price,
-                                    uint64_t fee_type, std::string data_format, uint64_t data_type, std::string criteria, uint64_t acceptance, std::string declaration,
+  [[eosio::action]] void regservice(uint64_t service_id, name account, asset amount,
+                                    std::string data_format, uint64_t data_type, std::string criteria, uint64_t acceptance, std::string declaration,
                                     uint64_t injection_method, uint64_t duration, uint64_t provider_limit, uint64_t update_cycle, time_point_sec update_start_time);
   [[eosio::action]] void stakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
   [[eosio::action]] void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
   [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
-  [[eosio::action]] void innerpush(uint64_t service_id, name provider, name contract_account, name action_name, uint64_t request_id, string data_json);
+  [[eosio::action]] void innerpush(uint64_t service_id, name provider, name contract_account,  uint64_t request_id, string data_json);
   [[eosio::action]] void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json, name contract_account);
   [[eosio::action]] void claim(name account, name receive_account);
   [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
-  [[eosio::action]] void unregservice(uint64_t service_id, name account, uint64_t status);
+  [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
   [[eosio::action]] void starttimer();
 
   using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
@@ -76,8 +76,8 @@ public:
   /// bos.consumer begin
   ///
   ///
-  [[eosio::action]] void subscribe(uint64_t service_id, name contract_account, name action_name, std::string publickey, name account, asset amount, std::string memo);
-  [[eosio::action]] void requestdata(uint64_t service_id, name contract_account, name action_name, name requester, std::string request_content);
+  [[eosio::action]] void subscribe(uint64_t service_id, name contract_account,   name account, asset amount, std::string memo);
+  [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,  name requester, std::string request_content);
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
   using subscribe_action = eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action = eosio::action_wrapper<"requestdata"_n, &bos_oracle::requestdata>;
@@ -114,7 +114,7 @@ public:
   /// bos.arbitration begin
   ///
   ///
-  // [[eosio::action]] void regarbitrat( name account, public_key pubkey,
+  // [[eosio::action]] void regarbitrat( name account, 
   // uint8_t type, asset amount, std::string public_info );
 
   // [[eosio::action]] void complain( name applicant, uint64_t service_id, asset
@@ -146,12 +146,12 @@ private:
   // provider
   void stake_asset(uint64_t service_id, name account, asset amount);
   void add_times(uint64_t service_id, name account, name contract_account,
-                 name action_name, bool is_request);
+                 bool is_request);
   std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> get_times(uint64_t service_id, name account);
-  time_point_sec get_payment_time(uint64_t service_id, name contract_account, name action_name);
-  uint8_t get_subscription_status(uint64_t service_id, name contract_account, name action_name);
+  time_point_sec get_payment_time(uint64_t service_id, name contract_account);
+  uint8_t get_subscription_status(uint64_t service_id, name contract_account);
   uint8_t get_service_status(uint64_t service_id);
-  void fee_service(uint64_t service_id, name contract_account, name action_name, uint8_t fee_type);
+  void fee_service(uint64_t service_id, name contract_account, uint8_t fee_type);
   asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
   uint64_t get_request_by_last_push(uint64_t service_id, name provider);
 
@@ -179,8 +179,8 @@ private:
 
   /// consumer
   void pay_service(uint64_t service_id, name contract_account, asset amount);
-  std::vector<std::tuple<name, name>> get_subscription_list(uint64_t service_id);
-  std::vector<std::tuple<name, name, uint64_t>> get_request_list(uint64_t service_id, uint64_t request_id);
+  std::vector<name> get_subscription_list(uint64_t service_id);
+  std::vector<std::tuple<name,  uint64_t>> get_request_list(uint64_t service_id, uint64_t request_id);
   std::tuple<uint64_t, uint64_t> get_consumption(uint64_t service_id);
 
   /// risk control
@@ -200,7 +200,7 @@ private:
   std::tuple<asset, asset> stat_freeze_amounts(uint64_t service_id, name account);
 
   /// arbitration
-  void _regarbitrat(name account, public_key pubkey, uint8_t type, asset amount, std::string public_info);
+  void _regarbitrat(name account,  uint8_t type, asset amount, std::string public_info);
   void _complain(name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method, std::string evidence);
   void _respcase(name respondent, uint64_t arbitration_id, asset amount, uint64_t process_id, std::string evidence);
   void _reappeal(name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason, std::string evidence);

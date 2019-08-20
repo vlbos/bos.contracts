@@ -21,13 +21,13 @@ using std::string;
 /**
  * 注册仲裁员
  */
-// void bos_oracle::regarbitrat( name account, public_key pubkey, uint8_t type,
+// void bos_oracle::regarbitrat( name account,  uint8_t type,
 // asset amount, std::string public_info ) {
 //     require_auth( account );
-//     _regarbitrat(  account,  pubkey,  type,  amount,  public_info );
+//     _regarbitrat(  account,    type,  amount,  public_info );
 // }
 
-void bos_oracle::_regarbitrat(name account, public_key pubkey, uint8_t type,
+void bos_oracle::_regarbitrat(name account, uint8_t type,
                               asset amount, std::string public_info) {
   check(type == arbitrator_type::profession || type == arbitrator_type::amateur,
         "Arbitrator type can only be 1 or 2.");
@@ -41,7 +41,7 @@ void bos_oracle::_regarbitrat(name account, public_key pubkey, uint8_t type,
   // 注册仲裁员, 填写信息
   abr_table.emplace(get_self(), [&](auto &p) {
     p.account = account;
-    p.pubkey = pubkey;
+    // p.pubkey = pubkey;
     p.type = type;
     p.public_info = public_info;
   });
@@ -147,7 +147,7 @@ void bos_oracle::_complain(name applicant, uint64_t service_id, asset amount,
   // 对所有的数据提供者发送通知, 通知数据提供者应诉
   for (auto iter = svcprovider_tb.begin(); iter != svcprovider_tb.end();
        iter++) {
-    if (!iter->stop_service) {
+    if (iter->status == service_status::service_in) {
       hasProvider = true;
       auto notify_amount = eosio::asset(1, core_symbol());
       // Transfer to provider
@@ -449,7 +449,7 @@ void bos_oracle::_reappeal(name applicant, uint64_t arbitration_id,
     bool hasProvider = false;
     for (auto iter = svcprovider_tb.begin(); iter != svcprovider_tb.end();
          iter++) {
-      if (!iter->stop_service) {
+      if (iter->status == service_status::service_in) {
         hasProvider = true;
         auto notify_amount = eosio::asset(1, core_symbol());
         // Transfer to provider

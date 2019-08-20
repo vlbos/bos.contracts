@@ -21,7 +21,10 @@ using namespace eosio;
 using eosio::asset;
 using eosio::public_key;
 using std::string;
-
+/**
+ * @brief 服务抵押表
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_stake {
   uint64_t service_id;
   asset amount;
@@ -38,7 +41,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] transfer_freeze_delay {
   time_point_sec start_time;
   uint64_t duration;
   asset amount;
-  uint64_t status;
+  uint8_t status;
   uint64_t type;
 
   uint64_t primary_key() const { return transfer_id; }
@@ -50,11 +53,14 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] risk_guarantee {
   asset amount;
   time_point_sec start_time;
   uint64_t duration;
-  signature sig;
-  uint64_t status;
+  uint8_t status;
   uint64_t primary_key() const { return risk_id; }
 };
 
+/**
+ * @brief 账户冻结日志表
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] account_freeze_log {
   uint64_t log_id;
   uint64_t service_id;

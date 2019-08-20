@@ -51,11 +51,10 @@ uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id,
  * @param service_id
  * @param account
  * @param contract_account
- * @param action_name
  * @param is_request
  */
 void bos_oracle::add_times(uint64_t service_id, name account,
-                           name contract_account, name action_name,
+                           name contract_account, 
                            bool is_request) {
 
   const uint64_t one_time = 1;
@@ -73,11 +72,10 @@ void bos_oracle::add_times(uint64_t service_id, name account,
     }
   };
 
-  push_records pushtable(_self, service_id);
+  push_records pushtable(_self, _self.value);
   auto push_itr = pushtable.find(service_id);
   if (push_itr == pushtable.end()) {
     pushtable.emplace(_self, [&](auto &p) {
-      p.service_id = service_id;
       add_time(p.times, p.month_times, true);
       // print(p.times);
       // print("==new==times");
@@ -98,7 +96,6 @@ void bos_oracle::add_times(uint64_t service_id, name account,
   auto provide_itr = providetable.find(account.value);
   if (provide_itr == providetable.end()) {
     providetable.emplace(_self, [&](auto &p) {
-      p.service_id = service_id;
       p.account = account;
       add_time(p.times, p.month_times, true);
     });
@@ -107,44 +104,13 @@ void bos_oracle::add_times(uint64_t service_id, name account,
                         [&](auto &p) { add_time(p.times, p.month_times); });
   }
 
-  action_push_records actiontable(_self, service_id);
-  uint64_t a_id = get_hash_key(get_nn_hash(contract_account, action_name));
-  auto action_itr = actiontable.find(a_id);
-  if (action_itr == actiontable.end()) {
-    actiontable.emplace(_self, [&](auto &a) {
-      a.service_id = service_id;
-      a.contract_account = contract_account;
-      a.action_name = action_name;
-      add_time(a.times, a.month_times, true);
-    });
-  } else {
-    actiontable.modify(action_itr, same_payer,
-                       [&](auto &a) { add_time(a.times, a.month_times); });
-  }
-
-  provider_action_push_records provideractiontable(_self, service_id);
-  uint64_t pa_id =
-      get_hash_key(get_nnn_hash(account, contract_account, action_name));
-  auto provider_action_itr = provideractiontable.find(pa_id);
-  if (provider_action_itr == provideractiontable.end()) {
-    provideractiontable.emplace(_self, [&](auto &pa) {
-      pa.service_id = service_id;
-      pa.account = account;
-      pa.contract_account = contract_account;
-      pa.action_name = action_name;
-      add_time(pa.times, pa.month_times, true);
-    });
-  } else {
-    provideractiontable.modify(provider_action_itr, same_payer, [&](auto &pa) {
-      add_time(pa.times, pa.month_times);
-    });
-  }
+  
 }
 
 std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
 bos_oracle::get_times(uint64_t service_id, name account) {
 
-  push_records pushtable(_self, service_id);
+  push_records pushtable(_self, _self.value);
   provider_push_records providetable(_self, service_id);
 
   uint64_t service_times = 0;
@@ -196,11 +162,10 @@ asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
  *
  * @param service_id
  * @param contract_account
- * @param action_name
  * @param fee_type
  */
 void bos_oracle::fee_service(uint64_t service_id, name contract_account,
-                             name action_name, uint8_t fee_type) {
+                             uint8_t fee_type) {
   // static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
   // //   token::transfer_action transfer_act{ token_account, { account,
   // active_permission } };
@@ -219,8 +184,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
         " get price by times cound not be greater than zero");
 
   data_service_subscriptions substable(_self, service_id);
-  // auto id =
-  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
@@ -273,16 +237,13 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
  *
  * @param service_id
  * @param contract_account
- * @param action_name
  * @return uint8_t
  */
 uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
-                                            name contract_account,
-                                            name action_name) {
+                                            name contract_account) {
 
   data_service_subscriptions substable(_self, service_id);
-  // auto id =
-  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
@@ -294,16 +255,13 @@ uint8_t bos_oracle::get_subscription_status(uint64_t service_id,
  *
  * @param service_id
  * @param contract_account
- * @param action_name
  * @return time_point_sec
  */
 time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
-                                            name contract_account,
-                                            name action_name) {
+                                            name contract_account) {
 
   data_service_subscriptions substable(_self, service_id);
-  // auto id =
-  //     get_hash_key(get_uuu_hash(service_id, contract_account, action_name));
+
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr != substable.end(), "contract_account does not exist");
 
@@ -316,17 +274,16 @@ time_point_sec bos_oracle::get_payment_time(uint64_t service_id,
  * @param service_id
  * @return std::vector<std::tuple<name, name>>
  */
-std::vector<std::tuple<name, name>>
+std::vector<name>
 bos_oracle::get_subscription_list(uint64_t service_id) {
 
   data_service_subscriptions substable(_self, service_id);
   auto subscription_time_idx = substable.get_index<"bytime"_n>();
-  std::vector<std::tuple<name, name>> receive_contracts;
+  std::vector<name> receive_contracts;
 
   for (const auto &s : subscription_time_idx) {
     if (s.status == subscription_status::subscription_subscribe) {
-      receive_contracts.push_back(
-          std::make_tuple(s.contract_account, s.action_name));
+      receive_contracts.push_back(s.contract_account);
     }
   }
 
@@ -340,25 +297,16 @@ bos_oracle::get_subscription_list(uint64_t service_id) {
  * @param request_id
  * @return std::vector<std::tuple<name, name, uint64_t>>
  */
-std::vector<std::tuple<name, name, uint64_t>>
+std::vector<std::tuple<name,  uint64_t>>
 bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
   // print("=-=============get_request_list in===========");
   static constexpr int64_t request_time_deadline = 2; // 2 hours
-  std::vector<std::tuple<name, name, uint64_t>> receive_contracts;
+  std::vector<std::tuple<name,  uint64_t>> receive_contracts;
   std::vector<uint64_t> ids;
   data_service_requests reqtable(_self, service_id);
   auto request_time_idx = reqtable.get_index<"bytime"_n>();
   auto lower = request_time_idx.begin();
   auto upper = request_time_idx.end();
-  // if (0 != request_id) {
-  //   auto req_itr = reqtable.find(request_id);
-  //   check(req_itr != reqtable.end(), "request id could not be found");
-
-  //   lower = request_time_idx.lower_bound(
-  //       static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
-  //   upper = request_time_idx.upper_bound(
-  //       static_cast<uint64_t>(req_itr->request_time.sec_since_epoch()));
-  // }
 
   // print("=-=============get_request_list while before===========");
   while (lower != upper) {
@@ -370,7 +318,7 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
             eosio::hours(request_time_deadline)) {
       // print("=-=============get_request_list while  if===========");
       receive_contracts.push_back(std::make_tuple(
-          req->contract_account, req->action_name, req->request_id));
+          req->contract_account,  req->request_id));
 
       ids.push_back(req->request_id);
     }

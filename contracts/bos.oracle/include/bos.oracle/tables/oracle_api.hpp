@@ -12,6 +12,10 @@
 
 using namespace eosio;
 
+/**
+ * @brief 推送数据
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_data_record {
   uint64_t update_number;
   uint64_t request_id;

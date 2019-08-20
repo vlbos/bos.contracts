@@ -90,7 +90,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       break;
     case tc_arbitration_stake_arbitrator:
 
-      _regarbitrat(account, eosio::public_key(), s2int(index_type), quantity,
+      _regarbitrat(account,  s2int(index_type), quantity,
                    "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
