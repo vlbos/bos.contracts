@@ -27,8 +27,20 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
 
   auto check_parameters_size = [&](uint64_t category) -> bool {
     std::vector<uint8_t> index_counts = {
-        arbitrator_count, arbitrator_count, deposit_count,  complain_count,
-        arbitrator_count, resp_case_count,  reappeal_count, reresp_case_count,
+        arbitrator_count,
+        arbitrator_count,
+        deposit_count,
+        appeal_count,
+        arbitrator_count,
+        resp_case_count,
+    };
+    std::vector<std::string> help_strings = {
+        "index_category,index_id",
+        "deposit_category,from,to,notify ",
+        "appeal_category,service_id ,evidence,info,reason,provider",
+        "arbitrator_category,type ",
+        "resp_case_category,arbitration_id,evidence",
+        "risk_guarantee_category,id,duration",
     };
     // check(category >= 0 && category < index_counts.size(), "unknown
     // category");
@@ -36,9 +48,12 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
     // check(parameters.size() == index_counts[category],
     //       "the parameters'size does not match ");
 
-    if (category >= 0 && category < index_counts.size() &&
-        parameters.size() == index_counts[category]) {
-      return true;
+    if (category >= 0 && category < index_counts.size()) {
+      if (parameters.size() == index_counts[category]) {
+        return true;
+      }
+      std::string str =  "the parameters'size does not match " + help_strings[category];
+      check(false, str.c_str());
     }
 
     return false;
@@ -83,33 +98,20 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       pay_service(s2int(index_id), account, quantity);
       oracle_transfer(_self, consumer_account, quantity, memo, true);
       break;
-    case tc_arbitration_stake_complain:
-      _complain(account, s2int(index_id), quantity, parameters[index_reason],
-                arbi_method_type::multiple_rounds, parameters[index_evidence]);
+    case tc_arbitration_stake_appeal:
+      _appeal(account, s2int(index_id), quantity, parameters[index_reason],
+                parameters[index_evidence],s2int(index_provider));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_arbitrator:
-
       _regarbitrat(account,  s2int(index_type), quantity,
                    "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_resp_case:
 
-      _respcase(account, s2int(index_id), quantity, s2int(index_round),
+      _respcase(account, s2int(index_id), quantity, 
                 parameters[index_evidence]);
-      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
-      break;
-    case ts_arbitration_stake_reappeal:
-
-      _reappeal(account, s2int(index_arbi_id), s2int(index_id),
-                s2int(index_round), 0 != s2int(index_provider), quantity,
-                parameters[index_reason], parameters[index_evidence]);
-      oracle_transfer(_self, arbitrat_account, quantity, memo, true);
-      break;
-    case tc_arbitration_stake_reresp_case:
-      _rerespcase(account, s2int(index_id), quantity, s2int(index_round),
-                  parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_risk_guarantee:

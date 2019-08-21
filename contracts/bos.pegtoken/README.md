@@ -99,24 +99,24 @@ actions
     3. value        参数值，例如 "某某承兑商"
  
  
- void applicant( symbol_code   sym_code,
+ void appeallant( symbol_code   sym_code,
                  name          action,
-                 name          applicant );
+                 name          appeallant );
  调用权限: issuer
  功能: 1. 设置充值地址申请人
  参数: 
     1. sym_code     承兑商发行的锚定币符号 例如 "BTC"
     2. action       "add" 或 "remove"
-    3. applicant    申请人账户
+    3. appeallant    申请人账户
     
     
- void applyaddr( name          applicant,
+ void applyaddr( name          appeallant,
                  name          to,
                  symbol_code   sym_code );
- 调用权限: applicant
+ 调用权限: appeallant
  功能: 1. 为用户申请地址
  参数: 
-    1. applicant    申请人
+    1. appeallant    申请人
     2. to           用户账户
     3. sym_code     承兑商发行的锚定币符号 例如 "BTC"
  
@@ -234,10 +234,10 @@ tables
     uint64_t primary_key()const { return sym.code().raw(); }
  };
 
- struct [[eosio::table]] applicant_ts {
-    name  applicant;
+ struct [[eosio::table]] appeallant_ts {
+    name  appeallant;
 
-    uint64_t primary_key()const { return applicant.value; }
+    uint64_t primary_key()const { return appeallant.value; }
  };
 
  struct [[eosio::table]] recharge_address_ts {

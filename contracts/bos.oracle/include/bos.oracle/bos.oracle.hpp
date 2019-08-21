@@ -29,6 +29,7 @@ public:
   static constexpr uint64_t arbi_process_time_limit = 3600;
   static constexpr uint64_t arbiresp_deadline_days = 1; // 仲裁员响应的截止时间 天
   static constexpr double default_arbitration_correct_rate = 0.6f;
+  static constexpr uint8_t arbitration_correct_rate_base = 10; // 
   static time_point_sec current_time_point_sec();
 
   using contract::contract;
@@ -117,26 +118,26 @@ public:
   // [[eosio::action]] void regarbitrat( name account, 
   // uint8_t type, asset amount, std::string public_info );
 
-  // [[eosio::action]] void complain( name applicant, uint64_t service_id, asset
+  // [[eosio::action]] void appeal( name appeallant, uint64_t service_id, asset
   // amount, std::string reason, uint8_t arbi_method , std::string evidence );
 
   // [[eosio::action]] void respcase( name respondent, uint64_t
-  // arbitration_id,asset amount, uint64_t process_id , std::string evidence );
+  // arbitration_id,asset amount, uint8_t round , std::string evidence );
 
-  [[eosio::action]] void acceptarbi(name arbitrator, uint64_t arbitration_id, uint64_t process_id);
-  [[eosio::action]] void uploadeviden(name applicant, uint64_t arbitration_id, uint64_t process_id, std::string evidence);
-  [[eosio::action]] void uploadresult(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
+  [[eosio::action]] void acceptarbi(name arbitrator, uint64_t arbitration_id, uint8_t round);
+  [[eosio::action]] void uploadeviden(name account, uint64_t arbitration_id, uint8_t round, std::string evidence);
+  [[eosio::action]] void uploadresult(name arbitrator, uint64_t arbitration_id, uint64_t result, uint8_t round,std::string comment);
 
-  // [[eosio::action]] void reappeal( name applicant, uint64_t arbitration_id,
-  // uint64_t service_id, uint64_t process_id, bool is_provider, asset amount,
+  // [[eosio::action]] void reappeal( name appeallant, uint64_t arbitration_id,
+  // uint64_t service_id, uint8_t round, bool is_provider, asset amount,
   // std::string reason , std::string evidence );
 
   // [[eosio::action]] void rerespcase( name respondent, uint64_t
-  // arbitration_id,asset amount, uint64_t process_id, std::string evidence );
+  // arbitration_id,asset amount, uint8_t round, std::string evidence );
 
-  [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type);
-  [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type);
-  [[eosio::action]] void unstakearbi(uint64_t appeal_id, name account, asset amount, std::string memo);
+  [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
+  [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
+  [[eosio::action]] void unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo);
   [[eosio::action]] void claimarbi(name account, name receive_account);
   ///
   ///
@@ -201,22 +202,20 @@ private:
 
   /// arbitration
   void _regarbitrat(name account,  uint8_t type, asset amount, std::string public_info);
-  void _complain(name applicant, uint64_t service_id, asset amount, std::string reason, uint8_t arbi_method, std::string evidence);
-  void _respcase(name respondent, uint64_t arbitration_id, asset amount, uint64_t process_id, std::string evidence);
-  void _reappeal(name applicant, uint64_t arbitration_id, uint64_t service_id, uint64_t process_id, bool is_provider, asset amount, std::string reason, std::string evidence);
-  void _rerespcase(name respondent, uint64_t arbitration_id, asset amount, uint64_t process_id, std::string evidence);
-
+  void _appeal(name appeallant, uint64_t service_id, asset amount, std::string reason, std::string evidence,bool is_provider);
+  void _respcase(name respondent, uint64_t arbitration_id, asset amount,  std::string evidence);
+  
   void handle_arbitration(uint64_t arbitration_id);
   void handle_arbitration_result(uint64_t arbitration_id);
   void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
-  vector<name> random_arbitrator(uint64_t arbitration_id, uint64_t process_id, uint64_t arbi_to_chose);
-  void random_chose_arbitrator(uint64_t arbitration_id, uint64_t process_id, uint64_t service_id, uint64_t arbi_to_chose);
-  void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint64_t process_id);
+  vector<name> random_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t arbi_to_chose);
+  void random_chose_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t service_id, uint64_t arbi_to_chose);
+  void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint8_t round,std::string comment);
   void update_arbitration_correcction(uint64_t arbitration_id);
   uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
-  void timeout_deferred(uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type, uint64_t time_length);
-  void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint64_t process_id, uint8_t timer_type, uint64_t time_length);
-  void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint64_t process_id);
+  void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint64_t time_length);
+  void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint64_t time_length);
+  void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint8_t round);
   std::tuple<std::vector<name>, asset> get_balances(uint64_t arbitration_id, bool is_provider);
   std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
   void slash_service_stake(uint64_t service_id, const std::vector<name> &slash_accounts, const asset &amount);
@@ -226,8 +225,8 @@ private:
   void handle_rearbitration_result(uint64_t arbitration_id);
   void sub_balance(name owner, asset value, uint64_t arbitration_id);
   void add_balance(name owner, asset value, uint64_t arbitration_id, bool is_provider);
-  void stake_arbitration(uint64_t id, name account, asset amount, uint64_t round_count, bool is_provider, string memo);
-  void check_stake_arbitration(uint64_t id, name account, uint64_t round_count);
+  void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, bool is_provider, string memo);
+  void check_stake_arbitration(uint64_t id, name account, uint8_t round);
   void add_income(name account, asset quantity);
 
   /// common

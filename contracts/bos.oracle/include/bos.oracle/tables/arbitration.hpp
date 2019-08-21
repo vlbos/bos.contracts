@@ -20,23 +20,16 @@ using eosio::time_point_sec;
 using std::string;
 
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] complainant {
+struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
   uint64_t appeal_id;
-  uint64_t service_id;
-  uint8_t status;
-  bool is_sponsor;
-  bool is_provider;        // 申诉者是否为数据提供者
-  uint64_t arbitration_id; // 如果为再申诉, 需要记录此申诉ID
-  name applicant;
-  name complaint_object; ///投诉对象
-  bool is_respondent;    //应诉者
-  time_point_sec appeal_time;
+  name appeallant;
   std::string reason;
   asset amount;
-  uint64_t process_id;
+  uint8_t round;
+  uint8_t role_type;   // 111 is_respondent is_provider  is_sponsor
+  time_point_sec appeal_time;
 
   uint64_t primary_key() const { return appeal_id; }
-  uint64_t by_svc() const { return service_id; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
@@ -44,57 +37,50 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
   uint8_t type;
   uint8_t status;
   double correct_rate;
-  uint64_t invitations;
-  uint64_t responses;
+  uint16_t arbitration_correct_times;     ///仲裁正确次数
+  uint16_t arbitration_times;             ///仲裁次数
+  uint16_t invitations;                   ///邀请次数
+  uint16_t responses;                     ///接收邀请次数
+  uint16_t uncommitted_arbitration_result_times;       ///未提交仲裁结果次数
   std::string public_info;
-  bool is_malicious;
 
   uint64_t primary_key() const { return account.value; }
 };
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] arbicaseapp {
+struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
   uint64_t arbitration_id;
-  uint64_t appeal_id;
-  uint64_t service_id;
-  uint64_t update_number;
-  uint64_t arbi_step;
-  uint64_t final_result;
-  uint64_t required_arbitrator;
-  uint64_t last_process_id;
-  uint64_t final_winner;
+  uint8_t arbi_step;
+  uint8_t arbitration_result;
+  uint8_t last_round;
+  uint8_t final_result;
   uint8_t arbi_method;
-  bool is_provider;
   time_point_sec deadline;
-  time_point_sec last_process_update_time;
-  std::string evidence_info;
-  std::vector<name> applicants;
+  time_point_sec last_round_update_time;
   std::vector<name> arbitrators;
-  std::vector<name> respondents;
+  std::vector<name> unaccepted_arbitrators;
 
   uint64_t primary_key() const { return arbitration_id; }
-  uint64_t by_svc() const { return service_id; }
-  void add_applicant(name applicant) { applicants.push_back(applicant); }
+
   void add_arbitrator(name arbitrator) { arbitrators.push_back(arbitrator); }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
-  uint64_t process_id;
-  uint64_t appeal_id;
+  uint8_t round;
   uint64_t arbitration_id;
-  uint64_t num_id;
-  uint64_t required_arbitrator; // 每一轮需要的仲裁员的个数: 2^num_id+1
+  uint8_t required_arbitrator; // 每一轮需要的仲裁员的个数: 2^round+1
+  std::vector<name> appeallants;
   std::vector<name> respondents;        // 数据提供者应诉者
   std::vector<name> arbitrators;        // 每一轮响应的仲裁员
   std::vector<name> random_arbitrators; // 每一轮随机选择的仲裁员
   time_point_sec arbiresp_deadline;     // 仲裁员应诉的截止时间
+  bool is_provider;
+  std::vector<uint8_t> arbitrator_arbitration_results;
+  uint8_t arbitration_result;
+  uint8_t arbi_method; // 本轮使用的仲裁方法
 
-  std::vector<uint64_t> arbitrator_arbitration_results;
-  std::string evidence_info;
-  uint64_t arbitration_result;
-  uint64_t arbi_method; // 本轮使用的仲裁方法
-
-  uint64_t primary_key() const { return process_id; }
+  uint64_t primary_key() const { return round; }
   uint64_t by_arbi() const { return arbitration_id; }
+  void add_appeallant(name appeallant) { appeallants.push_back(appeallant); }
   void add_respondent(name respondent) { respondents.push_back(respondent); }
   void add_arbitrator(name arbitrator) { arbitrators.push_back(arbitrator); }
   void add_random_arbitrator(name arbitrator) {
@@ -112,15 +98,24 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   }
 };
 
+struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_evidence {
+  uint64_t evidence_id;
+  uint8_t round;
+  name account;        
+  std::string evidence_info;
+
+  uint64_t primary_key() const { return evidence_id; }
+
+};
+
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_result {
   uint64_t result_id;
-  uint64_t arbitration_id;
   uint64_t result;
-  uint64_t process_id;
+  uint8_t round;
   name arbitrator;
+  string comment;
 
   uint64_t primary_key() const { return result_id; }
-  uint64_t by_arbi() const { return arbitration_id; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {
@@ -148,7 +143,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account
  * @brief 抵押 记录
  * 
  */
-struct [[eosio::table, eosio::contract("bos.oracle")]] stake_record {
+struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_record {
   uint64_t record_id;
   name account;
   time_point_sec stake_time;
@@ -168,14 +163,13 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_income_accoun
   uint64_t primary_key() const { return income.symbol.code().raw(); }
 };
 
-typedef eosio::multi_index<"complainants"_n, complainant, indexed_by<"svc"_n, const_mem_fun<complainant, uint64_t, &complainant::by_svc>>> complainants;
+typedef eosio::multi_index<"appealreq"_n, appeal_request> appeal_requests;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
-typedef eosio::multi_index<"arbicaseapp"_n, arbicaseapp, indexed_by<"svc"_n, const_mem_fun<arbicaseapp, uint64_t, &arbicaseapp::by_svc>>> arbicaseapps;
+typedef eosio::multi_index<"arbicase"_n, arbitration_case> arbitration_cases;
 typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t,
-                                       &arbitration_process::by_arbi>>> arbitration_processs;
-
-typedef eosio::multi_index<"arbiresults"_n, arbitration_result,indexed_by<"arbi"_n, const_mem_fun<arbitration_result, uint64_t,&arbitration_result::by_arbi>>>
-    arbitration_results;
+                                       &arbitration_process::by_arbi>>> arbitration_processes;
+typedef eosio::multi_index<"arbievidence"_n, arbitration_evidence> arbitration_evidences;
+typedef eosio::multi_index<"arbiresults"_n, arbitration_result>    arbitration_results;
 
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
 
@@ -183,7 +177,7 @@ typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account, indexed_
                                        &arbitration_stake_account::by_type>>>
     arbitration_stake_accounts;
 
-typedef eosio::multi_index<"arbistakes"_n, stake_record> stake_records;
+typedef eosio::multi_index<"arbistakes"_n, arbitration_stake_record> arbitration_stake_records;
 typedef eosio::multi_index<"arbiincomes"_n, arbitration_income_account>
     arbitration_income_accounts;
 

@@ -294,10 +294,10 @@ void pegtoken::retire( asset quantity, string memo )
     } );
 }
 
-void pegtoken::setpartner( symbol_code sym_code, string action, name applicant )
+void pegtoken::setpartner( symbol_code sym_code, string action, name appeallant )
 {
 
-    { ACCOUNT_CHECK( applicant ) };
+    { ACCOUNT_CHECK( appeallant ) };
 
     {
         auto sym_raw = sym_code.raw();
@@ -305,32 +305,32 @@ void pegtoken::setpartner( symbol_code sym_code, string action, name applicant )
         auto iter = stats_table.find( sym_raw );
         eosio_assert( iter != stats_table.end(), "token not exist" );
         require_auth( iter->issuer );
-        eosio_assert( applicant != get_self(), "applicant can`t be contract" );
-        eosio_assert( applicant != iter->issuer, "applicant can`t be issuer" );
-        eosio_assert( applicant != iter->acceptor, "applicant can`t be acceptor" );
+        eosio_assert( appeallant != get_self(), "appeallant can`t be contract" );
+        eosio_assert( appeallant != iter->issuer, "appeallant can`t be issuer" );
+        eosio_assert( appeallant != iter->acceptor, "appeallant can`t be acceptor" );
     }
 
-    eosio_assert( balance_check( sym_code, applicant ), "applicant`s balance should be 0" );
-    eosio_assert( addr_check( sym_code, applicant ), "applicant`s address should be null" );
+    eosio_assert( balance_check( sym_code, appeallant ), "appeallant`s balance should be 0" );
+    eosio_assert( addr_check( sym_code, appeallant ), "appeallant`s address should be null" );
 
-    auto appl = applicants( get_self(), sym_code.raw() );
+    auto appl = appeallants( get_self(), sym_code.raw() );
     if ( action == "add" ) {
-        eosio_assert( appl.find( applicant.value ) == appl.end(), "applicant already exist" );
+        eosio_assert( appl.find( appeallant.value ) == appl.end(), "appeallant already exist" );
         appl.emplace( get_self(), [&]( auto& p ) {
-            p.applicant = applicant;
+            p.appeallant = appeallant;
         } );
     } else if ( action == "remove" ) {
-        auto iter = appl.find( applicant.value );
-        eosio_assert( iter != appl.end(), "applicant not exist" );
+        auto iter = appl.find( appeallant.value );
+        eosio_assert( iter != appl.end(), "appeallant not exist" );
         appl.erase( iter );
     } else {
         eosio_assert( false, "action must be add or remove" );
     }
 }
 
-void pegtoken::applyaddr( name applicant, symbol_code sym_code, name to )
+void pegtoken::applyaddr( name appeallant, symbol_code sym_code, name to )
 {
-    require_auth( applicant );
+    require_auth( appeallant );
 
     { ACCOUNT_CHECK( to ) };
 
@@ -344,13 +344,13 @@ void pegtoken::applyaddr( name applicant, symbol_code sym_code, name to )
         {
             eosio_assert( account != iter->issuer, "to can't be issuer" );
             eosio_assert( account != iter->acceptor, "to can't be acceptor" );
-            auto appl = applicants( get_self(), sym_raw );
-            eosio_assert( appl.find( account.value ) == appl.end(), "to can't be applicant " );
+            auto appl = appeallants( get_self(), sym_raw );
+            eosio_assert( appl.find( account.value ) == appl.end(), "to can't be appeallant " );
         }
     }
 
-    auto appl = applicants( get_self(), sym_code.raw() );
-    eosio_assert( appl.find( applicant.value ) != appl.end(), "applicant dose not exist" );
+    auto appl = appeallants( get_self(), sym_code.raw() );
+    eosio_assert( appl.find( appeallant.value ) != appl.end(), "appeallant dose not exist" );
 
     auto addresses = addrs( get_self(), sym_code.raw() );
     eosio_assert( addresses.find( to.value ) == addresses.end(), "to account has applied for address already" );
@@ -378,8 +378,8 @@ void pegtoken::assignaddr( symbol_code sym_code, name to, string address )
     {
         eosio_assert( account != iter->issuer, "to can't be issuer" );
         eosio_assert( account != iter->acceptor, "to can't be acceptor" );
-        auto appl = applicants( get_self(), sym_raw );
-        eosio_assert( appl.find( account.value ) == appl.end(), "to  can't be applicant " );
+        auto appl = appeallants( get_self(), sym_raw );
+        eosio_assert( appl.find( account.value ) == appl.end(), "to  can't be appeallant " );
     }
     require_auth( iter->acceptor );
 
@@ -424,8 +424,8 @@ void pegtoken::withdraw( name from, string to, asset quantity, string memo )
     {
         eosio_assert( account != iter->issuer, "from can't be issuer" );
         eosio_assert( account != iter->acceptor, "from can't be acceptor" );
-        auto appl = applicants( get_self(), sym_raw );
-        eosio_assert( appl.find( account.value ) == appl.end(), "from can't be applicant " );
+        auto appl = appeallants( get_self(), sym_raw );
+        eosio_assert( appl.find( account.value ) == appl.end(), "from can't be appeallant " );
     }
 
 
@@ -519,8 +519,8 @@ void pegtoken::deposit( name to, asset quantity, string memo )
         {
             eosio_assert( account != iter->issuer, "to can't be issuer" );
             eosio_assert( account != iter->acceptor, "to can't be acceptor" );
-            auto appl = applicants( get_self(), sym_raw );
-            eosio_assert( appl.find( account.value ) == appl.end(), "to can't be applicant " );
+            auto appl = appeallants( get_self(), sym_raw );
+            eosio_assert( appl.find( account.value ) == appl.end(), "to can't be appeallant " );
         }
     }
 
@@ -838,8 +838,8 @@ void pegtoken::sendback( name auditor, transaction_id_type trx_id, name to, asse
     {
         eosio_assert( account != iter->issuer, "to can't be issuer" );
         eosio_assert( account != iter->acceptor, "to can't be acceptor" );
-        auto appl = applicants( get_self(), sym_raw );
-        eosio_assert( appl.find( account.value ) == appl.end(), "to can't be applicant " );
+        auto appl = appeallants( get_self(), sym_raw );
+        eosio_assert( appl.find( account.value ) == appl.end(), "to can't be appeallant " );
     }
 
     eosio_assert( iter->active, "underwriter is not active" );
