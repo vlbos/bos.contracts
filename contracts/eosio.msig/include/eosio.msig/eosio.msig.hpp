@@ -23,6 +23,16 @@ namespace eosio {
          void exec( name proposer, name proposal_name, name executer );
          [[eosio::action]]
          void invalidate( name account );
+         [[eosio::action]]
+         void oppose( name proposer, name proposal_name, permission_level level,
+                       const eosio::binary_extension<eosio::checksum256>& proposal_hash );
+         [[eosio::action]]
+         void unoppose( name proposer, name proposal_name, permission_level level );
+		 [[eosio::action]]
+         void abstain( name proposer, name proposal_name, permission_level level,
+                       const eosio::binary_extension<eosio::checksum256>& proposal_hash );
+         [[eosio::action]]
+         void unabstain( name proposer, name proposal_name, permission_level level );
 
          using propose_action = eosio::action_wrapper<"propose"_n, &multisig::propose>;
          using approve_action = eosio::action_wrapper<"approve"_n, &multisig::approve>;
@@ -66,6 +76,17 @@ namespace eosio {
             uint64_t primary_key()const { return proposal_name.value; }
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
+
+         //one can only approval, or oppose, or abstain.
+         //if he/she wants to change opinion of oppose, needs to unoppose first.
+         //oppose/abstain won't be counted in when trying exec. only approvals are counted.
+         struct [[eosio::table]] opposes_info {
+             name             proposal_name;
+             std::vector<permission_level> opposed_approvals;
+             std::vector<permission_level> abstained_approvals;
+             uint64_t primary_key() const { return proposal_name.value; }
+         };
+         typedef eosio::multi_index< "opposes"_n, opposes_info > opposes;
 
          struct [[eosio::table]] invalidation {
             name         account;
