@@ -131,18 +131,17 @@ public:
       produce_block();
       BOOST_REQUIRE_EQUAL( true, chain_has_transaction(trace->id) );
       return trace;
+   }
 
-      /*
-         string action_type_name = abi_ser.get_action_type(name);
+   action_result push_action_get_result( const account_name& signer, const action_name &name, const variant_object &data ) {
+      string action_type_name = abi_ser.get_action_type(name);
 
-         action act;
-         act.account = N(eosio.msig);
-         act.name = name;
-         act.data = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
-         //std::cout << "test:\n" << fc::to_hex(act.data.data(), act.data.size()) << " size = " << act.data.size() << std::endl;
+      action act;
+      act.account = N(eosio.msig);
+      act.name    = name;
+      act.data    = abi_ser.variant_to_binary( action_type_name, data,abi_serializer_max_time );
 
-         return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : 0 );
-      */
+      return base_tester::push_action( std::move(act), uint64_t(signer));
    }
 
    transaction reqauth( account_name from, const vector<permission_level>& auths, const fc::microseconds& max_serialization_time );
@@ -953,5 +952,242 @@ BOOST_FIXTURE_TEST_CASE( switch_proposal_and_fail_approve_with_hash, eosio_msig_
                             fc_exception_message_is("hash mismatch")
    );
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( propose_approve_oppose_abstain, eosio_msig_tester ) try {
+   //what should be tested:
+   //1. if you approved, you can't oppose/abstain. the same with oppose/abstain
+   //2. if you approved, unoppose/unabstain should fail, the same with oppose/abstain
+   //3. if you approved, unapprove should success, the same with unoppose and unabstain
+   //4. after unapprove, you can oppose/abstain, the same with unoppose/unabstain
+   //5. without all approved, exec will fail
+   //6. after all approved, exec will success
+   auto trx = reqauth("alice",
+                     vector<permission_level>{
+                        { N(alice), config::active_name },
+                        { N(bob), config::active_name },
+                        { N(carol), config::active_name }},
+                     abi_serializer_max_time );
+
+   //propose should success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result( N(alice), N(propose), mvo()
+                     ("proposer",      "alice")
+                     ("proposal_name", "first")
+                     ("trx",           trx)
+                     ("requested", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name },{ N(carol), config::active_name } })
+                  ));
+
+   //1. if you approved, you can't oppose/abstain. the same with oppose/abstain
+   //approve by alice should success
+   BOOST_REQUIRE_EQUAL(success(), 
+                  push_action_get_result( N(alice), N(approve), mvo()
+                     ("proposer",      "alice")
+                     ("proposal_name", "first")
+                     ("level",         permission_level{ N(alice), config::active_name })
+                  ));
+
+   //oppose by alice should fail
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("provided permission not requested, or you have approved to this proposal" ),
+                   push_action_get_result( N(alice), N(oppose), mvo()
+                      ("proposer",      "alice")
+                      ("proposal_name", "first")
+                      ("level",         permission_level{ N(alice), config::active_name })
+                   ));
+
+   //abstain by alice should fail
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("provided permission not requested, or you have approved to this proposal" ),
+                  push_action_get_result( N(alice), N(abstain), mvo()
+                     ("proposer",	 "alice")
+                     ("proposal_name", "first")
+                     ("level", 		permission_level{ N(alice), config::active_name })
+                  ));
+
+   //oppose by bob should success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(bob), N(oppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+
+   //approve by bob should fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("you already opposed this proposal" ),
+                  push_action_get_result(N(bob), N(approve), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+
+   //abstain by bob should fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("you have opposed to this proposal" ),
+                  push_action_get_result(N(bob), N(abstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+
+   //abstain by carol should success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(carol), N(abstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //approve by carol should fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("you already abstained this proposal"),
+                  push_action_get_result(N(carol), N(approve), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //oppose by carol should fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("you have abstained to this proposal"),
+                  push_action_get_result(N(carol), N(oppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //2. if you approved, unoppose/unabstain should fail, the same with oppose/abstain
+   //bob do unapprove will faill
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no approval previously granted"),
+                  push_action_get_result(N(bob), N(unapprove), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+	                 ("level", permission_level{N(bob), config::active_name })
+                   ));
+
+   //carol do unapprove will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no approval previously granted"),
+                  push_action_get_result(N(carol), N(unapprove), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                   ));
+
+   //alice do unoppose will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no oppose found"),
+                  push_action_get_result(N(alice), N(unoppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                   ));
+
+   //carol do unoppose will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no oppose found"),
+                  push_action_get_result(N(carol), N(unoppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //alice do unabstain will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no abstain found"),
+                  push_action_get_result(N(alice), N(unabstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                  ));
+
+   //bob do unabstain will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("no abstain found"),
+                  push_action_get_result(N(bob), N(unabstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+
+   //3. if you approved, unapprove should success, the same with unoppose and unabstain
+   //alice unapprove will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(alice), N(unapprove), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                  ));
+
+   //bob unoppose will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(bob), N(unoppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+
+   //carol unoppose will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(carol), N(unabstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //4. after unapprove, you can oppose/abstain, the same with unoppose/unabstain
+   //alice do abstain will success
+   BOOST_REQUIRE_EQUAL(success(), 
+                  push_action_get_result(N(alice), N(abstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                  ));
+   //bob do approve will success
+   BOOST_REQUIRE_EQUAL(success(), 
+                  push_action_get_result(N(bob), N(approve), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(bob), config::active_name })
+                  ));
+   //carol do oppose will success
+   BOOST_REQUIRE_EQUAL(success(), 
+                  push_action_get_result(N(carol), N(oppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+
+   //5. without all approved, exec will fail
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("transaction authorization failed"),
+                  push_action_get_result(N(alice), N(exec), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("executer", "alice")));
+
+   //6. after all approved, exec will success
+   //alice unabstain and approve will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(alice), N(unabstain), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                  ));
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(alice), N(approve), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(alice), config::active_name })
+                  ));
+   //carol unoppose and approve will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(carol), N(unoppose), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  ));
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(carol), N(approve), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("level", permission_level{N(carol), config::active_name })
+                  )); 
+
+   //exec will success
+   BOOST_REQUIRE_EQUAL(success(),
+                  push_action_get_result(N(alice), N(exec), mvo()
+                     ("proposer", "alice")
+                     ("proposal_name", "first")
+                     ("executer", "alice")));
+}FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
