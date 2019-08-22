@@ -53,12 +53,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
   uint8_t arbitration_result;
   uint8_t last_round;
   uint8_t final_result;
-  uint8_t arbi_method;
-  time_point_sec deadline;
   time_point_sec last_round_update_time;
   std::vector<name> arbitrators;
-  std::vector<name> unaccepted_arbitrators;
-
+  std::vector<name> chosen_arbitrators;
   uint64_t primary_key() const { return arbitration_id; }
 
   void add_arbitrator(name arbitrator) { arbitrators.push_back(arbitrator); }

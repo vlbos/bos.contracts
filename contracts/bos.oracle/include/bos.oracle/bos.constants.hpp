@@ -18,6 +18,7 @@ enum subscription_status : uint8_t {
   subscription_subscribe,
   subscription_unsubscribe
 };
+
 enum provision_status : uint8_t {
   provision_reg,
   provision_unreg,
@@ -100,7 +101,7 @@ enum arbitration_timer_type : uint8_t {
 
 enum arbitrator_status : uint8_t { stoped = 0, serving = 1 };
 
-enum arbitrator_type : uint8_t { profession = 1, amateur = 2 };
+enum arbitrator_type : uint8_t { fulltime = 1, crowd = 2,wps=5 };
 
 
 enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };
