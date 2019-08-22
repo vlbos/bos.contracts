@@ -283,7 +283,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
  * @param type
  */
 void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
-                                  time_point_sec start_time, uint64_t duration,
+                                  time_point_sec start_time, uint32_t duration,
                                   asset amount, uint64_t type) {
 
   transfer_freeze_delays transfertable(_self, service_id);
@@ -301,7 +301,7 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account,
 }
 
 void bos_oracle::add_freeze(uint64_t service_id, name account,
-                            time_point_sec start_time, uint64_t duration,
+                            time_point_sec start_time, uint32_t duration,
                             asset amount) {
 
   std::vector<std::tuple<name, asset>> providers =
@@ -343,7 +343,7 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
 }
 
 void bos_oracle::add_delay(uint64_t service_id, name account,
-                           time_point_sec start_time, uint64_t duration,
+                           time_point_sec start_time, uint32_t duration,
                            asset amount) {
 
   add_freeze_delay(service_id, account,
@@ -482,7 +482,7 @@ std::tuple<asset, asset> bos_oracle::get_freeze_stat(uint64_t service_id,
  * @return uint64_t
  */
 uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
-                                   asset amount, uint64_t duration) {
+                                   asset amount, uint32_t duration) {
   risk_guarantees guaranteetable(_self, _self.value);
 
   uint64_t risk_id = 0;

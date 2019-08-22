@@ -397,9 +397,9 @@ public:
    action_result regservice(
       uint64_t service_id, name account, asset amount,
      std::string data_format,
-      uint64_t data_type, std::string criteria, uint64_t acceptance,
-      std::string declaration, uint64_t injection_method,
-      uint64_t duration, uint64_t provider_limit, uint64_t update_cycle,
+      uint8_t data_type, std::string criteria, uint8_t acceptance,
+      std::string declaration, uint8_t injection_method,
+      uint32_t duration, uint8_t provider_limit, uint32_t update_cycle,
       time_point_sec update_start_time) {
 
       return push_action( account, N(regservice), mvo()
@@ -429,7 +429,7 @@ public:
       );
    }
 
-   action_result execaction(uint64_t service_id, uint64_t action_type) {
+   action_result execaction(uint64_t service_id, uint8_t action_type) {
       return push_action( N(oracle.bos), N(execaction), mvo()
            ( "service_id", service_id)
            ( "action_type", action_type)
@@ -613,10 +613,10 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
   uint8_t data_type = 1;
   uint8_t status = 0;
   uint8_t injection_method = 0;
-  uint64_t acceptance = 0;
-  uint64_t duration = 30;
-  uint64_t provider_limit = 3;
-  uint64_t update_cycle = 300;
+  uint8_t acceptance = 0;
+  uint32_t duration = 30;
+  uint8_t provider_limit = 3;
+  uint32_t update_cycle = 300;
   uint64_t appeal_freeze_period = 0;
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
@@ -760,10 +760,10 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
   uint8_t data_type = 1;
   uint8_t status = 0;
   uint8_t injection_method = 0;
-  uint64_t acceptance = 0;
-  uint64_t duration = 1;
-  uint64_t provider_limit = 3;
-  uint64_t update_cycle = 1;
+  uint8_t acceptance = 0;
+  uint32_t duration = 1;
+  uint8_t provider_limit = 3;
+  uint32_t update_cycle = 1;
   uint64_t appeal_freeze_period = 0;
   uint64_t exceeded_risk_control_freeze_period = 0;
   uint64_t guarantee_id = 0;
@@ -1075,9 +1075,9 @@ BOOST_FIXTURE_TEST_CASE( publishdata_test, bos_oracle_tester ) try {
    {
      auto services = get_data_service(service_id);
 
-    uint64_t update_cycle = services["update_cycle"].as<uint64_t>();
+    uint32_t update_cycle = services["update_cycle"].as<uint64_t>();
      BOOST_REQUIRE(update_cycle > 0);
-    uint64_t duration = services["duration"].as<uint64_t>();
+    uint32_t duration = services["duration"].as<uint64_t>();
     BOOST_REQUIRE(duration > 0);
     uint64_t update_number = update_start_time.sec_since_epoch()/update_cycle;
     const string data_json = "publish test data json";

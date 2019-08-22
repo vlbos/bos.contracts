@@ -25,11 +25,11 @@ using std::string;
  * @param update_start_time
  */
 void bos_oracle::regservice(uint64_t service_id, name account, asset amount,
-                            std::string data_format, uint64_t data_type,
-                            std::string criteria, uint64_t acceptance,
-                            std::string declaration, uint64_t injection_method,
-                            uint64_t duration, uint64_t provider_limit,
-                            uint64_t update_cycle,
+                            std::string data_format, uint8_t data_type,
+                            std::string criteria, uint8_t acceptance,
+                            std::string declaration, uint8_t injection_method,
+                            uint32_t duration, uint8_t provider_limit,
+                            uint32_t update_cycle,
                             time_point_sec update_start_time) {
   cout << 33333333;
   print(1234567);
@@ -590,7 +590,7 @@ void bos_oracle::claim(name account, name receive_account) {
  * @param service_id
  * @param action_type
  */
-void bos_oracle::execaction(uint64_t service_id, uint64_t action_type) {
+void bos_oracle::execaction(uint64_t service_id, uint8_t action_type) {
   require_auth(_self);
   check(service_status::service_freeze == action_type ||
             service_status::service_emergency == action_type,
@@ -804,7 +804,7 @@ uint64_t bos_oracle::get_publish_provider_count(uint64_t service_id,
 }
 
 string bos_oracle::get_publish_data(uint64_t service_id, uint64_t update_number,
-                                    uint64_t provider_limit,
+                                    uint8_t provider_limit,
                                     uint64_t request_id) {
 
   if (provider_limit < 3) {

@@ -58,7 +58,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
   std::vector<name> chosen_arbitrators;
   uint64_t primary_key() const { return arbitration_id; }
 
-  void add_arbitrator(name arbitrator) { arbitrators.push_back(arbitrator); }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
@@ -68,7 +67,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   std::vector<name> appeallants;
   std::vector<name> respondents;        // 数据提供者应诉者
   std::vector<name> arbitrators;        // 每一轮响应的仲裁员
-  std::vector<name> random_arbitrators; // 每一轮随机选择的仲裁员
   time_point_sec arbiresp_deadline;     // 仲裁员应诉的截止时间
   bool is_provider;
   std::vector<uint8_t> arbitrator_arbitration_results;
@@ -76,17 +74,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   uint8_t arbi_method; // 本轮使用的仲裁方法
 
   uint64_t primary_key() const { return round; }
-  uint64_t by_arbi() const { return arbitration_id; }
-  void add_appeallant(name appeallant) { appeallants.push_back(appeallant); }
-  void add_respondent(name respondent) { respondents.push_back(respondent); }
-  void add_arbitrator(name arbitrator) { arbitrators.push_back(arbitrator); }
-  void add_random_arbitrator(name arbitrator) {
-    random_arbitrators.push_back(arbitrator);
-  }
-  void add_result(uint64_t result) {
-    arbitrator_arbitration_results.push_back(result);
-  }
-  uint64_t result_size() const { return arbitrator_arbitration_results.size(); }
+
   uint64_t total_result() const {
     uint64_t total = 0;
     for (auto &n : arbitrator_arbitration_results)
@@ -107,7 +95,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_evidence {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_result {
   uint64_t result_id;
-  uint64_t result;
+  uint8_t result;
   uint8_t round;
   name arbitrator;
   string comment;
@@ -163,8 +151,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_income_accoun
 typedef eosio::multi_index<"appealreq"_n, appeal_request> appeal_requests;
 typedef eosio::multi_index<"arbitrators"_n, arbitrator> arbitrators;
 typedef eosio::multi_index<"arbicase"_n, arbitration_case> arbitration_cases;
-typedef eosio::multi_index<"arbiprocess"_n, arbitration_process,indexed_by<"arbi"_n, const_mem_fun<arbitration_process, uint64_t,
-                                       &arbitration_process::by_arbi>>> arbitration_processes;
+typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_processes;
 typedef eosio::multi_index<"arbievidence"_n, arbitration_evidence> arbitration_evidences;
 typedef eosio::multi_index<"arbiresults"_n, arbitration_result>    arbitration_results;
 

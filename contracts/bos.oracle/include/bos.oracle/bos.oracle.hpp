@@ -43,8 +43,8 @@ public:
   ///
   //
   [[eosio::action]] void regservice(uint64_t service_id, name account, asset amount,
-                                    std::string data_format, uint64_t data_type, std::string criteria, uint64_t acceptance, std::string declaration,
-                                    uint64_t injection_method, uint64_t duration, uint64_t provider_limit, uint64_t update_cycle, time_point_sec update_start_time);
+                                    std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
+                                    uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time);
   [[eosio::action]] void stakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
@@ -54,7 +54,7 @@ public:
   [[eosio::action]] void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json, name contract_account);
   [[eosio::action]] void claim(name account, name receive_account);
-  [[eosio::action]] void execaction(uint64_t service_id, uint64_t action_type);
+  [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
   [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
   [[eosio::action]] void starttimer();
 
@@ -124,9 +124,9 @@ public:
   // [[eosio::action]] void respcase( name respondent, uint64_t
   // arbitration_id,asset amount, uint8_t round , std::string evidence );
 
-  [[eosio::action]] void acceptarbi(name arbitrator, uint64_t arbitration_id, uint8_t round);
-  [[eosio::action]] void uploadeviden(name account, uint64_t arbitration_id, uint8_t round, std::string evidence);
-  [[eosio::action]] void uploadresult(name arbitrator, uint64_t arbitration_id, uint64_t result, uint8_t round,std::string comment);
+  [[eosio::action]] void acceptarbi(name arbitrator, uint64_t arbitration_id);
+  [[eosio::action]] void uploadeviden(name account, uint64_t arbitration_id, std::string evidence);
+  [[eosio::action]] void uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t result, std::string comment);
 
   // [[eosio::action]] void reappeal( name appeallant, uint64_t arbitration_id,
   // uint64_t service_id, uint8_t round, bool is_provider, asset amount,
@@ -174,7 +174,7 @@ private:
 
   uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
 
-  string get_publish_data(uint64_t service_id, uint64_t update_number, uint64_t provider_limit, uint64_t request_id);
+  string get_publish_data(uint64_t service_id, uint64_t update_number, uint8_t provider_limit, uint64_t request_id);
   std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> get_publish_service_update_number();
   std::vector<std::tuple<uint64_t, uint64_t, uint64_t>> get_publish_service_request();
 
@@ -188,11 +188,11 @@ private:
   void transfer(name from, name to, asset quantity, string memo);
   void oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred);
   void call_deposit(name from, name to, asset quantity, bool is_notify);
-  void add_freeze_delay(uint64_t service_id, name account, time_point_sec start_time, uint64_t duration, asset amount, uint64_t type);
-  void add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint64_t duration, asset amount);
-  void add_delay(uint64_t service_id, name account, time_point_sec start_time, uint64_t duration, asset amount);
+  void add_freeze_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount, uint64_t type);
+  void add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount);
+  void add_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount);
 
-  uint64_t add_guarantee(uint64_t service_id, name account, asset amount, uint64_t duration);
+  uint64_t add_guarantee(uint64_t service_id, name account, asset amount, uint32_t duration);
   void sub_balance(name owner, asset value);
   void add_balance(name owner, asset value, name ram_payer);
   void add_freeze_log(uint64_t service_id, name account, asset amount);
@@ -210,7 +210,7 @@ private:
   void start_arbitration(arbitrator_type arbitype, uint64_t arbitration_id, uint64_t service_id);
   vector<name> random_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t required_arbitrator_count);
   void random_chose_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t service_id, uint64_t required_arbitrator_count);
-  void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint64_t result, uint8_t round,std::string comment);
+  void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round,std::string comment);
   void update_arbitration_correcction(uint64_t arbitration_id);
   uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
   void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint64_t time_length);

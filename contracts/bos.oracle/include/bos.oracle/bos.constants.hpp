@@ -108,7 +108,6 @@ enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };
 
 enum arbi_step_type : uint64_t {
   arbi_init = 1,
-  arbi_responded,
   arbi_choosing_arbitrator,
   arbi_started,
   arbi_end,

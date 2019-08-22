@@ -39,7 +39,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] transfer_freeze_delay {
   uint64_t service_id;
   name account;
   time_point_sec start_time;
-  uint64_t duration;
+  uint32_t duration;
   asset amount;
   uint8_t status;
   uint64_t type;
@@ -52,7 +52,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] risk_guarantee {
   name account;
   asset amount;
   time_point_sec start_time;
-  uint64_t duration;
+  uint32_t duration;
   uint8_t status;
   uint64_t primary_key() const { return risk_id; }
 };

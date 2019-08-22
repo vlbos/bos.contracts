@@ -80,7 +80,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
   uint64_t arbitration_id = service_id;
   const uint8_t arbi_freeze_stake_duration = 1; //days
   // add_freeze
-  const uint64_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
+  const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
   add_delay(service_id, appeallant, time_point_sec(eosio::current_time_point()),
             duration, amount);
 
@@ -135,29 +135,31 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
     current_round++;
     // 仲裁案件存在, 为此案件新增一个再申诉者
     arbitration_case_tb.modify(arbitration_case_itr, get_self(),
-                               [&](auto &p) { p.arbi_step = arbi_step_type::arbi_reappeal; });
+                               [&](auto &p) { 
+                                 p.arbi_step = arbi_step_type::arbi_reappeal; 
+                                 p.last_round = current_round;
+                               });
   }
 
   auto arbiprocess_itr = arbiprocess_tb.find(current_round);
 
   uint8_t arbitrator_type = arbitrator_type::fulltime;
-    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
-      arbitrator_type = arbitrator_type::crowd;
-    }
+  if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
+    arbitrator_type = arbitrator_type::crowd;
+  }
 
-    uint8_t fulltime_count = 0;
-    // 遍历仲裁员表, 找出可以选择的仲裁员
-    auto arb_table = arbitrators(get_self(), get_self().value);
-    for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type)  && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
-          ++fulltime_count;
-    }
+  uint8_t fulltime_count = 0;
+  // 遍历仲裁员表, 找出可以选择的仲裁员
+  auto arb_table = arbitrators(get_self(), get_self().value);
+  for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
+    ++fulltime_count;
+  }
 
   uint8_t arbi_method = arbi_method_type::multiple_rounds;
-  uint8_t arbi_count = pow(2, current_round+1) + current_round-2;
-  if(arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds && arbi_count > fulltime_count)
-  {
+  uint8_t arbi_count = pow(2, current_round + 1) + current_round - 2;
+  if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds && arbi_count > fulltime_count) {
     arbi_method = arbi_method_type::public_arbitration;
-    arbi_count = 2 * fulltime_count;           
+    arbi_count = 2 * fulltime_count;
   }
 
   bool first_one = false;
@@ -166,16 +168,16 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
     // 第一次申诉, 创建第1个仲裁过程
     arbiprocess_tb.emplace(get_self(), [&](auto &p) {
       p.arbitration_id = arbitration_id;
-      p.round = current_round;                     // 仲裁过程为第一轮
+      p.round = current_round;             // 仲裁过程为第一轮
       p.required_arbitrator = arbi_method; // 每一轮需要的仲裁员的个数
-      p.add_appeallant(appeallant);
-      p.arbi_method=arbi_method;
+      p.appeallants.push_back(appeallant);
+      p.arbi_method = arbi_method;
       p.is_provider = is_provider;
     });
   } else {
     // 新增申诉者
     arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) {
-      p.add_appeallant(appeallant);
+      p.appeallants.push_back(appeallant);
     });
   }
 
@@ -253,7 +255,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
   }
 
   if (!evidence.empty()) {
-    uploadeviden(appeallant, arbitration_id, current_round, evidence);
+    uploadeviden(appeallant, arbitration_id, evidence);
   }
 }
 
@@ -296,25 +298,27 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
 
   // 新增应诉者
   arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) {
-    p.add_respondent(respondent);
+    p.respondents.push_back(respondent);
   });
 
   if (!evidence.empty()) {
-    uploadeviden(respondent, arbitration_id, current_round, evidence);
+    uploadeviden(respondent, arbitration_id, evidence);
   }
 }
 
-void bos_oracle::uploadeviden(name account, uint64_t arbitration_id,
-                              uint8_t round, std::string evidence) {
+void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string evidence) {
   require_auth(account);
-  auto arbievidencetable = arbitration_evidences(get_self(), arbitration_id);
-  // auto evidence_itr = arbievidencetable.find(round);
-  // check(arbievidencetable != arbievidencetable.end(), "Can not find such process.");
+  auto arbievidencetable = arbitration_evidences(get_self(),arbitration_id);
+
+  auto arbitration_case_tb = arbitration_cases(get_self(), arbitration_id);
+  auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+  check(arbitration_case_itr != arbitration_case_tb.end(),"no arbitration id");
+
 
   // 申诉者上传仲裁证据
   arbievidencetable.emplace(get_self(), [&](auto &e) {
     e.evidence_id = arbievidencetable.available_primary_key();
-    e.round = round;
+    e.round = arbitration_case_itr->last_round;
     e.account = account;
     e.evidence_info = evidence;
   });
@@ -324,36 +328,31 @@ void bos_oracle::uploadeviden(name account, uint64_t arbitration_id,
  * 仲裁员上传仲裁结果
  */
 void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id,
-                              uint64_t result, uint8_t round, std::string comment) {
+                              uint8_t result, std::string comment) {
   require_auth(arbitrator);
   check(result == 0 || result == 1, "`result` can only be 0 or 1.");
   uint64_t service_id = arbitration_id;
   auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
   auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
-  check(arbitration_case_itr != arbitration_case_tb.end(),
-        "Can not find such arbitration case application.");
- 
+  check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration case application.");
 
+  uint8_t round = arbitration_case_itr->last_round;
   // 仲裁员上传本轮仲裁结果
   auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
   auto arbiprocess_itr = arbiprocess_tb.find(round);
   check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process.");
 
-  
-
-  arbiprocess_tb.modify(arbiprocess_itr, get_self(),
-                        [&](auto &p) { p.add_result(result); });
+  arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) { p.arbitrator_arbitration_results.push_back(result); });
 
   // 计算本轮结果, 条件为上传结果的人数 >= 本轮所需要的仲裁员人数 / 2 + 1
   // 满足条件取消计算结果定时器, 直接计算上传结果
   // Add result to arbitration_results
   add_arbitration_result(arbitrator, arbitration_id, result, round, comment);
 
- bool public_arbi =
+  bool public_arbi =
       arbiprocess_itr->arbi_method == arbi_method_type::public_arbitration;
 
-  if (arbiprocess_itr->result_size() >=
-      arbiprocess_itr->required_arbitrator / 2 + 1) {
+  if (arbiprocess_itr->arbitrator_arbitration_results.size() >= arbiprocess_itr->required_arbitrator / 2 + 1) {
     auto timer_type = public_arbi
                           ? arbitration_timer_type::public_upload_result_timeout
                           : arbitration_timer_type::upload_result_timeout;
@@ -381,86 +380,65 @@ void bos_oracle::handle_upload_result(name arbitrator, uint64_t arbitration_id,
 
   // 此处1表示申诉者赢, 应诉者输
   uint64_t arbi_result = 0;
-  if (arbiprocess_itr->total_result() >= arbiprocess_itr->required_arbitrator / 2) {
+  if (arbiprocess_itr->total_result() > arbiprocess_itr->required_arbitrator / 2) {
     arbi_result = 1;
-  } else {
-    arbi_result = 0;
   }
+
   // 修改本轮的结果
   arbiprocess_tb.modify(arbiprocess_itr, get_self(),
                         [&](auto &p) { p.arbitration_result = arbi_result; });
 
+  arbitration_case_tb.modify(arbitration_case_itr, get_self(),
+                        [&](auto &p) { p.arbitration_result = arbi_result; });
+
   // 看是否有人再次申诉, 大众仲裁不允许再申诉
   if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds) {
-    // timeout_deferred(arbitration_id, round,
-    //                  arbitration_timer_type::reappeal_timeout,
-    //                  eosio::hours(10).to_seconds());
+    timeout_deferred(arbitration_id, round,
+                     arbitration_timer_type::reappeal_timeout,
+                     eosio::hours(10).to_seconds());
   }
 }
 
 /**
  * 仲裁员应邀
  */
-void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id,
-                            uint8_t round) {
+void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
   require_auth(arbitrator);
 
   // 修改仲裁案件状态
   auto arbitration_case_tb = arbitration_cases(get_self(), get_self().value);
   auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
   check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration.");
-
+  uint8_t round = arbitration_case_itr->last_round;
 
   // 将仲裁员添加此轮应诉的仲裁者中
   auto arbiprocess_tb = arbitration_processes(get_self(), get_self().value);
   auto arbiprocess_itr = arbiprocess_tb.find(round);
-  check(arbiprocess_itr != arbiprocess_tb.end(),
-        "Can not find such arbitration process.");
+  check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such arbitration process.");
 
-  bool public_arbi = arbiprocess_itr->arbi_method ==                  arbi_method_type::public_arbitration; // 是否为大众仲裁
-  // auto amount = public_arbi ? 2 * amount : amount;
-
-  // TODO
-  // transfer(arbitrator, arbitrat_account, amount, "acceptarbi deposit.");
-  // stake_arbitration(arbitration_id,arbitrator, amount,0,0, "reappeal.");
-
+  bool public_arbi = arbiprocess_itr->arbi_method == arbi_method_type::public_arbitration; // 是否为大众仲裁
+ 
   arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
-    p.arbi_step = public_arbi
-                      ? arbi_step_type::arbi_public_responded
-                      : arbi_step_type::arbi_responded; // 状态为有仲裁员确认
+    p.arbitrators.push_back(arbitrator);
   });
 
-  arbiprocess_tb.modify(arbiprocess_itr, get_self(),
-                        [&](auto &p) { p.add_arbitrator(arbitrator); });
+  arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) { p.arbitrators.push_back(arbitrator); });
 
   // 如果仲裁员人数满足需求, 那么开始仲裁
-  if (arbiprocess_itr->arbitrators.size() >=
-      arbiprocess_itr->required_arbitrator) {
+  if (arbiprocess_itr->arbitrators.size() >= arbiprocess_itr->required_arbitrator) {
     arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
-      p.arbi_step = public_arbi ? arbi_step_type::arbi_public_started
-                                : arbi_step_type::arbi_started;
+      p.arbi_step = public_arbi ? arbi_step_type::arbi_public_started : arbi_step_type::arbi_started;
     });
 
-    // 等待仲裁员上传结果
-    if (public_arbi) {
-      upload_result_timeout_deferred(
-          arbitrator, arbitration_id, 0,
-          arbitration_timer_type::public_upload_result_timeout,
-          eosio::hours(10).to_seconds());
-    } else {
-      upload_result_timeout_deferred(
-          arbitrator, arbitration_id, 0,
-          arbitration_timer_type::upload_result_timeout,
-          eosio::hours(10).to_seconds());
-    }
+    const uint8_t arbi_upload_result_timeout_value = 1; //hours
+                                                        // 等待仲裁员上传结果
+    upload_result_timeout_deferred(arbitrator, arbitration_id, round, public_arbi ? arbitration_timer_type::public_upload_result_timeout : arbitration_timer_type::upload_result_timeout, eosio::hours(arbi_upload_result_timeout_value).to_seconds());
+
   } else {
-    if (arbiprocess_itr->arbiresp_deadline.utc_seconds <
-        eosio::time_point_sec(eosio::current_time_point()).utc_seconds) {
+    if (arbiprocess_itr->arbiresp_deadline.utc_seconds < eosio::time_point_sec(eosio::current_time_point()).utc_seconds) {
       // 如果仲裁员没有在指定时间内应诉, 那么继续选择仲裁员
-      auto required_arbitrator_count = arbiprocess_itr->required_arbitrator -
-                                       arbiprocess_itr->arbitrators.size();
-      random_chose_arbitrator(arbitration_id, round, arbitration_id,
-                              required_arbitrator_count);
+      auto required_arbitrator_count = arbiprocess_itr->required_arbitrator - arbiprocess_itr->arbitrators.size();
+      random_chose_arbitrator(arbitration_id, round, arbitration_id, required_arbitrator_count);
     }
   }
 }
@@ -468,152 +446,142 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id,
 /**
  * 随机选择仲裁员
  */
-void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id,
-                                         uint8_t round,
-                                         uint64_t service_id,
-                                         uint64_t required_arbitrator_count) {
+void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t service_id, uint64_t required_arbitrator_count) {
   vector<name> chosen_arbitrators =
       random_arbitrator(arbitration_id, round, required_arbitrator_count);
 
   auto arbitration_case_tb = arbitration_cases(get_self(), arbitration_id);
-    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
-    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration");
+  auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+  check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration");
 
-    auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
-    auto arbiprocess_itr = arbiprocess_tb.find(round);
-    check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such arbitration process");
+  auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
+  auto arbiprocess_itr = arbiprocess_tb.find(round);
+  check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such arbitration process");
 
-
- if (chosen_arbitrators.size() == required_arbitrator_count) {
-     arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
-      p.chosen_arbitrators.insert(p.chosen_arbitrators.end(),chosen_arbitrators.begin(),chosen_arbitrators.end());
+  if (chosen_arbitrators.size() == required_arbitrator_count) {
+    arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
+      p.chosen_arbitrators.insert(p.chosen_arbitrators.end(), chosen_arbitrators.begin(), chosen_arbitrators.end());
     });
 
     // 保存被选择的仲裁员
     arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) {
-      // p.add_random_arbitrator(arbitrator);
       // 刚好选择完毕仲裁员, 那么设置这些仲裁员需要在指定时间内应诉的时间
       p.arbiresp_deadline = time_point_sec(eosio::current_time_point()) +
                             eosio::days(arbiresp_deadline_days);
     });
 
- 
-  auto notify_amount = eosio::asset(1, core_symbol());
+    auto notify_amount = eosio::asset(1, core_symbol());
 
-  // 通知选择的仲裁员
-  for (auto &arbitrator : chosen_arbitrators) {
-    auto memo = "arbitration_id: " + std::to_string(arbitration_id) +
-                ", service_id: " + std::to_string(service_id);
-    transfer(get_self(), arbitrator, notify_amount, memo);
+    // 通知选择的仲裁员
+    for (auto &arbitrator : chosen_arbitrators) {
+      auto memo = "arbitration_id: " + std::to_string(arbitration_id) +
+                  ", service_id: " + std::to_string(service_id);
+      transfer(get_self(), arbitrator, notify_amount, memo);
+    }
+
+    const uint8_t arbi_resp_arbitrate_timeout_value = 1; //hours
+                                                         // 等待仲裁员响应
+    timeout_deferred(arbitration_id, round,
+                     arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds ? arbitration_timer_type::resp_arbitrate_timeout : arbitration_timer_type::public_resp_arbitrate_timeout,
+                     eosio::hours(arbi_resp_arbitrate_timeout_value).to_seconds());
+    return;
   }
 
-  const uint8_t arbi_resp_arbitrate_timeout_value = 1; //hours
-                                                       // 等待仲裁员响应
-  timeout_deferred(arbitration_id, round,
-                   arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds ? arbitration_timer_type::resp_arbitrate_timeout : arbitration_timer_type::public_resp_arbitrate_timeout,
-                   eosio::hours(arbi_resp_arbitrate_timeout_value).to_seconds());
-      return;
-  }
-
-    ///public arbitration
+  ///public arbitration
   uint8_t arbitrator_type = arbitrator_type::fulltime;
-    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
-      arbitrator_type = arbitrator_type::crowd;
-    }
+  if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
+    arbitrator_type = arbitrator_type::crowd;
+  }
 
-    uint8_t fulltime_count = 0;
-    // 遍历仲裁员表, 找出可以选择的仲裁员
-    auto arb_table = arbitrators(get_self(), get_self().value);
-    for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type)  && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
-      ++fulltime_count;
-    }
+  uint8_t fulltime_count = 0;
+  // 遍历仲裁员表, 找出可以选择的仲裁员
+  auto arb_table = arbitrators(get_self(), get_self().value);
+  for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
+    ++fulltime_count;
+  }
 
-    //不重复选择的公式是 2^(n+1)+n-2,可重复选择的公式是2^n+1
-    // 专业仲裁第一轮, 人数指数倍增加, 2^1+1, 2^2+1, 2^3+1, 2^num+1,
-    // num为冲裁的轮次 专业仲裁人数不够, 走大众仲裁
-    // 人数不够情况有两种: 1.最开始不够; 2.随机选择过程中不够;
-    // 大众仲裁人数为专业仲裁2倍, 启动过程一样, 阶段重新设置,
-    // 大众冲裁结束不能再申诉, 进入大众仲裁需要重新抵押, 抵押变为2倍 增加抵押金,
-    // 记录方法为大众仲裁, 仲裁个数为2倍, 增加抵押金
-      if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds) {
-        // 专业仲裁人数不够, 走大众仲裁
+  //不重复选择的公式是 2^(n+1)+n-2,可重复选择的公式是2^n+1
+  // 专业仲裁第一轮, 人数指数倍增加, 2^1+1, 2^2+1, 2^3+1, 2^num+1,
+  // num为冲裁的轮次 专业仲裁人数不够, 走大众仲裁
+  // 人数不够情况有两种: 1.最开始不够; 2.随机选择过程中不够;
+  // 大众仲裁人数为专业仲裁2倍, 启动过程一样, 阶段重新设置,
+  // 大众冲裁结束不能再申诉, 进入大众仲裁需要重新抵押, 抵押变为2倍 增加抵押金,
+  // 记录方法为大众仲裁, 仲裁个数为2倍, 增加抵押金
+  if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds) {
+    // 专业仲裁人数不够, 走大众仲裁
 
-        arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
-          p.arbi_step = arbi_step_type::arbi_public_choosing_arbitrator; //大众仲裁阶段开始
-        });
-        // 修改本轮仲裁过程为大众仲裁
-        arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) {
-          p.arbi_method = arbi_method_type::public_arbitration;          //仲裁案件变为大众仲裁
-          p.required_arbitrator = 2 * fulltime_count;           // 该轮需要的仲裁员的个数
-          p.arbi_method = arbi_method_type::public_arbitration; //本轮变为大众仲裁
-        });
+    arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto &p) {
+      p.arbi_step = arbi_step_type::arbi_public_choosing_arbitrator; //大众仲裁阶段开始
+    });
+    // 修改本轮仲裁过程为大众仲裁
+    arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto &p) {
+      p.arbi_method = arbi_method_type::public_arbitration; //仲裁案件变为大众仲裁
+      p.required_arbitrator = 2 * fulltime_count;           // 该轮需要的仲裁员的个数
+      p.arbi_method = arbi_method_type::public_arbitration; //本轮变为大众仲裁
+    });
 
-        // 挑选专业仲裁员过程中人数不够，进入大众仲裁，开始随机挑选大众仲裁
-        random_chose_arbitrator(arbitration_id, round, arbitration_id, fulltime_count * 2);
+    // 挑选专业仲裁员过程中人数不够，进入大众仲裁，开始随机挑选大众仲裁
+    random_chose_arbitrator(arbitration_id, round, arbitration_id, fulltime_count * 2);
 
-        return;
-      } 
+    return;
+  }
 
-      // 大众仲裁人数不够, TODO
-      
-      print("public arbitration processing ");
-    
+  // 大众仲裁人数不够, TODO
+
+  print("public arbitration processing ");
 }
 
 /**
  * 为某一个仲裁的某一轮随机选择 `required_arbitrator_count` 个仲裁员
  */
-vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id,
-                                           uint8_t round,
-                                           uint64_t required_arbitrator_count) {
-    auto arbitration_case_tb = arbitration_cases(get_self(), arbitration_id);
-    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
-    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration");
+vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t round, uint64_t required_arbitrator_count) {
+  auto arbitration_case_tb = arbitration_cases(get_self(), arbitration_id);
+  auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+  check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration");
 
-    auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
-    auto arbiprocess_itr = arbiprocess_tb.find(round);
-    check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such arbitration process");
+  auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
+  auto arbiprocess_itr = arbiprocess_tb.find(round);
+  check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such arbitration process");
 
-    auto chosen_arbitrators = arbitration_case_itr->chosen_arbitrators; // 本案已经选择的仲裁员
-    std::vector<name> chosen_from_arbitrators;                          // 需要从哪里选择出来仲裁员的地方
-    std::set<name> arbitrators_set;
+  auto chosen_arbitrators = arbitration_case_itr->chosen_arbitrators; // 本案已经选择的仲裁员
+  std::vector<name> chosen_from_arbitrators;                          // 需要从哪里选择出来仲裁员的地方
+  std::set<name> arbitrators_set;
 
-    uint8_t arbitrator_type = arbitrator_type::fulltime;
-    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
-      arbitrator_type = arbitrator_type::crowd;
+  uint8_t arbitrator_type = arbitrator_type::fulltime;
+  if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
+    arbitrator_type = arbitrator_type::crowd;
+  }
+
+  // 遍历仲裁员表, 找出可以选择的仲裁员
+  auto arb_table = arbitrators(get_self(), get_self().value);
+  for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
+    auto chosen = std::find(chosen_arbitrators.begin(),
+                            chosen_arbitrators.end(), itr->account);
+    if (chosen == chosen_arbitrators.end()) {
+      chosen_from_arbitrators.push_back(itr->account);
+    }
+  }
+
+  if (chosen_from_arbitrators.size() < required_arbitrator_count) {
+    return std::vector<name>{};
+  }
+
+  // 挑选 `required_arbitrator_count` 个仲裁员
+  while (arbitrators_set.size() < required_arbitrator_count) {
+    auto total_arbi = chosen_from_arbitrators.size();
+    auto tmp = tapos_block_prefix();
+    auto arbi_id = random((void *)&tmp, sizeof(tmp));
+    arbi_id %= total_arbi;
+    auto arbitrator = chosen_from_arbitrators.at(arbi_id);
+    if (arbitrators_set.find(arbitrator) != arbitrators_set.end()) {
+      continue;
     }
 
-    // 遍历仲裁员表, 找出可以选择的仲裁员
-    auto arb_table = arbitrators(get_self(), get_self().value);
-    for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->correct_rate > bos_oracle::default_arbitration_correct_rate; ++itr) {
-      auto chosen = std::find(chosen_arbitrators.begin(),
-                              chosen_arbitrators.end(), itr->account);
-      if (chosen == chosen_arbitrators.end()) {
-        chosen_from_arbitrators.push_back(itr->account);
-      }
-    }
-
-    if (chosen_from_arbitrators.size() < required_arbitrator_count) {
-      return std::vector<name>{};
-    }
-
-    // 挑选 `required_arbitrator_count` 个仲裁员
-    while (arbitrators_set.size() < required_arbitrator_count) {
-      auto total_arbi = chosen_from_arbitrators.size();
-      auto tmp = tapos_block_prefix();
-      auto arbi_id = random((void *)&tmp, sizeof(tmp));
-      arbi_id %= total_arbi;
-      auto arbitrator = chosen_from_arbitrators.at(arbi_id);
-      if (arbitrators_set.find(arbitrator) != arbitrators_set.end()) {
-        continue;
-      }
-
-      arbitrators_set.insert(arbitrator);
-      auto chosen = std::find(chosen_from_arbitrators.begin(),
-                              chosen_from_arbitrators.end(), arbitrator);
-      chosen_from_arbitrators.erase(chosen);
-
-    }
+    arbitrators_set.insert(arbitrator);
+    auto chosen = std::find(chosen_from_arbitrators.begin(),
+                            chosen_from_arbitrators.end(), arbitrator);
+    chosen_from_arbitrators.erase(chosen);
+  }
 
   std::vector<name> final_arbi(arbitrators_set.begin(), arbitrators_set.end());
   return final_arbi;
@@ -622,9 +590,7 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id,
 /**
  * 新增仲裁结果表
  */
-void bos_oracle::add_arbitration_result(name arbitrator,
-                                        uint64_t arbitration_id,
-                                        uint64_t result, uint8_t round, std::string comment) {
+void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round, std::string comment) {
   auto arbi_result_tb = arbitration_results(get_self(), arbitration_id);
   arbi_result_tb.emplace(get_self(), [&](auto &p) {
     p.result_id = arbi_result_tb.available_primary_key();
@@ -669,8 +635,7 @@ void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
   }
 }
 
-uint128_t bos_oracle::make_deferred_id(uint64_t arbitration_id,
-                                       uint8_t timer_type) {
+uint128_t bos_oracle::make_deferred_id(uint64_t arbitration_id,                                       uint8_t timer_type) {
   return (uint128_t(arbitration_id) << 64) | timer_type;
 }
 

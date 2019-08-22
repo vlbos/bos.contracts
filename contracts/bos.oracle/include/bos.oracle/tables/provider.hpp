@@ -13,10 +13,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint8_t data_type;
   uint8_t status;
   uint8_t injection_method;
-  uint64_t acceptance;
-  uint64_t duration;
-  uint64_t provider_limit;
-  uint64_t update_cycle;
+  uint8_t acceptance;
+  uint32_t duration;
+  uint8_t provider_limit;
+  uint32_t update_cycle;
   uint64_t last_update_number;
   uint64_t appeal_freeze_period;
   uint64_t exceeded_risk_control_freeze_period;
