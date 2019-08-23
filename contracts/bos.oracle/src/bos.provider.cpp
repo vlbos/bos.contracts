@@ -110,11 +110,10 @@ void bos_oracle::regservice(uint64_t service_id, name account, std::string data_
   });
   // print("=====1");
   provider_services provservicestable(_self, account.value);
-  uint64_t create_time_sec =
-      static_cast<uint64_t>(update_start_time.sec_since_epoch());
+  uint64_t create_time_sec =   static_cast<uint64_t>(update_start_time.sec_since_epoch());
   auto provservice_itr = provservicestable.find(create_time_sec);
   check(provservice_itr == provservicestable.end(),
-        "same account register service interval too short ");
+        "same account register service  argument 'update_start_time' should be differ ");
   provservicestable.emplace(_self, [&](auto &p) {
     p.service_id = new_service_id;
     p.create_time = update_start_time;

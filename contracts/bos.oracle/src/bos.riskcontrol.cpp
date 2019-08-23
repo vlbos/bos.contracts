@@ -35,7 +35,8 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
         resp_case_count,
     };
     std::vector<std::string> help_strings = {
-        "index_category,index_id",
+        "stake_category,index_id",
+        "pay_category,index_id",
         "deposit_category,from,to,notify ",
         "appeal_category,service_id ,evidence,info,reason,provider",
         "arbitrator_category,type ",

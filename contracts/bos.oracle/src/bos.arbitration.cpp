@@ -129,6 +129,9 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
     current_round = arbitration_case_itr->last_round;
   }
 
+    arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+
+    print("arbi_step=",arbitration_case_itr->arbi_step );
   check(arbi_step_type::arbi_init == arbitration_case_itr->arbi_step || arbi_step_type::arbi_reappeal == arbitration_case_itr->arbi_step || arbi_step_type::arbi_end == arbitration_case_itr->arbi_step,
         "should not  appeal,arbitration is processing");
 
@@ -170,7 +173,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
     arbiprocess_tb.emplace(get_self(), [&](auto &p) {
       p.arbitration_id = arbitration_id;
       p.round = current_round;             // 仲裁过程为第一轮
-      p.required_arbitrator = arbi_method; // 每一轮需要的仲裁员的个数
+      p.required_arbitrator = arbi_count; // 每一轮需要的仲裁员的个数
       p.appeallants.push_back(appeallant);
       p.arbi_method = arbi_method;
       p.is_provider = is_provider;
@@ -283,6 +286,10 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
         "arbitration setp shoule not be arbi_started");
 
   uint8_t current_round = arbitration_case_itr->last_round;
+
+    uint64_t stake_amount_limit = pow(2,current_round)*uint64_t(100)*pow(10,core_symbol().precision());
+  std::string checkmsg = "resp case stake amount could not be less than " + std::to_string(stake_amount_limit);
+  check(amount.amount >= stake_amount_limit, checkmsg.c_str());
   stake_arbitration(arbitration_id, respondent, amount, current_round, false, "");
 
   auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);

@@ -25,7 +25,7 @@ public:
   static constexpr eosio::name arbitrat_account{"arbitrat.bos"_n};
   static constexpr eosio::name token_account{"eosio.token"_n};
   static constexpr eosio::name active_permission{"active"_n};
-  static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
+  static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
   static constexpr uint64_t arbiresp_deadline_days = 1; // 仲裁员响应的截止时间 天
   static constexpr double default_arbitration_correct_rate = 0.6f;
