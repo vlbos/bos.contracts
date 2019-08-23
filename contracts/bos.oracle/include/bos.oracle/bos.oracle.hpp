@@ -42,8 +42,7 @@ public:
   ///
   ///
   //
-  [[eosio::action]] void regservice(uint64_t service_id, name account, asset amount,
-                                    std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
+  [[eosio::action]] void regservice(uint64_t service_id, name account, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
                                     uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time);
   [[eosio::action]] void stakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
@@ -77,7 +76,7 @@ public:
   /// bos.consumer begin
   ///
   ///
-  [[eosio::action]] void subscribe(uint64_t service_id, name contract_account,   name account, asset amount, std::string memo);
+  [[eosio::action]] void subscribe(uint64_t service_id, name contract_account,   name account, std::string memo);
   [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,  name requester, std::string request_content);
   [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
   using subscribe_action = eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;

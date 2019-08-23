@@ -395,7 +395,7 @@ public:
 
 //provider
    action_result regservice(
-      uint64_t service_id, name account, asset amount,
+      uint64_t service_id, name account, 
      std::string data_format,
       uint8_t data_type, std::string criteria, uint8_t acceptance,
       std::string declaration, uint8_t injection_method,
@@ -405,7 +405,6 @@ public:
       return push_action( account, N(regservice), mvo()
            ( "service_id", service_id)
            ( "account", account)
-           ( "amount", amount)
            ( "data_format", data_format)
            ( "data_type", data_type)
            ( "criteria", criteria)
@@ -530,13 +529,12 @@ public:
    }
 //consumer
    action_result subscribe(uint64_t service_id, name contract_account,
-                           name account, asset amount, std::string memo) {
+                           name account, std::string memo) {
      return push_action(
          account, N(subscribe),mvo()
          ("service_id", service_id)
          ("contract_account", contract_account)
          ("account", account)
-         ("amount", amount)
          ("memo", memo)
          );
    }
@@ -628,7 +626,7 @@ uint64_t reg_service(uint64_t service_id,name account,time_point_sec update_star
   std::string declaration = "";
 //   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, amount,  data_format, data_type, criteria,
+  auto token = regservice(service_id, account,   data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
 
@@ -678,7 +676,7 @@ void add_fee_type(uint64_t service_id)
     asset amount = core_sym::from_string("10.0000");
     std::string memo = "";
     auto subs = subscribe(service_id, contract_account, 
-                          account, amount, memo);
+                          account,  memo);
 
     }
 
@@ -777,7 +775,7 @@ BOOST_FIXTURE_TEST_CASE( reg_test, bos_oracle_tester ) try {
 //   bool emergency_flag = false;
   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-  auto token = regservice(service_id, account, amount, data_format, data_type, criteria,
+  auto token = regservice(service_id, account, data_format, data_type, criteria,
                           acceptance, declaration, injection_method, duration,
                           provider_limit, update_cycle, update_start_time);
 BOOST_TEST("" == "reg service after");
@@ -858,7 +856,7 @@ BOOST_TEST("" == "push_permission_update_auth_action before");
     asset amount = core_sym::from_string("0.0000");
     std::string memo = "";
     auto subs = subscribe(service_id, contract_account,  
-                          account, amount, memo);
+                          account,  memo);
 
     auto consumer = get_data_consumer(account);
     auto time = consumer["create_time"];
@@ -1146,7 +1144,7 @@ stake_asset(service_id,N(alice),core_sym::from_string("10.0000"));
     asset amount = core_sym::from_string("0.0000");
     std::string memo = "";
     auto subs = subscribe(service_id, contract_account, 
-                          account, amount, memo);
+                          account,  memo);
 
     auto consumer = get_data_consumer(account);
     auto time = consumer["create_time"];

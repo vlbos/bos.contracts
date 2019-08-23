@@ -28,31 +28,11 @@ using std::string;
  * @param amount
  * @param memo
  */
-void bos_oracle::subscribe(uint64_t service_id, name contract_account,
-                           name account, asset amount, std::string memo) {
-
-  // //   token::transfer_action transfer_act{ token_account, { account,
-  // active_permission } };
-  // //          transfer_act.send( account, consumer_account, amount, memo );
-
-  //       INLINE_ACTION_SENDER(eosio::token, transfer)(
-  //          token_account, { {account, active_permission} },
-  //          { account, consumer_account, amount, memo }
-  //       );
+void bos_oracle::subscribe(uint64_t service_id, name contract_account, name account, std::string memo) {
   require_auth(account);
-  // require_auth(contract_account);
 
-  // asset price_by_month =
-  //     get_price_by_fee_type(service_id, fee_type::fee_month);
-  // check(price_by_month.amount > 0 && amount >= price_by_month,
-  //       "amount must greater than price by month");
-
-  // transfer(account, consumer_account, amount, memo);
-
-  
   // add consumer service subscription relation
   data_service_subscriptions substable(_self, service_id);
-
 
   auto subs_itr = substable.find(contract_account.value);
   check(subs_itr == substable.end(), "contract_account exist");

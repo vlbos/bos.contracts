@@ -24,13 +24,9 @@ using std::string;
  * @param update_cycle
  * @param update_start_time
  */
-void bos_oracle::regservice(uint64_t service_id, name account, asset amount,
-                            std::string data_format, uint8_t data_type,
-                            std::string criteria, uint8_t acceptance,
-                            std::string declaration, uint8_t injection_method,
-                            uint32_t duration, uint8_t provider_limit,
-                            uint32_t update_cycle,
-                            time_point_sec update_start_time) {
+void bos_oracle::regservice(uint64_t service_id, name account, std::string data_format, uint8_t data_type,
+                            std::string criteria, uint8_t acceptance, std::string declaration, uint8_t injection_method,
+                            uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time) {
   cout << 33333333;
   print(1234567);
   // print("=====1");
