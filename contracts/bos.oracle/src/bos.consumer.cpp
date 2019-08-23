@@ -66,7 +66,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account,
     subs.consumption = asset(0, core_symbol());
     subs.month_consumption = asset(0, core_symbol());
     subs.balance = subs.payment - subs.consumption - subs.month_consumption;
-    subs.subscription_time = time_point_sec(eosio::current_time_point());
+    subs.subscription_time = bos_oracle::current_time_point_sec();
     subs.last_payment_time = time_point_sec();
     subs.status = subscription_status::subscription_subscribe;
   });
@@ -102,7 +102,7 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
     r.service_id = service_id;
     r.contract_account = contract_account;
     r.requester = requester;
-    r.request_time = time_point_sec(eosio::current_time_point());
+    r.request_time = bos_oracle::current_time_point_sec();
     r.request_content = request_content;
     r.status = request_status::reqeust_valid;
   });

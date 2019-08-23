@@ -213,8 +213,8 @@ private:
   void add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round,std::string comment);
   void update_arbitration_correcction(uint64_t arbitration_id);
   uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
-  void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint64_t time_length);
-  void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint64_t time_length);
+  void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
+  void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
   void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint8_t round);
   std::tuple<std::vector<name>, asset> get_balances(uint64_t arbitration_id, bool is_provider);
   std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);

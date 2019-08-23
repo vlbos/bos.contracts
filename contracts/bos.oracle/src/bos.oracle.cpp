@@ -14,6 +14,7 @@
 #include "bos.oracle/bos.oracle.hpp"
 #include "bos.provider.cpp"
 #include "bos.riskcontrol.cpp"
+#include "bos.util.cpp"
 
 using namespace eosio;
 

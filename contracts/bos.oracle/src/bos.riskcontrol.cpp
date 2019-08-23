@@ -175,7 +175,7 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity,
     t.delay_sec = 0;
     uint128_t deferred_id =
         (uint128_t(to.value) << 64) |
-        time_point_sec(eosio::current_time_point()).sec_since_epoch();
+        bos_oracle::current_time_point_sec().sec_since_epoch();
     cancel_deferred(deferred_id);
     t.send(deferred_id, _self, true);
   }
@@ -234,7 +234,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
   // quantity, " no service stake  found" );
   //
   // print("========77777=subsr");
-  uint64_t time_length = 1;
+  uint32_t time_length = 1;
   if (svcstake_itr->amount - svcstake_itr->freeze_amount >= quantity) {
     // print("=========subsr");
     svcstaketable.modify(svcstake_itr, same_payer,
@@ -242,7 +242,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
     // print("======free===subsr");
     // transfer(from, to, quantity, memo);
     add_freeze(svcsubs_itr->service_id, from,
-               time_point_sec(eosio::current_time_point()), time_length,
+               bos_oracle::current_time_point_sec(), time_length,
                quantity);
   } else {
     // risk guarantee
@@ -257,7 +257,7 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to,
 
     // print("===delay======subsr");
     add_delay(svcsubs_itr->service_id, from,
-              time_point_sec(eosio::current_time_point()), time_length,
+              bos_oracle::current_time_point_sec(), time_length,
               quantity);
 
     // transaction t;
@@ -333,12 +333,12 @@ void bos_oracle::add_freeze(uint64_t service_id, name account,
       service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
 
   add_freeze_delay(service_id, account,
-                   time_point_sec(eosio::current_time_point()), duration,
+                   bos_oracle::current_time_point_sec(), duration,
                    amount - asset(unfreeze_amount, core_symbol()),
                    transfer_type::tt_freeze);
 
   // delay
-  add_delay(service_id, account, time_point_sec(eosio::current_time_point()),
+  add_delay(service_id, account, bos_oracle::current_time_point_sec(),
             duration, amount);
 }
 
@@ -347,7 +347,7 @@ void bos_oracle::add_delay(uint64_t service_id, name account,
                            asset amount) {
 
   add_freeze_delay(service_id, account,
-                   time_point_sec(eosio::current_time_point()), duration,
+                   bos_oracle::current_time_point_sec(), duration,
                    amount, transfer_type::tt_delay);
 }
 
@@ -422,7 +422,7 @@ void bos_oracle::add_freeze_log(uint64_t service_id, name account,
     t.service_id = service_id;
     t.account = account;
     t.amount = amount;
-    t.update_time = time_point_sec(eosio::current_time_point());
+    t.update_time = bos_oracle::current_time_point_sec();
   });
 
   add_freeze_stat(service_id, account, amount);
@@ -490,7 +490,7 @@ uint64_t bos_oracle::add_guarantee(uint64_t service_id, name account,
     g.risk_id = guaranteetable.available_primary_key();
     g.account = account;
     g.amount = amount;
-    g.start_time = time_point_sec(eosio::current_time_point());
+    g.start_time = bos_oracle::current_time_point_sec();
     g.duration = duration;
     g.status = 0;
     //  g.sig = sig;

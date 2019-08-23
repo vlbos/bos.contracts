@@ -10,8 +10,6 @@ enum service_status : uint8_t {
   service_emergency
 };
 
-enum consumer_status : uint8_t { consumer_on, consumer_stop };
-
 enum apply_status : uint8_t { apply_init, apply_cancel };
 
 enum subscription_status : uint8_t {
@@ -31,7 +29,6 @@ enum transfer_status : uint8_t {
   transfer_failed
 };
 
-enum usage_type : uint8_t { usage_request, usage_subscribe };
 
 enum request_status : uint8_t { reqeust_valid, request_cancel, reqeust_finish };
 
@@ -49,8 +46,6 @@ enum transfer_category : uint8_t {
   tc_arbitration_stake_appeal,
   tc_arbitration_stake_arbitrator,
   tc_arbitration_stake_resp_case,
-  ts_arbitration_stake_reappeal,
-  tc_arbitration_stake_reresp_case,
   tc_risk_guarantee
 };
 
@@ -98,11 +93,7 @@ enum arbitration_timer_type : uint8_t {
 };
 
 
-
-enum arbitrator_status : uint8_t { stoped = 0, serving = 1 };
-
 enum arbitrator_type : uint8_t { fulltime = 1, crowd = 2,wps=5 };
-
 
 enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };
 
@@ -126,5 +117,4 @@ enum arbi_step_type : uint64_t {
 enum final_result_type : uint64_t {
   consumer,
   provider
-
 };

@@ -369,7 +369,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider,
     time_point_sec pay_time =
         get_payment_time(service_id, contract_account);
     pay_time += eosio::days(30);
-    if (pay_time < time_point_sec(eosio::current_time_point())) {
+    if (pay_time < bos_oracle::current_time_point_sec()) {
       fee_service(service_id, contract_account, 
                   fee_type::fee_month);
     }
@@ -386,7 +386,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider,
     // l.provider_sig = provider_signature;
     l.contract_account = contract_account;
     l.request_id = request_id;
-    l.update_time = time_point_sec(eosio::current_time_point());
+    l.update_time = bos_oracle::current_time_point_sec();
   });
 
   add_times(service_id, provider, contract_account, 
@@ -485,7 +485,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider,
     // l.provider_sig = provider_signature;
     l.contract_account = contract_account;
     l.request_id = request_id;
-    l.update_time = time_point_sec(eosio::current_time_point());
+    l.update_time = bos_oracle::current_time_point_sec();
   });
 
   add_times(service_id, provider, contract_account, 
@@ -525,7 +525,7 @@ void bos_oracle::claim(name account, name receive_account) {
   auto provider_itr = providertable.find(account.value);
   check(provider_itr != providertable.end(), "");
 
-  check(time_point_sec(eosio::current_time_point()) -
+  check(bos_oracle::current_time_point_sec() -
                 provider_itr->last_claim_time >=
             eosio::days(1),
         "claim span must be greater than one day");
@@ -630,7 +630,7 @@ void bos_oracle::unregservice(uint64_t service_id, name account,
       a.service_id = service_id;
       a.provider = account;
       a.status = apply_status::apply_init;
-      // a.cancel_time = time_point_sec(eosio::current_time_point());
+      // a.cancel_time = bos_oracle::current_time_point_sec();
       a.finish_time = time_point_sec();
     });
 
@@ -733,7 +733,7 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t update_number,
                                    uint64_t request_id, string value,
                                    name provider) {
   oracle_data oracledatatable(_self, service_id);
-  int now_sec = time_point_sec(eosio::current_time_point()).sec_since_epoch();
+  int now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
 
   auto itr = oracledatatable.find(now_sec);
 
@@ -741,7 +741,7 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t update_number,
   int i = 0;
   while (itr != oracledatatable.end()) {
     i++;
-    now_sec = time_point_sec(eosio::current_time_point()).sec_since_epoch() + i;
+    now_sec = bos_oracle::current_time_point_sec().sec_since_epoch() + i;
     itr = oracledatatable.find(now_sec);
     if (i > retry_time) {
       break;
@@ -881,7 +881,7 @@ bos_oracle::get_publish_service_update_number() {
     uint32_t update_number =
         s.update_start_time.sec_since_epoch() / s.update_cycle;
     uint32_t now_sec =
-        time_point_sec(eosio::current_time_point()).sec_since_epoch();
+        bos_oracle::current_time_point_sec().sec_since_epoch();
     if (s.update_cycle * update_number + s.duration < now_sec) {
       service_numbers.push_back(
           std::make_tuple(s.service_id, update_number, s.provider_limit));

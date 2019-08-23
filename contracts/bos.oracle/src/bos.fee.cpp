@@ -196,7 +196,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
       subs.consumption += price_by_times;
     } else {
       subs.month_consumption += price_by_times;
-      subs.last_payment_time = time_point_sec(eosio::current_time_point());
+      subs.last_payment_time = bos_oracle::current_time_point_sec();
     }
     subs.balance = subs.payment - subs.consumption - subs.month_consumption;
   });
@@ -213,7 +213,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
         c.consumption = asset(0, core_symbol());
         c.month_consumption = price_by_times;
       }
-      c.update_time = time_point_sec(eosio::current_time_point());
+      c.update_time = bos_oracle::current_time_point_sec();
     });
   } else {
     consumptionstable.modify(consumptions_itr, same_payer, [&](auto &c) {
@@ -227,7 +227,7 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account,
       } else {
         c.month_consumption += price_by_times;
       }
-      c.update_time = time_point_sec(eosio::current_time_point());
+      c.update_time = bos_oracle::current_time_point_sec();
     });
   }
 }
@@ -314,7 +314,7 @@ bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
     // upper)===========");
     auto req = lower++;
     if (req->status == request_status::reqeust_valid &&
-        time_point_sec(eosio::current_time_point()) - req->request_time >
+        bos_oracle::current_time_point_sec() - req->request_time >
             eosio::hours(request_time_deadline)) {
       // print("=-=============get_request_list while  if===========");
       receive_contracts.push_back(std::make_tuple(
@@ -354,7 +354,7 @@ bos_oracle::get_consumption(uint64_t service_id) {
   uint64_t consumptions = service_itr->consumption.amount;
   uint64_t month_consumptions = service_itr->month_consumption.amount;
 
-  if (service_itr->update_time - time_point_sec(eosio::current_time_point()) >
+  if (service_itr->update_time - bos_oracle::current_time_point_sec() >
       eosio::days(update_time_deadline)) {
     consumptions = 0;
     month_consumptions = 0;
@@ -366,7 +366,7 @@ bos_oracle::get_consumption(uint64_t service_id) {
     consumptionstable.modify(service_itr, _self, [&](auto &consump) {
       consump.consumption = asset(consumptions, core_symbol());
       consump.month_consumption = asset(month_consumptions, core_symbol());
-      consump.update_time = time_point_sec(eosio::current_time_point());
+      consump.update_time = bos_oracle::current_time_point_sec();
     });
   }
 
