@@ -52,7 +52,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       if (parameters.size() == index_counts[category]) {
         return true;
       }
-      std::string str =  "the parameters'size does not match " + help_strings[category];
+      std::string str = "the parameters'size does not match " + help_strings[category];
       check(false, str.c_str());
     }
 
@@ -83,8 +83,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
   };
 
   if (tc_deposit == transfer_category) {
-    call_deposit(s2name(static_cast<uint64_t>(index_from)), s2name(index_to),
-                 quantity, 0 != s2int(index_notify));
+    call_deposit(s2name(static_cast<uint64_t>(index_from)), s2name(index_to), quantity, 0 != s2int(index_notify));
     transfer(_self, riskctrl_account, quantity, memo);
   } else {
 
@@ -99,19 +98,16 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       oracle_transfer(_self, consumer_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_appeal:
-      _appeal(account, s2int(index_id), quantity, parameters[index_reason],
-                parameters[index_evidence],s2int(index_provider));
+      _appeal(account, s2int(index_id), quantity, parameters[index_reason], parameters[index_evidence], s2int(index_provider));
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_arbitrator:
-      _regarbitrat(account,  s2int(index_type), quantity,
-                   "");
+      _regarbitrat(account, s2int(index_type), quantity, "");
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_resp_case:
 
-      _respcase(account, s2int(index_id), quantity, 
-                parameters[index_evidence]);
+      _respcase(account, s2int(index_id), quantity, parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_risk_guarantee:

@@ -36,6 +36,7 @@ void bos_oracle::_regarbitrat(name account, uint8_t type,
   check(itr == abr_table.end(), "Arbitrator already registered");
   // TODO
   // transfer(account, arbitrat_account, amount, "regarbitrat deposit.");
+  check(amount.amount >= uint64_t(10000)*pow(10,core_symbol().precision()), "stake amount could not be less than 10000");
   stake_arbitration(account.value, account, amount, 0, 0, "");
 
   // 注册仲裁员, 填写信息
@@ -203,6 +204,9 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount,
     p.reason = reason;
   });
 
+  uint64_t stake_amount_limit = pow(2,current_round)*uint64_t(100)*pow(10,core_symbol().precision());
+  std::string checkmsg = "appeal stake amount could not be less than " + std::to_string(stake_amount_limit);
+  check(amount.amount >= stake_amount_limit, checkmsg.c_str());
   stake_arbitration(arbitration_id, appeallant, amount, current_round, is_provider, "");
 
   if (first_one) {

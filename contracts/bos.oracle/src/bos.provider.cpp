@@ -149,7 +149,7 @@ void bos_oracle::unstakeasset(uint64_t service_id, name account, asset amount,
 void bos_oracle::stakeasset(uint64_t service_id, name account, asset amount,
                             std::string memo) {
   require_auth(account);
-  check(amount.amount > 0, "stake amount could not equal zero");
+  check(amount.amount >= uint64_t(1000)*pow(10,core_symbol().precision()), "stake amount could not be less than 1000");
   transfer(account, provider_account, amount, "");
 
   stake_asset(service_id, account, amount);
