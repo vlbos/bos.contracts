@@ -378,7 +378,8 @@ void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id,
 void bos_oracle::handle_upload_result(name arbitrator, uint64_t arbitration_id,
                                       uint8_t round) {
   // 仲裁案件检查
-  auto arbitration_case_tb = arbitration_cases(get_self(), get_self().value);
+    uint64_t service_id = arbitration_id;
+  auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
   auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
   check(arbitration_case_itr != arbitration_case_tb.end(),
         "Can not find such arbitration case application.");
