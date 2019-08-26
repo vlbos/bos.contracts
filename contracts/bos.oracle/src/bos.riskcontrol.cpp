@@ -33,6 +33,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
         appeal_count,
         arbitrator_count,
         resp_case_count,
+        risk_guarantee_case_count
     };
     std::vector<std::string> help_strings = {
         "stake_category,index_id",
@@ -41,11 +42,10 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
         "appeal_category,service_id ,evidence,info,reason,provider",
         "arbitrator_category,type ",
         "resp_case_category,arbitration_id,evidence",
-        "risk_guarantee_category,id,duration",
+        "risk_guarantee_category,id,duration"
     };
-    // check(category >= 0 && category < index_counts.size(), "unknown
-    // category");
 
+    // check(category >= 0 && category < index_counts.size(), "unknown category");
     // check(parameters.size() == index_counts[category],
     //       "the parameters'size does not match ");
 

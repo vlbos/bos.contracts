@@ -68,7 +68,7 @@ const uint8_t arbitrator_count = 2;
 const uint8_t resp_case_count = 3;
 
 const uint8_t index_duration = 2;
-const uint8_t risk_guarantee_case_count = 4;
+const uint8_t risk_guarantee_case_count = 3;
 
 // index_category,index_id 
 // deposit_category,deposit_from,deposit_to,deposit_notify 
@@ -80,41 +80,29 @@ enum arbitration_timer_type : uint8_t {
   appeal_timeout,
   reappeal_timeout,
   resp_appeal_timeout,
-  resp_arbitrate_timeout,
+  accept_arbitrate_invitation_timeout,
   upload_result_timeout,
-  resp_reappeal_timeout,
-
-  public_appeal_timeout,
-  public_reappeal_timeout,
-  public_resp_appeal_timeout,
-  public_resp_arbitrate_timeout,
-  public_upload_result_timeout,
-  public_resp_reappeal_timeout
 };
 
 
 enum arbitrator_type : uint8_t { fulltime = 1, crowd = 2,wps=5 };
-
 enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };
-
 enum arbi_step_type : uint64_t {
   arbi_init = 1,
   arbi_choosing_arbitrator,
   arbi_started,
-  arbi_end,
-  arbi_appeal_timeout_end,
-  arbi_reappeal,
-  arbi_reappeal_responded,
+  arbi_wait_for_resp_appeal,
+  arbi_resp_appeal_timeout_end,
+  arbi_wait_for_accept_arbitrate_invitation,
+  arbi_wait_for_upload_result,
+  arbi_wait_for_reappeal,
   arbi_reappeal_timeout_end,
-  arbi_public_init,
-  arbi_public_responded,
-  arbi_public_choosing_arbitrator,
-  arbi_public_started,
-  arbi_public_end,
-  arbi_public_timeout
+  arbi_reappeal,
+  arbi_public_end
 };
 
 enum final_result_type : uint64_t {
+  provider,
   consumer,
-  provider
+  pending_result
 };

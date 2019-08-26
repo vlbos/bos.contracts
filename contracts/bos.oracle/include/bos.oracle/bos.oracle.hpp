@@ -25,7 +25,7 @@ public:
   static constexpr eosio::name arbitrat_account{"arbitrat.bos"_n};
   static constexpr eosio::name token_account{"eosio.token"_n};
   static constexpr eosio::name active_permission{"active"_n};
-  static constexpr symbol _core_symbol = symbol(symbol_code("EOS"), 4);
+  static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
   static constexpr uint64_t arbiresp_deadline_days = 1; // 仲裁员响应的截止时间 天
   static constexpr double default_arbitration_correct_rate = 0.6f;
@@ -135,7 +135,6 @@ public:
   // arbitration_id,asset amount, uint8_t round, std::string evidence );
 
   [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
-  [[eosio::action]] void uploaddefer(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
   [[eosio::action]] void unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo);
   [[eosio::action]] void claimarbi(name account, name receive_account);
   ///
@@ -213,15 +212,13 @@ private:
   void update_arbitration_correcction(uint64_t arbitration_id);
   uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
   void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
-  void upload_result_timeout_deferred(name arbitrator, uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
-  void handle_upload_result(name arbitrator, uint64_t arbitration_id, uint8_t round);
+  void handle_upload_result( uint64_t arbitration_id, uint8_t round);
   std::tuple<std::vector<name>, asset> get_balances(uint64_t arbitration_id, bool is_provider);
   std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
   void slash_service_stake(uint64_t service_id, const std::vector<name> &slash_accounts, const asset &amount);
   void slash_arbitration_stake(uint64_t arbitration_id, std::vector<name> & slash_accounts);
   void pay_arbitration_award(uint64_t arbitration_id, std::vector<name> & award_accounts, double dividend_amount);
   void pay_arbitration_fee(uint64_t arbitration_id, const std::vector<name> &fee_accounts, double fee_amount);
-  void handle_rearbitration_result(uint64_t arbitration_id);
   void sub_balance(name owner, asset value, uint64_t arbitration_id);
   void add_balance(name owner, asset value, uint64_t arbitration_id, bool is_provider);
   void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, bool is_provider, string memo);

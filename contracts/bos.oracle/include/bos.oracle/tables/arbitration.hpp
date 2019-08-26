@@ -75,10 +75,13 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
 
   uint64_t primary_key() const { return round; }
 
-  uint64_t total_result() const {
-    uint64_t total = 0;
+  uint8_t total_result() const {
+    uint8_t total = 0;
     for (auto &n : arbitrator_arbitration_results)
+    {
       total += n;
+    }
+
     return total;
   }
 };
