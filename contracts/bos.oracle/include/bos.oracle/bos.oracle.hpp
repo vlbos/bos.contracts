@@ -134,9 +134,14 @@ public:
   // [[eosio::action]] void rerespcase( name respondent, uint64_t
   // arbitration_id,asset amount, uint8_t round, std::string evidence );
 
-  [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
   [[eosio::action]] void unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo);
   [[eosio::action]] void claimarbi(name account, name receive_account);
+
+  [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
+
+  [[eosio::action]] void setstatus(uint64_t arbitration_id);
+  [[eosio::action]] void importwps(vector<name> arbitrators);
+
   ///
   ///
   /// bos.arbitration end

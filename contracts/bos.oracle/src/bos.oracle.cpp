@@ -53,7 +53,9 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
          (regservice)(unregservice)(execaction)(unstakeasset)(innerpush)(pushdata)(innerpublish)(oraclepush)(
               addfeetypes)(addfeetype)(claim)(subscribe)(requestdata)( starttimer)
               (uploadeviden)(uploadresult)(acceptarbi)(unstakearbi)(claimarbi)(timertimeout)
-              (deposit)(withdraw))
+              (deposit)(withdraw)
+              (importwps)(setstatus)
+              )
     }
   }
   // print("&&&&&&&&&&&&&&&&&&&");
