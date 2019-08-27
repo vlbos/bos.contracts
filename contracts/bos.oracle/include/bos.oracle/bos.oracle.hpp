@@ -139,8 +139,8 @@ public:
 
   [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
 
-  [[eosio::action]] void setstatus(uint64_t arbitration_id);
-  [[eosio::action]] void importwps(vector<name> arbitrators);
+  [[eosio::action]] void setstatus(uint64_t arbitration_id,uint8_t status);
+  [[eosio::action]] void importwps(vector<name> auditors);
 
   ///
   ///

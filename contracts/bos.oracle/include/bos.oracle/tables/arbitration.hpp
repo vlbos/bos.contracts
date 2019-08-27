@@ -108,7 +108,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {
   uint64_t arbitration_id;
   std::string arbitrator_evidence;
 
-  uint64_t primary_key() const { return service_id; }
+  uint64_t primary_key() const { return award_id; }
 };
 
 /**
@@ -152,9 +152,7 @@ typedef eosio::multi_index<"arbicase"_n, arbitration_case> arbitration_cases;
 typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_processes;
 typedef eosio::multi_index<"arbievidence"_n, arbitration_evidence> arbitration_evidences;
 typedef eosio::multi_index<"arbiresults"_n, arbitration_result> arbitration_results;
-
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
-
 typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account,
                            indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t, &arbitration_stake_account::by_type>> >
     arbitration_stake_accounts;
