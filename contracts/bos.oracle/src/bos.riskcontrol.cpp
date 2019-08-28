@@ -107,7 +107,6 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;
     case tc_arbitration_stake_resp_case:
-
       _respcase(account, s2int(index_id), quantity, parameters[index_evidence]);
       oracle_transfer(_self, arbitrat_account, quantity, memo, true);
       break;

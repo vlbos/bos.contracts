@@ -58,8 +58,8 @@ const uint8_t deposit_count = 4;
 const uint8_t index_id = 1;
 const uint8_t index_evidence = 2;
 const uint8_t index_info = 3;
-const uint8_t index_provider = 4;
-const uint8_t index_reason = 5;
+const uint8_t index_reason = 4;
+const uint8_t index_provider = 5;
 const uint8_t appeal_count = 6;
 
 const uint8_t index_type = 1;
@@ -100,8 +100,10 @@ enum arbi_step_type : uint64_t {
   arbi_public_end
 };
 
-enum final_result_type : uint64_t {
-  provider,
-  consumer,
-  pending_result
+enum arbitration_role_type : uint8_t {
+  pending=0,
+  consumer=1,
+  provider=2,
+  sponsor=4,
+  respodent=8
 };

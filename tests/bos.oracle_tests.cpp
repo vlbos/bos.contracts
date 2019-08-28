@@ -205,7 +205,7 @@ class bos_oracle_tester : public tester {
 
    fc::variant get_svc_provision_cancel_apply(const uint64_t& service_id, const name& provider) {
       vector<char> data = get_row_by_account(N(oracle.bos), service_id, N(cancelapplys), provider);
-      return data.empty() ? fc::variant() :abi_ser.binary_to_variant("svc_provision_cancel_apply", data, abi_serializer_max_time);
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("svc_provision_cancel_apply", data, abi_serializer_max_time);
    }
 
    fc::variant get_data_service_provision_log(const uint64_t& service_id, const uint64_t& log_id) {
@@ -439,11 +439,7 @@ class bos_oracle_tester : public tester {
    }
 
    action_result setstatus(uint64_t arbitration_id, uint8_t status) { return push_action(N(oracle.bos), N(setstatus), mvo()("arbitration_id", arbitration_id)("status", status)); }
-   action_result importwps(const std::vector<name>& auditors) {
-   return push_action(N(oracle.bos), N(importwps), mvo()
-                                                ("auditors", auditors)
-                                                );
-   }
+   action_result importwps(const std::vector<name>& auditors) { return push_action(N(oracle.bos), N(importwps), mvo()("auditors", auditors)); }
 
    uint64_t reg_service(name account, time_point_sec update_start_time) { return reg_service(0, account, update_start_time); }
 
@@ -1094,12 +1090,24 @@ try {
       }
    }
 
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+
    /// appeal
    {
-      std::string memo = "3,1,'evidence','info','reason',0";
+      std::string memo = "3,1,'evidence','info','reason',1";
       std::string appeal_name = "appeallant11";
       name from = name(appeal_name.c_str());
-      transfer(from, to, "200.0000", appeal_name.c_str(), memo);
+      string amount = "200.0000";
+      transfer(from, to, amount, appeal_name.c_str(), memo);
+      produce_blocks(1);
+      auto arbis = get_arbitration_process(arbitration_id, round);
+      uint64_t id = arbis["round"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(1 == id);
+
+      auto stakes = get_arbitration_stake_account(arbitration_id, from);
+      auto balance = stakes["balance"].as<asset>();
+      BOOST_TEST_REQUIRE( core_sym::from_string(amount) == balance);
    }
 
    /// resp appeal
@@ -1108,7 +1116,44 @@ try {
       std::string provider_name = "provider1111";
       name from = name(provider_name.c_str());
       transfer(from, to, "200.0000", provider_name.c_str(), memo);
+      produce_blocks(1);
    }
+
+   /// accept invitation
+   {
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
+      BOOST_TEST_REQUIRE(3 == arbivec.size());
+      for (auto& arbi : arbivec) {
+         acceptarbi(arbi, arbitration_id);
+         produce_blocks(1);
+      }
+   }
+
+   /// upload result
+   {
+      uint8_t result = 1;
+      auto arbis = get_arbitration_process(arbitration_id, round);
+      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      BOOST_TEST_REQUIRE(3 == arbivec.size());
+      for (auto& arbi : arbivec) {
+         uploadresult(arbi, arbitration_id, result, "");
+         produce_blocks(1);
+      }
+   }
+
+   produce_blocks(60*60*2+10);
+   /// get final result
+   {
+      uint8_t result = 1;
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint64_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(1 == final_result);
+      produce_blocks(1);
+      
+   }
+
+
 }
 FC_LOG_AND_RETHROW()
 

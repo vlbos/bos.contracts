@@ -10,6 +10,7 @@
 #include <eosio/singleton.hpp>
 #include <eosio/time.hpp>
 #include <string>
+#include "../bos.constants.hpp"
 
 // namespace eosio {
 using namespace eosio;
@@ -25,7 +26,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
   std::string reason;
   asset amount;
   uint8_t round;
-  uint8_t role_type; // 111 is_respondent is_provider  is_sponsor
+  uint8_t role_type; // 1110 is_respondent is_sponsor is_provider  
   time_point_sec appeal_time;
 
   uint64_t primary_key() const { return appeal_id; }
@@ -35,7 +36,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
   name account;
   uint8_t type;
   uint8_t status;
-  double correct_rate;
   uint16_t arbitration_correct_times;            ///仲裁正确次数
   uint16_t arbitration_times;                    ///仲裁次数
   uint16_t invitations;                          ///邀请次数
@@ -44,6 +44,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
   std::string public_info;
 
   uint64_t primary_key() const { return account.value; }
+  double correct_rate() const { 
+    return 0==arbitration_times || 0==arbitration_correct_times?1.0f:1.0f*arbitration_correct_times/arbitration_times;
+    }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
@@ -52,7 +55,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
   uint8_t arbitration_result;
   uint8_t last_round;
   uint8_t final_result;
-  time_point_sec last_round_update_time;
   std::vector<name> arbitrators;
   std::vector<name> chosen_arbitrators;
   uint64_t primary_key() const { return arbitration_id; }
@@ -60,13 +62,12 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   uint8_t round;
-  uint64_t arbitration_id;
   uint8_t required_arbitrator; // 每一轮需要的仲裁员的个数: 2^round+1
   std::vector<name> appeallants;
   std::vector<name> respondents;    // 数据提供者应诉者
   std::vector<name> arbitrators;    // 每一轮响应的仲裁员
   time_point_sec arbiresp_deadline; // 仲裁员应诉的截止时间
-  bool is_provider;
+  uint8_t role_type;
   std::vector<uint8_t> arbitrator_arbitration_results;
   uint8_t arbitration_result;
   uint8_t arbi_method; // 本轮使用的仲裁方法
@@ -76,7 +77,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   uint8_t total_result() const {
     uint8_t total = 0;
     for (auto &n : arbitrator_arbitration_results) {
-      total += n;
+      if(arbitration_role_type::consumer==n)
+      {
+      ++total;
+      }
     }
 
     return total;
@@ -118,9 +122,9 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account {
   name account;
   asset balance; /// stake amount
-  bool is_provider;
+  uint8_t role_type;
   uint64_t primary_key() const { return account.value; }
-  uint64_t by_type() const { return (is_provider ? 0 : 1); }
+  uint64_t by_type() const { return static_cast<uint64_t>(role_type); }
 };
 
 /**
