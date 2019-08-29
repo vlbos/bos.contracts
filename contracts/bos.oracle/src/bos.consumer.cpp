@@ -97,13 +97,13 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account,
  * @param amount
  * @param memo
  */
-void bos_oracle::payservice(uint64_t service_id, name contract_account,
-                            asset amount, std::string memo) {
-  require_auth(contract_account);
-  check(amount.amount > 0, "amount must be greater than zero");
-  transfer(contract_account, consumer_account, amount, "");
-  pay_service(service_id, contract_account, amount);
-}
+// void bos_oracle::payservice(uint64_t service_id, name contract_account,
+//                             asset amount, std::string memo) {
+//   require_auth(contract_account);
+//   check(amount.amount > 0, "amount must be greater than zero");
+//   transfer(contract_account, consumer_account, amount, "");
+//   pay_service(service_id, contract_account, amount);
+// }
 
 /**
  * @brief

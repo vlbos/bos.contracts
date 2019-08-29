@@ -66,7 +66,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
   std::vector<name> appeallants;
   std::vector<name> respondents;    // 数据提供者应诉者
   std::vector<name> arbitrators;    // 每一轮响应的仲裁员
-  time_point_sec arbiresp_deadline; // 仲裁员应诉的截止时间
+  std::vector<name> chosen_arbitrators;
   uint8_t role_type;
   std::vector<uint8_t> arbitrator_arbitration_results;
   uint8_t arbitration_result;

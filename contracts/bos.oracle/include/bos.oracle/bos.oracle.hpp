@@ -27,7 +27,6 @@ public:
   static constexpr eosio::name active_permission{"active"_n};
   static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
   static constexpr uint64_t arbi_process_time_limit = 3600;
-  static constexpr uint64_t arbiresp_deadline_days = 1; // 仲裁员响应的截止时间 天
   static constexpr double default_arbitration_correct_rate = 0.6f;
   static constexpr uint8_t arbitration_correct_rate_base = 10; // 
   static time_point_sec current_time_point_sec();
@@ -42,9 +41,8 @@ public:
   ///
   ///
   //
-  [[eosio::action]] void regservice(uint64_t service_id, name account, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
+  [[eosio::action]] void regservice( name account,asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
                                     uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time);
-  [[eosio::action]] void stakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
   [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
   [[eosio::action]] void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
@@ -78,10 +76,10 @@ public:
   ///
   [[eosio::action]] void subscribe(uint64_t service_id, name contract_account,   name account, std::string memo);
   [[eosio::action]] void requestdata(uint64_t service_id, name contract_account,  name requester, std::string request_content);
-  [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
+  // [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
   using subscribe_action = eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
   using requestdata_action = eosio::action_wrapper<"requestdata"_n, &bos_oracle::requestdata>;
-  using payservice_action = eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
+  // using payservice_action = eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
 
   ///
   ///
@@ -132,10 +130,16 @@ public:
   /// bos.arbitration end
 
 private:
+  void save_id(uint8_t id_type, uint64_t id);
   // provider
-  void stake_asset(uint64_t service_id, name account, asset amount);
-  void add_times(uint64_t service_id, name account, name contract_account,
-                 bool is_request);
+  void reg_service_provider(uint64_t service_id, name account, asset amount);
+  void check_service_status(uint64_t service_id);
+  void update_service_status(uint64_t service_id);
+  void check_service_provider_status(uint64_t service_id, name account);
+  void update_service_provider_status(uint64_t service_id, name account);
+  void stake_asset(uint64_t service_id, name account, asset amount, std::string memo);
+  void update_stake_asset(uint64_t service_id, name account, asset amount);
+  void add_times(uint64_t service_id, name account, name contract_account,                 bool is_request);
   std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> get_times(uint64_t service_id, name account);
   time_point_sec get_payment_time(uint64_t service_id, name contract_account);
   uint8_t get_subscription_status(uint64_t service_id, name contract_account);
