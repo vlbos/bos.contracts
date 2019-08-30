@@ -63,7 +63,7 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
 }
 
 void bos_oracle::save_id(uint8_t id_type, uint64_t id) {
-   oracler_ids idstable(_self, _self.value);
+   oracle_ids idstable(_self, _self.value);
    auto ids_itr = idstable.find(id_type);
    if (ids_itr == idstable.end()) {
       idstable.emplace(_self, [&](auto& s) {
@@ -184,9 +184,8 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
    check(service_itr != svctable.end(), "no service id");
 
    data_service_provisions provisionstable(_self, service_id);
-
    auto provision_itr = provisionstable.find(account.value);
-   check(provision_itr != provisionstable.end(), "the account has not subscribed service   ");
+   check(provision_itr != provisionstable.end(), "the account has not provided service");
 
    if (provision_itr->amount - provision_itr->freeze_amount <= asset(0, core_symbol())) {
       provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.status = provision_status::provision_freeze_suspend; });
@@ -347,7 +346,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_nu
    check(svc_iter != svctable.end(), "no service id");
 
    if (svc_iter->data_type == data_type::data_deterministic) {
-      publishdata(service_id, provider, update_number, request_id, data_json);
+      innerpublish(service_id, provider, update_number, request_id, data_json);
    } else {
       multipush(service_id, provider, data_json, false);
    }
@@ -449,7 +448,7 @@ void bos_oracle::publishdata(uint64_t service_id, name provider, uint64_t update
 void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
    print(" innerpublish in");
    name contract_account = _self; // placeholder
-   require_auth(_self);
+   // require_auth(_self);
    check(service_status::service_in == get_service_status(service_id), "service and subscription must be available");
 
    data_service_provision_logs logtable(_self, service_id);
@@ -460,7 +459,6 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t updat
       l.data_json = data_json;
       l.update_number = update_number;
       l.status = 0;
-      // l.provider_sig = provider_signature;
       l.contract_account = contract_account;
       l.request_id = request_id;
       l.update_time = bos_oracle::current_time_point_sec();
@@ -470,7 +468,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t updat
 
    print("check publish before=", provider, "s=", service_id, "u=", update_number);
    check_publish_service(service_id, update_number, request_id);
-   // require_recipient(contract_account);
+   require_recipient(contract_account);
 }
 
 /**
@@ -657,31 +655,18 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
 
 void bos_oracle::save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string value, name provider) {
    oracle_data oracledatatable(_self, service_id);
-   int now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
-
-   auto itr = oracledatatable.find(now_sec);
-
-   const int retry_time = 1000;
-   int i = 0;
-   while (itr != oracledatatable.end()) {
-      i++;
-      now_sec = bos_oracle::current_time_point_sec().sec_since_epoch() + i;
-      itr = oracledatatable.find(now_sec);
-      if (i > retry_time) {
-         break;
-      }
-   }
-
-   if (i <= retry_time) {
+   auto itr = oracledatatable.find(update_number);
+   if(itr == oracledatatable.end())
+   {
       oracledatatable.emplace(_self, [&](auto& d) {
          d.update_number = update_number;
-         d.request_id = request_id;
          d.value = value;
-         d.timestamp = now_sec;
-         d.provider = provider;
+         d.timestamp = bos_oracle::current_time_point_sec().sec_since_epoch();
       });
-   } else {
-      print("repeat timestamp:", now_sec, value);
+   }
+   else
+   {
+      print("if(itr != oracledatatable.end())",update_number);
    }
 }
 

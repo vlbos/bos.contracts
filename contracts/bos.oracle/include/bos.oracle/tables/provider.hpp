@@ -70,7 +70,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_appl
   uint8_t status;
   time_point_sec update_time;
 
-  uint64_t primary_key() const { return provider.value; }
+  uint64_t primary_key() const { return apply_id; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_log {
@@ -115,7 +115,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] provider_push_record {
   uint64_t primary_key() const { return account.value; }
 };
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] oracler_id {
+struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_id {
   uint8_t id_type;
   uint64_t id;   
   uint64_t primary_key() const { return static_cast<uint64_t>(id_type); }
@@ -125,7 +125,7 @@ typedef eosio::multi_index<"dataservices"_n, data_service> data_services;
 
 typedef eosio::multi_index<"servicefees"_n, data_service_fee> data_service_fees;
 typedef eosio::multi_index<"providers"_n, data_provider> data_providers;
-typedef eosio::multi_index<"oracleids"_n, oracler_id> oracler_ids;
+typedef eosio::multi_index<"oracleids"_n, oracle_id> oracle_ids;
 typedef eosio::multi_index<"svcprovision"_n, data_service_provision> data_service_provisions;
 
 typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply> svc_provision_cancel_applys;

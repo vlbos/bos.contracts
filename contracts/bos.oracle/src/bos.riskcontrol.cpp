@@ -273,7 +273,6 @@ void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec st
    // delay
    add_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, amount);
 
-   update_service_provider_status(service_id,account);
 }
 
 void bos_oracle::add_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount) {
@@ -332,6 +331,8 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
    provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.freeze_amount += amount; });
 
    add_freeze_log(service_id, account, amount);
+
+   update_service_provider_status(service_id,account);
 }
 
 void bos_oracle::add_freeze_log(uint64_t service_id, name account, asset amount) {

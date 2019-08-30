@@ -60,7 +60,7 @@ class bos_oracle_tester : public tester {
       transfer("eosio", "dappuser", ("1000.0000"), "eosio");
       transfer("eosio", "dapp", ("1000.0000"), "eosio");
 
-      std::vector<string> accounts_prefix = {"provider", "consumer", "appeallant"};
+      std::vector<string> accounts_prefix = {"provider", "consumer", "appeallant", "arbitrators"};
       for (auto& a : accounts_prefix) {
          for (int j = 1; j <= 5; ++j) {
             std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
@@ -150,8 +150,9 @@ class bos_oracle_tester : public tester {
    }
 
    /// dappuser.bos
-   void fetchdata(uint64_t service_id, uint64_t update_number) {
-      base_tester::push_action(N(dappuser.bos), N(fetchdata), N(dappuser.bos), mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("update_number", update_number));
+   void fetchdata(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
+      base_tester::push_action(N(dappuser.bos), N(fetchdata), N(dappuser.bos),
+                               mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("update_number", update_number)("request_id", request_id));
    }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
@@ -354,8 +355,8 @@ class bos_oracle_tester : public tester {
 
    action_result execaction(uint64_t service_id, uint8_t action_type) { return push_action(N(oracle.bos), N(execaction), mvo()("service_id", service_id)("action_type", action_type)); }
 
-   action_result pushdata(uint64_t service_id, name provider, name contract_account, uint64_t request_id, const string& data_json) {
-      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("contract_account", contract_account)("request_id", request_id)("data_json", data_json));
+   action_result pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, const string& data_json) {
+      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data_json", data_json));
    }
 
    action_result innerpush(uint64_t service_id, name provider, name contract_account, uint64_t request_id, const string& data_json) {
@@ -429,7 +430,7 @@ class bos_oracle_tester : public tester {
    uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time) {
       //  name account = N(alice);
       //  uint64_t service_id =0;
-      uint8_t data_type = 1;
+      uint8_t data_type = 0;
       uint8_t status = 0;
       uint8_t injection_method = 0;
       uint8_t acceptance = 0;
@@ -457,7 +458,7 @@ class bos_oracle_tester : public tester {
    /// stake asset
    void stake_asset(uint64_t service_id, name account, asset amount) {
       std::string memo = "0," + std::to_string(service_id);
-      transfer(account, N(oracle.bos), amount.to_string(), account.to_string().c_str(), memo);
+      transfer(account, N(oracle.bos), amount.to_string().substr(0, amount.to_string().size() - 4), account.to_string().c_str(), memo);
    }
 
    /// add fee type
@@ -483,7 +484,7 @@ class bos_oracle_tester : public tester {
    /// pay service
    void pay_service(uint64_t service_id, name contract_account, asset amount) {
       std::string memo = "1," + std::to_string(service_id);
-      transfer(contract_account, N(oracle.bos), amount.to_string(), contract_account.to_string().c_str(), memo);
+      transfer(contract_account, N(oracle.bos), amount.to_string().substr(0, amount.to_string().size() - 4), contract_account.to_string().c_str(), memo);
    }
 
    /// push data
@@ -494,7 +495,7 @@ class bos_oracle_tester : public tester {
       const string data_json = "test data json";
       // uint64_t request_id = 0;
 
-      auto data = pushdata(service_id, provider, contract_account, request_id, data_json);
+      auto data = pushdata(service_id, provider, 1, request_id, data_json);
    }
 
    /// request data
@@ -535,7 +536,7 @@ class bos_oracle_tester : public tester {
       name account = N(provider1111);
       time_point_sec update_start_time = time_point_sec(control->head_block_time());
       uint64_t service_id = reg_service(account, update_start_time);
-
+      BOOST_TEST(0 == service_id);
       add_fee_type(service_id);
       stake_asset(service_id, N(provider1111), core_sym::from_string("1000.0000"));
       stake_asset(service_id, N(provider2222), core_sym::from_string("1000.0000"));
@@ -554,6 +555,19 @@ class bos_oracle_tester : public tester {
          for (int j = 1; j <= 5; ++j) {
             std::string memo = "4,1";
             std::string arbi_name = "arbitrator" + std::to_string(i) + std::to_string(j);
+            name from = name(arbi_name.c_str());
+            transfer(from, to, "10000.0000", arbi_name.c_str(), memo);
+            produce_blocks(1);
+            auto arbitrator = get_arbitrator(from);
+            BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
+         }
+      }
+
+      std::vector<string> accounts_prefix = {"arbitrators"};
+      for (auto& a : accounts_prefix) {
+         for (int j = 1; j <= 5; ++j) {
+            std::string arbi_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
+            std::string memo = "4,1";
             name from = name(arbi_name.c_str());
             transfer(from, to, "10000.0000", arbi_name.c_str(), memo);
             produce_blocks(1);
@@ -599,7 +613,22 @@ class bos_oracle_tester : public tester {
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
       for (auto& arbi : arbivec) {
+         BOOST_TEST("" == arbi);
          acceptarbi(arbi, arbitration_id);
+         produce_blocks(1);
+      }
+   }
+
+   void test_accept_invitation(uint64_t arbitration_id, uint8_t round) {
+      BOOST_TEST("" == "round");
+      BOOST_TEST(0 == round);
+      uint8_t arbi_count = pow(2, round + 1) + round - 2;
+      uint64_t service_id = arbitration_id;
+      auto arbis = get_arbitration_process(arbitration_id, round);
+      vector<name> arbivec = arbis["invited_arbitrators"].as<vector<name>>();
+      BOOST_TEST(arbi_count == arbivec.size());
+      for (auto& arbi : arbivec) {
+         BOOST_TEST("" == arbi);
          produce_blocks(1);
       }
    }
@@ -742,7 +771,7 @@ try {
       const string data_json = "test data json";
       uint64_t request_id = 0;
 
-      auto data = pushdata(service_id, provider, contract_account, request_id, data_json);
+      auto data = pushdata(service_id, provider, 1, request_id, data_json);
    }
 
    BOOST_TEST("" == "====pushdata");
@@ -873,29 +902,24 @@ try {
       const string data_json = "test data json";
       uint64_t request_id = 0;
 
-      auto data = pushdata(service_id, provider, contract_account, request_id, data_json);
+      auto data = pushdata(service_id, provider, 1, request_id, data_json);
    }
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(publishdata_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(push_deterministic_data_to_table_test, bos_oracle_tester)
 try {
 
    /// reg service
    name account = N(alice);
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
    uint64_t service_id = reg_service(N(provider1111), update_start_time);
-   reg_service(service_id, N(provider2222), update_start_time);
-   reg_service(service_id, N(provider3333), update_start_time);
-   reg_service(service_id, N(provider4444), update_start_time);
-   reg_service(service_id, N(provider5555), update_start_time);
-
    add_fee_type(service_id);
-   stake_asset(service_id, N(provider1111), core_sym::from_string("10.0000"));
-   stake_asset(service_id, N(provider2222), core_sym::from_string("10.0000"));
-   stake_asset(service_id, N(provider3333), core_sym::from_string("10.0000"));
-   stake_asset(service_id, N(provider4444), core_sym::from_string("10.0000"));
-   stake_asset(service_id, N(provider5555), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(provider1111), core_sym::from_string("1000.0000"));
+   stake_asset(service_id, N(provider2222), core_sym::from_string("1000.0000"));
+   stake_asset(service_id, N(provider3333), core_sym::from_string("1000.0000"));
+   stake_asset(service_id, N(provider4444), core_sym::from_string("1000.0000"));
+   stake_asset(service_id, N(provider5555), core_sym::from_string("1000.0000"));
 
    subscribe_service(service_id, N(consumer1111), N(conconsumer1));
    subscribe_service(service_id, N(consumer2222), N(conconsumer2));
@@ -903,11 +927,11 @@ try {
    subscribe_service(service_id, N(consumer4444), N(conconsumer4));
    subscribe_service(service_id, N(consumer5555), N(conconsumer5));
 
-   pay_service(service_id, N(conconsumer1), core_sym::from_string("10.0000"));
-   pay_service(service_id, N(conconsumer2), core_sym::from_string("10.0000"));
-   pay_service(service_id, N(conconsumer3), core_sym::from_string("10.0000"));
-   pay_service(service_id, N(conconsumer4), core_sym::from_string("10.0000"));
-   pay_service(service_id, N(conconsumer5), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(consumer1111), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(consumer2222), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(consumer3333), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(consumer4444), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(consumer5555), core_sym::from_string("10.0000"));
 
    /// publish data
    {
@@ -922,18 +946,26 @@ try {
       uint64_t request_id = 0;
 
       auto data = pushdata(service_id, N(provider1111), update_number, request_id, data_json);
+      produce_blocks(2);
+      BOOST_TEST(0 == 2);
       data = pushdata(service_id, N(provider2222), update_number, request_id, data_json);
+      BOOST_TEST(0 == 3);
+      produce_blocks(2);
       data = pushdata(service_id, N(provider3333), update_number, request_id, data_json);
+      BOOST_TEST(0 == 4);
+      produce_blocks(2);
       data = pushdata(service_id, N(provider4444), update_number, request_id, data_json);
+      BOOST_TEST(0 == 5);
+      produce_blocks(2);
       data = pushdata(service_id, N(provider5555), update_number, request_id, data_json);
 
+      BOOST_TEST(0 == 8);
       auto oracledata = get_oracle_data(service_id, update_number);
 
       uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-
-      BOOST_REQUIRE(update_number_from_api > 0);
-
-      fetchdata(service_id, update_number);
+      BOOST_TEST_REQUIRE(update_number_from_api == update_number);
+      BOOST_TEST(0 == update_number);
+      fetchdata(service_id, update_number, 0);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1163,7 +1195,7 @@ try {
    /// reg arbitrator
    reg_arbi();
 
-  uint64_t service_id = reg_svc_for_arbi();
+   uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
    std::string appeal_name = "appeallant11";
@@ -1196,8 +1228,7 @@ try {
    name to = N(oracle.bos);
    /// reg arbitrator
    reg_arbi();
-  
-   
+
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
@@ -1272,6 +1303,7 @@ try {
 
    resp_appeal(arbitration_id, provider_name, amount);
 
+   test_accept_invitation(arbitration_id, round);
    /// accept invitation
    accept_invitation(arbitration_id, round);
 
@@ -1305,6 +1337,8 @@ try {
       transfer(from, to, amount, provider_name.c_str(), memo);
       produce_blocks(1);
    }
+
+   test_accept_invitation(arbitration_id, round);
 
    /// reaccept invitation
    {
@@ -1355,6 +1389,8 @@ try {
       transfer(from, to, amount, provider_name.c_str(), memo);
       produce_blocks(1);
    }
+
+   test_accept_invitation(arbitration_id, round);
 
    /// reaccept invitation
    {
@@ -1523,7 +1559,7 @@ try {
    /// reg arbitrator
    reg_arbi();
 
-  uint64_t service_id = reg_svc_for_arbi();
+   uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
    std::string appeal_name = "appeallant11";

@@ -34,8 +34,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_subscription
   time_point_sec last_payment_time;
   time_point_sec subscription_time;
   uint8_t status; /// unsubscribe 1 subscribe 0
-  uint64_t primary_key() const { return contract_account.value; }
-  uint64_t by_account() const { return account.value; }
+  uint64_t primary_key() const { return account.value; }
+  uint64_t by_account() const { return contract_account.value; }
   uint64_t by_time() const {
     return static_cast<uint64_t>(-subscription_time.sec_since_epoch());
   }
