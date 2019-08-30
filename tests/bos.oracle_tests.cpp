@@ -733,15 +733,15 @@ try {
       BOOST_TEST_REQUIRE(amount == get_data_provider(account)["total_stake_amount"].as<asset>());
    }
 
+
    // subscribe service
    {
       service_id = new_service_id;
       name contract_account = N(dappuser.bos);
-      name account = N(bob);
       asset amount = core_sym::from_string("0.0000");
       std::string memo = "";
       auto subs = subscribe(service_id, contract_account, account, memo);
-
+      name account = N(bob);
       auto consumer = get_data_consumer(account);
       auto time = consumer["create_time"];
       //  BOOST_TEST("" == "1221ss");
@@ -756,11 +756,12 @@ try {
    produce_blocks(1);
    /// pay service
    {
+      name account = N(bob);
       uint64_t service_id = new_service_id;
       name contract_account = N(dappuser.bos);
       asset amount = core_sym::from_string("10.0000");
       std::string memo = "";
-      pay_service(service_id, contract_account, amount);
+      pay_service(service_id, account, amount);
    }
 
    /// push data
@@ -893,7 +894,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
 
    /// push data
    {
@@ -1029,7 +1030,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+   pay_service(service_id,N(bob), core_sym::from_string("10.0000"));
 
    /// request data
    {
@@ -1056,7 +1057,7 @@ try {
       name contract_account = N(dappuser.bos);
       asset amount = core_sym::from_string("10.0000");
       std::string memo = "";
-      pay_service(service_id, contract_account, amount);
+      pay_service(service_id, N(bob), amount);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1070,7 +1071,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    request_data(service_id, N(bob));
    push_data(service_id, N(alice), 0);
    _deposit(service_id, N(bob));
@@ -1096,7 +1097,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    /// deposit
    {
       name from = N(dappuser);
@@ -1122,7 +1123,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id, N(dappuser.bos), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    request_data(service_id, N(bob));
    push_data(service_id, N(alice), 0);
    _deposit(service_id, N(bob));
