@@ -119,7 +119,7 @@ void bos_oracle::check_service_status(uint64_t service_id) {
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "no service id");
 
-   check(service_itr->status != service_status::service_in, " service status is not in");
+   check(service_itr->status == service_status::service_in, " service status is not in");
 }
 
 void bos_oracle::update_service_status(uint64_t service_id) {
@@ -137,17 +137,14 @@ void bos_oracle::update_service_status(uint64_t service_id) {
    }
 
    if (available_service_providers_count < service_itr->provider_limit) {
-      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_pause; });
-   } else if (service_status::service_init || service_status::service_pause_insufficient_providers) {
+      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_pause_insufficient_providers; });
+   } else if (service_status::service_init == service_itr->status || service_status::service_pause_insufficient_providers == service_itr->status) {
       svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });
    }
 }
 
 void bos_oracle::check_service_provider_status(uint64_t service_id, name account) {
-   data_services svctable(_self, _self.value);
-   auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
-
+   check_service_status(service_id);
    // print("===service_id==");
    // print(service_id);
    data_service_provisions provisionstable(_self, service_id);
@@ -155,7 +152,7 @@ void bos_oracle::check_service_provider_status(uint64_t service_id, name account
    auto provision_itr = provisionstable.find(account.value);
    check(provision_itr != provisionstable.end(), "the account has not provided service   ");
 
-   check(provision_itr->status != provision_status::provision_reg, "the account's provision service status is not reg  ");
+   check(provision_itr->status == provision_status::provision_reg, "the account's provision service status is not reg  ");
 }
 
 void bos_oracle::update_service_provider_status(uint64_t service_id, name account) {
@@ -168,6 +165,7 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
    check(provision_itr != provisionstable.end(), "the account has not provided service");
 
    if (provision_itr->amount - provision_itr->freeze_amount <= asset(0, core_symbol())) {
+      print("========================freeze================");
       provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.status = provision_status::provision_freeze_suspend; });
    } else if (provision_status::provision_freeze_suspend == provision_itr->status) {
       provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.status = provision_status::provision_reg; });
@@ -293,13 +291,15 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
 void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
    require_auth(provider);
 
-   data_services svctable(get_self(), get_self().value);
-   auto svc_iter = svctable.find(service_id);
-   check(svc_iter != svctable.end(), "no service id");
+   check_service_provider_status(service_id, provider);
 
    check(!(0 != update_number && 0 != request_id), "both update_number and request_id could not be greater than 0");
 
-   if (svc_iter->data_type == data_type::data_deterministic) {
+   data_services svctable(_self, _self.value);
+   auto service_itr = svctable.find(service_id);
+   check(service_itr != svctable.end(), "no service id");
+
+   if (service_itr->data_type == data_type::data_deterministic) {
       innerpublish(service_id, provider, update_number, request_id, data_json);
    } else {
       innerpush(service_id, provider, update_number, request_id, data_json);
@@ -336,11 +336,9 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
       l.update_time = bos_oracle::current_time_point_sec();
    });
 
-
    if (injection_method::chain_indirect == servic_injection_method) {
       save_publish_data(service_id, 0, request_id, data_json, provider);
    } else {
-  
 
       //  check(service_status::service_in == get_service_status(service_id) && subscription_status::subscription_subscribe == get_subscription_status(service_id, contract_account),
       //    "service and subscription must be available");
@@ -348,21 +346,21 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
       // std::vector<name> subscription_receive_contracts = get_subscription_list(service_id);
 
       // for (const auto& src : subscription_receive_contracts) {
-             //    if (0 == request_id) {
+      //    if (0 == request_id) {
       //    time_point_sec pay_time = get_payment_time(service_id, contract_account);
       //    pay_time += eosio::days(30);
       //    if (pay_time < bos_oracle::current_time_point_sec()) {
       //       fee_service(service_id, contract_account, fee_type::fee_month);
       //    }
       // }
-         // add_times(service_id, provider, contract_account, 0 != request_id);
+      // add_times(service_id, provider, contract_account, 0 != request_id);
       //    push_data(service_id, provider, src, 0, data_json);
       // }
       // require_recipient(contract_account);
       transaction t;
       t.actions.emplace_back(permission_level{_self, active_permission}, _self, "oraclepush"_n, std::make_tuple(service_id, 0, request_id, data_json));
       t.delay_sec = 0;
-      uint128_t deferred_id = (uint128_t(service_id) << 64) | (update_number+request_id);
+      uint128_t deferred_id = (uint128_t(service_id) << 64) | (update_number + request_id);
       cancel_deferred(deferred_id);
       t.send(deferred_id, _self, true);
    }
@@ -576,7 +574,7 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
       if (injection_method::chain_indirect == service_itr->injection_method) {
          save_publish_data(service_id, update_number, request_id, data_json, name());
       } else {
-         innerpush(service_id, name{},update_number, request_id, data_json);
+         innerpush(service_id, name{}, update_number, request_id, data_json);
       }
    }
 }
