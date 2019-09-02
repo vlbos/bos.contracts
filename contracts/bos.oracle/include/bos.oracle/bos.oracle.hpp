@@ -19,10 +19,6 @@ using namespace eosio;
 
 class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
  public:
-   static constexpr eosio::name provider_account{"provider.bos"_n};
-   static constexpr eosio::name consumer_account{"consumer.bos"_n};
-   static constexpr eosio::name riskctrl_account{"riskctrl.bos"_n};
-   static constexpr eosio::name arbitrat_account{"arbitrat.bos"_n};
    static constexpr eosio::name token_account{"eosio.token"_n};
    static constexpr eosio::name active_permission{"active"_n};
    static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
@@ -68,10 +64,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    ///
    [[eosio::action]] void subscribe(uint64_t service_id, name contract_account, name account, std::string memo);
    [[eosio::action]] void requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content);
-   // [[eosio::action]] void payservice(uint64_t service_id, name contract_account, asset amount, std::string memo);
    using subscribe_action = eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
    using requestdata_action = eosio::action_wrapper<"requestdata"_n, &bos_oracle::requestdata>;
-   // using payservice_action = eosio::action_wrapper<"payservice"_n, &bos_oracle::payservice>;
 
    ///
    ///
