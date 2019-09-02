@@ -75,7 +75,7 @@ void bos_oracle::save_id(uint8_t id_type, uint64_t id) {
    }
 }
 
-void bos_oracle::reg_service_provider(uint64_t service_id, name account, asset amount) {
+void bos_oracle::reg_service_provider(uint64_t service_id, name account) {
    require_auth(account);
 
    data_services svctable(_self, _self.value);
@@ -88,50 +88,30 @@ void bos_oracle::reg_service_provider(uint64_t service_id, name account, asset a
    if (provider_itr == providertable.end()) {
       providertable.emplace(_self, [&](auto& p) {
          p.account = account;
-         p.total_stake_amount = amount;
+         p.total_stake_amount = asset(0, core_symbol());
          p.total_freeze_amount = asset(0, core_symbol());
          p.unconfirmed_amount = asset(0, core_symbol());
          p.claim_amount = asset(0, core_symbol());
          p.last_claim_time = time_point_sec();
          p.services.push_back(service_id);
       });
-   } else {
-      providertable.modify(provider_itr, same_payer, [&](auto& p) { p.total_stake_amount += amount; });
    }
 
    data_service_provisions provisionstable(_self, service_id);
 
    auto provision_itr = provisionstable.find(account.value);
    if (provision_itr == provisionstable.end()) {
-      check(amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the sevice");
       provisionstable.emplace(_self, [&](auto& p) {
          p.service_id = service_id;
          p.account = account;
-         p.amount = amount;
+         p.amount = asset(0, core_symbol());
          p.freeze_amount = asset(0, core_symbol());
          p.service_income = asset(0, core_symbol());
          p.status = provision_status::provision_reg;
          p.public_information = "";
          p.create_time = bos_oracle::current_time_point_sec();
       });
-   } else {
-      provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.amount += amount; });
    }
-
-   data_service_stakes svcstaketable(_self, _self.value);
-   auto svcstake_itr = svcstaketable.find(service_id);
-   if (svcstake_itr == svcstaketable.end()) {
-      svcstaketable.emplace(_self, [&](auto& ss) {
-         ss.service_id = service_id;
-         ss.amount = amount;
-         ss.freeze_amount = asset(0, core_symbol());
-         ss.unconfirmed_amount = asset(0, core_symbol());
-      });
-   } else {
-      svcstaketable.modify(svcstake_itr, same_payer, [&](auto& ss) { ss.amount += amount; });
-   }
-
-   update_service_status(service_id);
 }
 
 void bos_oracle::check_service_status(uint64_t service_id) {
@@ -205,7 +185,7 @@ void bos_oracle::stake_asset(uint64_t service_id, name account, asset amount, st
    const uint32_t service_stake_limit = 1000;
    std::string checkmsg = "stake amount could not be less than " + std::to_string(service_stake_limit);
    check(amount.amount >= uint64_t(service_stake_limit) * pow(10, core_symbol().precision()), checkmsg);
-   reg_service_provider(service_id, account, amount);
+   reg_service_provider(service_id, account);
    update_stake_asset(service_id, account, amount);
 }
 
@@ -221,10 +201,13 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
    // if (amount.amount > 0) {
    //    transfer(account, provider_account, amount, "");
    // }
+   data_services svctable(_self, _self.value);
+   auto service_itr = svctable.find(service_id);
+   check(service_itr != svctable.end(), "no service id");
 
    data_providers providertable(_self, _self.value);
    auto provider_itr = providertable.find(account.value);
-   check(provider_itr != providertable.end(), "");
+   check(provider_itr != providertable.end(), "no provider in update_stake_asset");
 
    data_service_provisions provisionstable(_self, service_id);
 
@@ -238,22 +221,30 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
 
    providertable.modify(provider_itr, same_payer, [&](auto& p) { p.total_stake_amount += amount; });
 
-   provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.amount += amount; });
+   provisionstable.modify(provision_itr, same_payer, [&](auto& p) {
+      p.amount += amount;
+      check(p.amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the sevice");
+   });
 
    if (amount < asset(0, core_symbol())) {
-      transfer(provider_account, account, asset(std::abs(amount.amount), core_symbol()), "");
+      transfer(_self, account, asset(std::abs(amount.amount), core_symbol()), "");
    }
 
    data_service_stakes svcstaketable(_self, _self.value);
    auto svcstake_itr = svcstaketable.find(service_id);
    if (svcstake_itr == svcstaketable.end()) {
       svcstaketable.emplace(_self, [&](auto& ss) {
+         ss.service_id = service_id;
          ss.amount = amount;
          ss.freeze_amount = asset(0, core_symbol());
+         ss.unconfirmed_amount = asset(0, core_symbol());
       });
    } else {
       svcstaketable.modify(svcstake_itr, same_payer, [&](auto& ss) { ss.amount += amount; });
    }
+
+
+   update_service_status(service_id);
 }
 
 /**
@@ -532,7 +523,7 @@ void bos_oracle::claim(name account, name receive_account) {
 
    providertable.modify(provider_itr, same_payer, [&](auto& p) { p.claim_amount += new_income; });
 
-   transfer(consumer_account, receive_account, new_income, "claim");
+   transfer(_self, receive_account, new_income, "claim");
 }
 
 /**
@@ -583,14 +574,14 @@ void bos_oracle::unregservice(uint64_t service_id, name account, uint8_t status)
       check(provider_itr != providersstable.end(), "provider does not provision service");
       auto id_itr = std::find(provider_itr->services.begin(), provider_itr->services.end(), service_id);
       if (id_itr != provider_itr->services.end()) {
-           providersstable.modify(provider_itr, same_payer, [&](auto& p) { p.services.erase(id_itr); });
+         providersstable.modify(provider_itr, same_payer, [&](auto& p) { p.services.erase(id_itr); });
       }
 
-       asset freeze_amount = asset(0, core_symbol()); /// calculates  unfinish code
+      asset freeze_amount = asset(0, core_symbol()); /// calculates  unfinish code
       asset amount = asset(0, core_symbol());
       check(asset(0, core_symbol()) == freeze_amount, "freeze amount must equal zero");
 
-      transfer(provider_account, account, amount, "");
+      transfer(_self, account, amount, "");
    }
 }
 
@@ -656,17 +647,14 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
 void bos_oracle::save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string value, name provider) {
    oracle_data oracledatatable(_self, service_id);
    auto itr = oracledatatable.find(update_number);
-   if(itr == oracledatatable.end())
-   {
+   if (itr == oracledatatable.end()) {
       oracledatatable.emplace(_self, [&](auto& d) {
          d.update_number = update_number;
          d.value = value;
          d.timestamp = bos_oracle::current_time_point_sec().sec_since_epoch();
       });
-   }
-   else
-   {
-      print("if(itr != oracledatatable.end())",update_number);
+   } else {
+      print("if(itr != oracledatatable.end())", update_number);
    }
 }
 

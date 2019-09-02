@@ -156,6 +156,11 @@ class bos_oracle_tester : public tester {
    }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
+      //       push_permission_update_auth_action(N(provider.bos));
+      // push_permission_update_auth_action(N(consumer.bos));
+      // push_permission_update_auth_action(N(arbitrat.bos));
+      // push_permission_update_auth_action(N(riskctrl.bos));
+
       string action_type_name = abi_ser.get_action_type(name);
 
       action act;
@@ -579,6 +584,9 @@ class bos_oracle_tester : public tester {
 
    /// appeal
    void _appeal(uint64_t arbitration_id, std::string appeal_name, uint8_t round, string amount, uint8_t role_type) {
+      push_permission_update_auth_action(N(provider.bos));
+      push_permission_update_auth_action(N(arbitrat.bos));
+
       name to = N(oracle.bos);
       std::string memo = "3,1,'evidence','info','reason'," + std::to_string(role_type);
       // std::string appeal_name = "appeallant11";
@@ -647,9 +655,10 @@ class bos_oracle_tester : public tester {
 
    /// get final result
    void get_result(uint64_t arbitration_id, uint8_t result) {
+      BOOST_TEST(0 == arbitration_id);
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
-      uint64_t final_result = arbis["final_result"].as<uint8_t>();
+      uint8_t final_result = arbis["final_result"].as<uint8_t>();
       BOOST_TEST_REQUIRE(result == final_result);
       produce_blocks(1);
    }
@@ -732,7 +741,6 @@ try {
       stake_asset(service_id, account, amount);
       BOOST_TEST_REQUIRE(amount == get_data_provider(account)["total_stake_amount"].as<asset>());
    }
-
 
    // subscribe service
    {
@@ -1030,7 +1038,7 @@ try {
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
    subscribe_service(service_id, N(bob));
-   pay_service(service_id,N(bob), core_sym::from_string("10.0000"));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
 
    /// request data
    {
@@ -1220,7 +1228,15 @@ try {
    produce_blocks(60 * 60 * 2 + 10);
 
    /// get final result
-   get_result(arbitration_id, result);
+   {
+      // get_result(arbitration_id, result);
+      BOOST_TEST(0 == arbitration_id);
+      uint64_t service_id = arbitration_id;
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint8_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == final_result);
+      produce_blocks(1);
+   }
 }
 FC_LOG_AND_RETHROW()
 
@@ -1457,7 +1473,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(claimabi_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(claimarbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1486,25 +1502,30 @@ try {
       uint8_t result = 1;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
+      get_arbitration_income_account(N(appeallant11), "4,BOS");
       BOOST_TEST_REQUIRE(1 == final_result);
       produce_blocks(1);
    }
 
-   string acc = "arbitrator11";
-   BOOST_TEST(core_sym::from_string("994.8000") == get_balance(acc));
-   {
+   uint8_t arbi_count = pow(2, round + 1) + round - 2;
+   auto arbis = get_arbitration_process(arbitration_id, round);
+   vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+   BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
 
+   string acc = (*arbivec.begin()).to_string();
+   BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
+   {
       name account = name(acc.c_str());
       name receive_account = account;
-      push_permission_update_auth_action(N(arbitrator.bos));
+      push_permission_update_auth_action(N(arbitrat.bos));
       auto token = claimarbi(arbitration_id, account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("994.8000"), get_balance(acc));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("11040.0001"), get_balance(acc));
    }
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(unstakeabi_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(unstakearbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1541,15 +1562,15 @@ try {
       produce_blocks(1);
    }
 
-   string acc = "arbitrator11";
-   BOOST_TEST(core_sym::from_string("994.8000") == get_balance(acc));
+   string acc = appeal_name;
+   BOOST_TEST(core_sym::from_string("19800.0002") == get_balance(acc));
    {
 
       name account = name(acc.c_str());
-      push_permission_update_auth_action(N(arbitrator.bos));
+      push_permission_update_auth_action(N(arbitrat.bos));
       auto token = unstakearbi(arbitration_id, account, core_sym::from_string(amount), "");
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("994.8000"), get_balance(acc));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1576,6 +1597,35 @@ try {
       uploadeviden(from, arbitration_id, "evidence ipfs hash link");
       produce_blocks(1);
    }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(arbi_freeze_stake_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appeallant11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+
+   name provider_name = N(provider1111);
+
+   BOOST_TEST(core_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
+   BOOST_TEST(core_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
+   // BOOST_TEST(core_sym::from_string("19800.0002") == get_balance(acc));
+
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+
+//  BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
+   BOOST_TEST_REQUIRE(core_sym::from_string("40.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
+   BOOST_TEST_REQUIRE(core_sym::from_string("40.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
 }
 FC_LOG_AND_RETHROW()
 

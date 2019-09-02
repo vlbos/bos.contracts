@@ -445,6 +445,7 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
          p.arbi_step = arbi_step_type::arbi_public_end;
          p.final_result = p.arbitration_result;
+         print("\n448",p.final_result);
       });
 
       handle_arbitration_result(arbitration_id);
@@ -541,7 +542,7 @@ void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint8_t round,
          // 刚好选择完毕仲裁员, 那么设置这些仲裁员需要在指定时间内应诉的时间
          p.invited_arbitrators.insert(p.invited_arbitrators.end(), chosen_arbitrators.begin(), chosen_arbitrators.end());
          for (auto& a : p.invited_arbitrators) {
-            print("\nround==", round, "=ch arbi=", a.to_string(),"\n");
+            print("\nround==", round, "=ch arbi=", a.to_string());
          }
       });
 
@@ -750,6 +751,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
             p.last_round = round;
             p.arbi_step = arbi_step_type::arbi_reappeal_timeout_end;
             p.final_result = p.arbitration_result;
+            print("\narbitration_id==",arbitration_id," \n  p.final_result = p.arbitration_result;752=",p.final_result);
          });
          handle_arbitration_result(arbitration_id);
 
@@ -780,6 +782,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
          arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
             p.arbi_step = arbi_step_type::arbi_resp_appeal_timeout_end;
             p.final_result = arbiprocess_itr->role_type;
+            print("\n785",p.final_result);
          });
 
          handle_arbitration_result(arbitration_id);
@@ -843,7 +846,6 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration. handle_arbitration_result");
    check(arbitration_role_type::consumer == arbitration_case_itr->final_result || arbitration_role_type::provider == arbitration_case_itr->final_result, "wrong final result");
 
-   print("result>>arbitration_case_itr->final_result == ", arbitration_case_itr->final_result);
    uint8_t loser_role_type = arbitration_role_type::provider;
    if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
       loser_role_type = arbitration_role_type::consumer;
@@ -853,13 +855,9 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
 
    // if final winner is not provider then slash  all service providers' stakes
    if (arbitration_role_type::provider == loser_role_type) {
-      uint64_t service_id = arbitration_id;
-
       std::tuple<std::vector<name>, asset> service_stakes = get_provider_service_stakes(service_id);
-      const std::vector<name>& accounts = std::get<0>(service_stakes);
-      const asset& amount = std::get<1>(service_stakes);
-      slash_amount += amount.amount; //  add slash service stake from all service providers
-      slash_service_stake(service_id, accounts, amount);
+      slash_amount += std::get<1>(service_stakes).amount; //  add slash service stake from all service providers
+      slash_service_stake(service_id, std::get<0>(service_stakes), std::get<1>(service_stakes));
    }
 
    double dividend_percent = 0.8;
@@ -935,9 +933,7 @@ void bos_oracle::add_balance(name owner, asset value, uint64_t arbitration_id, u
  * @return std::tuple<std::vector<name>,asset>
  */
 std::tuple<std::vector<name>, asset> bos_oracle::get_balances(uint64_t arbitration_id, uint8_t role_type) {
-
    uint64_t stake_type = static_cast<uint64_t>(role_type);
-   print("===============role_type========", role_type, "----stake_type==", stake_type, "=======");
    arbitration_stake_accounts stake_acnts(_self, arbitration_id);
    auto type_index = stake_acnts.get_index<"type"_n>();
    auto type_itr = type_index.lower_bound(stake_type);
@@ -945,17 +941,12 @@ std::tuple<std::vector<name>, asset> bos_oracle::get_balances(uint64_t arbitrati
    std::vector<name> accounts;
    asset stakes = asset(0, core_symbol());
    for (; type_itr != upper; ++type_itr) {
-      print("stakes>>account", type_itr->account, "provider=", type_itr->role_type);
       if (type_itr->role_type == role_type) {
          accounts.push_back(type_itr->account);
          stakes += type_itr->balance;
       } else {
          break;
       }
-   }
-
-   for (auto& a : stake_acnts) {
-      print("table stakes>>account", a.account, "provider=", a.role_type);
    }
 
    return std::make_tuple(accounts, stakes);
@@ -991,15 +982,10 @@ std::tuple<std::vector<name>, asset> bos_oracle::get_provider_service_stakes(uin
  */
 void bos_oracle::slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount) {
 
-   // oracle internal account provider acount transfer to arbitrat account
-   if (amount.amount > 0) {
-      transfer(provider_account, arbitrat_account, amount, "");
-   }
-
    for (auto& account : slash_accounts) {
       data_providers providertable(_self, _self.value);
       auto provider_itr = providertable.find(account.value);
-      check(provider_itr != providertable.end(), "");
+      check(provider_itr != providertable.end(), "no privider in slash_service_stake");
 
       data_service_provisions provisionstable(_self, service_id);
 
@@ -1013,8 +999,8 @@ void bos_oracle::slash_service_stake(uint64_t service_id, const std::vector<name
    }
    data_service_stakes svcstaketable(_self, _self.value);
    auto svcstake_itr = svcstaketable.find(service_id);
-   check(svcstake_itr != svcstaketable.end(), "");
-   check(svcstake_itr->amount >= amount, "");
+   check(svcstake_itr != svcstaketable.end(), "no service in data_service_stakes of slash_service_stake ");
+   check(svcstake_itr->amount >= amount, "insufficient service stake in data_service_stakes of slash_service_stake");
 
    svcstaketable.modify(svcstake_itr, same_payer, [&](auto& ss) { ss.amount -= amount; });
 }
@@ -1042,14 +1028,19 @@ void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id, std::vector<na
  * @param award_accounts
  * @param dividend_amount
  */
-void bos_oracle::pay_arbitration_award(uint64_t arbitration_id, std::vector<name>& award_accounts, double dividend_amount) {
+void bos_oracle::pay_arbitration_award(uint64_t arbitration_id, std::vector<name>& award_accounts, double dividend_amount) 
+{
+   print("=====pay_arbitration_award=====");
    check(!award_accounts.empty(), "no accounts in award_accounts");
    int64_t average_award_amount = static_cast<int64_t>(dividend_amount / award_accounts.size());
    if (average_award_amount > 0) {
       for (auto& a : award_accounts) {
          add_income(a, asset(average_award_amount, core_symbol()));
+            print("=====pay_arbitration_award===in==");
       }
    }
+      print("=====pay_arbitration_award==end===");
+
 }
 
 void bos_oracle::add_income(name account, asset quantity) {
@@ -1074,11 +1065,16 @@ void bos_oracle::add_income(name account, asset quantity) {
  * @param fee_amount
  */
 void bos_oracle::pay_arbitration_fee(uint64_t arbitration_id, const std::vector<name>& fee_accounts, double fee_amount) {
+    print("=====pay_arbitration_fee=====");
+
    auto abr_table = arbitrators(get_self(), get_self().value);
 
    for (auto& a : fee_accounts) {
       add_income(a, asset(static_cast<int64_t>(fee_amount), core_symbol()));
+          print("=====pay_arbitration_fee==in===");
    }
+
+       print("=====pay_arbitration_fee===end==");
 }
 
 void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo) {
@@ -1121,7 +1117,7 @@ void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount
 
    stake_acnts.modify(acc, same_payer, [&](auto& a) { a.balance -= amount; });
 
-   transfer(account, provider_account, amount, "");
+   transfer(_self, account, amount, "");
 }
 
 void bos_oracle::claimarbi(name account, name receive_account) {
@@ -1136,5 +1132,5 @@ void bos_oracle::claimarbi(name account, name receive_account) {
 
    incometable.modify(income_itr, same_payer, [&](auto& p) { p.claim += new_income; });
 
-   transfer(consumer_account, receive_account, new_income, "claim arbi");
+   transfer(_self, receive_account, new_income, "claim arbi");
 }

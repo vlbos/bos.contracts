@@ -132,7 +132,7 @@ public:
 private:
   void save_id(uint8_t id_type, uint64_t id);
   // provider
-  void reg_service_provider(uint64_t service_id, name account, asset amount);
+  void reg_service_provider(uint64_t service_id, name account);
   void check_service_status(uint64_t service_id);
   void update_service_status(uint64_t service_id);
   void check_service_provider_status(uint64_t service_id, name account);

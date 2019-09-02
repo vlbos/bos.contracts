@@ -74,34 +74,34 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
 
    if (tc_deposit == transfer_category) {
       call_deposit(s2name(static_cast<uint64_t>(index_from)), s2name(index_to), quantity, 0 != s2int(index_notify));
-      transfer(_self, riskctrl_account, quantity, memo);
+      // transfer(_self, riskctrl_account, quantity, memo);
    } else {
 
       name account = from;
       switch (transfer_category) {
       case tc_service_stake:
          stake_asset(s2int(index_id), account, quantity,memo);
-         oracle_transfer(_self, provider_account, quantity, memo, true);
+       //oracle_transfer(_self, provider_account, quantity, memo, true);
          break;
       case tc_pay_service:
          pay_service(s2int(index_id), account, quantity);
-         oracle_transfer(_self, consumer_account, quantity, memo, true);
+       //oracle_transfer(_self, consumer_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_appeal:
          _appeal(account, s2int(index_id), quantity, parameters[index_reason], parameters[index_evidence], s2int(index_provider));
-         oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_arbitrator:
          _regarbitrat(account, s2int(index_type), quantity, "");
-         oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_resp_case:
          _respcase(account, s2int(index_id), quantity, parameters[index_evidence]);
-         oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_risk_guarantee:
          add_guarantee(s2int(index_id), account, quantity, s2int(index_duration));
-         oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       default:
          //  check(false, "unknown  transfer category ");
