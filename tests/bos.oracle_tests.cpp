@@ -1134,7 +1134,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(import_arbitrator_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_import_arbitrator_test, bos_oracle_tester)
 try {
 
    name to = N(oracle.bos);
@@ -1159,7 +1159,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(reg_arbitrator_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_reg_arbitrator_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1181,7 +1181,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(reappeal_timeout_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_reappeal_timeout_test, bos_oracle_tester)
 try {
 
    name to = N(oracle.bos);
@@ -1224,7 +1224,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(resp_appeal_timeout_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_resp_appeal_timeout_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1284,7 +1284,60 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(reappeal_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_reappeal_role_type_wrong_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appeallant11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+
+   /// appeal wrong role type
+   {
+      std::string memo = "3,1,'evidence','info','reason',2";
+      std::string appeal_name = "provider1111";
+      name from = name(appeal_name.c_str());
+      BOOST_REQUIRE_EXCEPTION(transfer(from, to, amount, appeal_name.c_str(), memo), eosio_assert_message_exception, eosio_assert_message_is("only support consume(1) role type  in the first round"));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("only support consume(1) role type  in the first round"), transfer(from, to, amount, appeal_name.c_str(), memo));
+   }
+
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+
+   uint8_t result = 1;
+   /// upload result
+   upload_result(arbitration_id, round, result);
+
+   round = 2;
+   amount = "400.0000";
+   /// reappeal wrong role type
+   {
+      std::string memo = "3,1,'evidence','info','reason',1";
+      std::string appeal_name = "provider1111";
+      name from = name(appeal_name.c_str());
+      BOOST_REQUIRE_EXCEPTION(transfer(from, to, amount, appeal_name.c_str(), memo), eosio_assert_message_exception,
+                              eosio_assert_message_is("role type  could not be  the winner of the previous round"));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("role type  could not be  the winner of the previous round"), transfer(from, to, amount, appeal_name.c_str(), memo));
+
+      produce_blocks(1);
+   }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(arbi_reappeal_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1428,7 +1481,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(unchosen_arbitrator_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_unchosen_arbitrator_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1457,7 +1510,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(uninvited_arbitrator_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_uninvited_arbitrator_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1490,7 +1543,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(claimarbi_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_claimarbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1542,7 +1595,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(unstakearbi_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_unstakearbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1592,7 +1645,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(uploadeviden_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_uploadeviden_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -1617,7 +1670,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(arbi_freeze_stake_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_arbi_freeze_stake_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator

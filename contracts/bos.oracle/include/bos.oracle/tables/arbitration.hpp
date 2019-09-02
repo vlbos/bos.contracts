@@ -21,15 +21,13 @@ using eosio::time_point_sec;
 using std::string;
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
-   uint64_t appeal_id;
    name appeallant;
    std::string reason;
    asset amount;
-   uint8_t round;
    uint8_t role_type; // 1110 is_respondent is_sponsor is_provider
    time_point_sec appeal_time;
 
-   uint64_t primary_key() const { return appeal_id; }
+   uint64_t primary_key() const { return appeallant.value; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
