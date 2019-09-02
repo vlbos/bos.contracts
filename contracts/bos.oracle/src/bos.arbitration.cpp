@@ -252,7 +252,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
          for (auto& a : arbiprocess_itr->appeallants) {
             auto notify_amount = eosio::asset(1, core_symbol());
             // Transfer to appeallant
-            auto memo = "resp appeallant >arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", state_amount: " + amount.to_string();
+            auto memo = "resp appeallant >arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
             transfer(get_self(), a, notify_amount, memo);
          }
 
@@ -269,7 +269,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
                hasProvider = true;
                auto notify_amount = eosio::asset(1, core_symbol());
                // Transfer to provider
-               auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", state_amount: " + amount.to_string();
+               auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
                transfer(get_self(), itr->account, notify_amount, memo);
             }
          }
@@ -376,6 +376,10 @@ void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t 
    auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
    auto arbiprocess_itr = arbiprocess_tb.find(round);
    check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process.");
+
+   auto invited = std::find(arbiprocess_itr->arbitrators.begin(), arbiprocess_itr->arbitrators.end(), arbitrator);
+   check(invited != arbiprocess_itr->arbitrators.end(), "could not find such an arbitrator in current invited arbitrators.");
+
 
    arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) { p.arbitrator_arbitration_results.push_back(result); });
 

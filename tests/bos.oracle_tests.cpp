@@ -364,27 +364,15 @@ class bos_oracle_tester : public tester {
       return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data_json", data_json));
    }
 
-   action_result innerpush(uint64_t service_id, name provider, name contract_account, uint64_t request_id, const string& data_json) {
-      return push_action(provider, N(innerpush), mvo()("service_id", service_id)("provider", provider)("contract_account", contract_account)("request_id", request_id)("data_json", data_json));
-   }
-
    action_result oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, const string& data_json, name contract_account) {
       return push_action(N(oracle.bos), N(oraclepush),
                          mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data_json", data_json)("contract_account", contract_account));
-   }
-
-   action_result innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, const string& data_json) {
-      return push_action(provider, N(innerpublish), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data_json", data_json));
    }
 
    action_result starttimer() { return push_action(N(oracle.bos), N(starttimer), mvo()); }
 
    action_result addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
-   }
-
-   action_result addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price) {
-      return push_action(N(oracle.bos), N(addfeetype), mvo()("service_id", service_id)("fee_type", fee_type)("service_price", service_price));
    }
 
    action_result claim(name account, name receive_account) { return push_action(account, N(claim), mvo()("account", account)("receive_account", receive_account)); }
@@ -621,22 +609,18 @@ class bos_oracle_tester : public tester {
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
       for (auto& arbi : arbivec) {
-         BOOST_TEST("" == arbi);
          acceptarbi(arbi, arbitration_id);
          produce_blocks(1);
       }
    }
 
    void test_accept_invitation(uint64_t arbitration_id, uint8_t round) {
-      BOOST_TEST("" == "round");
-      BOOST_TEST(0 == round);
       uint8_t arbi_count = pow(2, round + 1) + round - 2;
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["invited_arbitrators"].as<vector<name>>();
       BOOST_TEST(arbi_count == arbivec.size());
       for (auto& arbi : arbivec) {
-         BOOST_TEST("" == arbi);
          produce_blocks(1);
       }
    }
@@ -1473,6 +1457,39 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(uninvited_arbitrator_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appeallant11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+
+   uint8_t result = 1;
+   /// reupload result
+   {
+      //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
+      //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("could not find such an arbitrator in current invited arbitrators."), uploadresult(N(alice), arbitration_id, result, ""));
+   }
+}
+FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(claimarbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
@@ -1622,8 +1639,7 @@ try {
    /// appeal
    _appeal(arbitration_id, appeal_name, round, amount, role_type);
 
-
-//  BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
+   //  BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
    BOOST_TEST_REQUIRE(core_sym::from_string("40.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
    BOOST_TEST_REQUIRE(core_sym::from_string("40.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
 }
