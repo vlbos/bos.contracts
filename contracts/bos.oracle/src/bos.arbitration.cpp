@@ -322,6 +322,10 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    auto arbiprocess_itr = arbiprocess_tb.find(current_round);
    check(arbiprocess_itr != arbiprocess_tb.end(), "no round process");
 
+   auto responded = std::find(arbiprocess_itr->respondents.begin(), arbiprocess_itr->respondents.end(), respondent);
+   check(responded == arbiprocess_itr->respondents.end(), "the respondent has responded in the current process");
+
+
    uint64_t stake_amount_limit = pow(2, current_round) * uint64_t(100) * pow(10, core_symbol().precision());
    std::string checkmsg = "resp case stake amount could not be less than " + std::to_string(stake_amount_limit);
    check(amount.amount >= stake_amount_limit, checkmsg.c_str());
