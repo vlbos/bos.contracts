@@ -92,13 +92,11 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_evidence {
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_result {
-   uint64_t result_id;
-   uint8_t result;
-   uint8_t round;
    name arbitrator;
+   uint8_t result;
    string comment;
 
-   uint64_t primary_key() const { return result_id; }
+   uint64_t primary_key() const { return arbitrator.value; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] fair_award {

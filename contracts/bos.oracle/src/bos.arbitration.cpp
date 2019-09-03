@@ -181,9 +181,8 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    } else {
       check(arbitration_case_itr->arbitration_result != role_type, "role type  could not be  the winner of the previous round");
    }
-   
-   auto arbiprocess_itr = arbiprocess_tb.find(current_round);
 
+   auto arbiprocess_itr = arbiprocess_tb.find(current_round);
 
    uint8_t arbitrator_type = arbitrator_type::fulltime;
    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
@@ -219,8 +218,6 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
       // 新增申诉者
       arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) { p.appeallants.push_back(appeallant); });
    }
-
-
 
    // 申诉者表
    auto appeal_request_tb = appeal_requests(get_self(), (service_id << 2) | (0x03 & current_round));
@@ -433,7 +430,7 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
    arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbitration_result = arbi_result; });
 
    // Calculate arbitration correction.
-   update_arbitration_correcction(arbitration_id);
+   update_arbitration_correction(arbitration_id);
 
    // 通知仲裁结果
    auto notify_amount = eosio::asset(1, core_symbol());
@@ -508,6 +505,9 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
    print(",round=", round, "==arbiprocess_itr->invited_arbitrators=====================", arbiprocess_itr->invited_arbitrators.size());
    auto chosen = std::find(arbitration_case_itr->chosen_arbitrators.begin(), arbitration_case_itr->chosen_arbitrators.end(), arbitrator);
    check(chosen != arbitration_case_itr->chosen_arbitrators.end(), "could not find such an arbitrator in current chosen arbitration.");
+
+   auto accepted = std::find(arbitration_case_itr->arbitrators.begin(), arbitration_case_itr->arbitrators.end(), arbitrator);
+   check(accepted == arbitration_case_itr->arbitrators.end(), "the arbitrator has accepted invitation");
 
    bool public_arbi = arbiprocess_itr->arbi_method == arbi_method_type::public_arbitration; // 是否为大众仲裁
 
@@ -684,11 +684,11 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t roun
  * 新增仲裁结果表
  */
 void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round, std::string comment) {
-   auto arbi_result_tb = arbitration_results(get_self(), arbitration_id);
+   auto arbi_result_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+   auto arbi_result_itr = arbi_result_tb.find(arbitrator.value);
+   check(arbi_result_itr == arbi_result_tb.end(), "the arbitrator has uploaded result in the round and the arbitration case");
    arbi_result_tb.emplace(get_self(), [&](auto& p) {
-      p.result_id = arbi_result_tb.available_primary_key();
       p.result = result;
-      p.round = round;
       p.arbitrator = arbitrator;
       p.comment = comment;
    });
@@ -697,33 +697,44 @@ void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id
 /**
  * 更新仲裁正确率
  */
-void bos_oracle::update_arbitration_correcction(uint64_t arbitration_id) {
+void bos_oracle::update_arbitration_correction(uint64_t arbitration_id) {
    uint64_t service_id = arbitration_id;
 
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
-   check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration.update_arbitration_correcction");
-   auto arbiresults_tb = arbitration_results(get_self(), arbitration_id);
-   auto arbitrator_tb = arbitrators(get_self(), get_self().value);
+   check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration in update_arbitration_correction");
 
-   auto arbitrators = arbitration_case_itr->arbitrators;
-   for (auto arbitrator : arbitrators) {
-      uint64_t correct = 0;
-      uint64_t total = 0;
-      for (auto itr = arbiresults_tb.begin(); itr != arbiresults_tb.end(); ++itr) {
-         if (itr->arbitrator == arbitrator) {
-            ++total;
-            if (itr->result == arbitration_case_itr->arbitration_result) {
-               ++correct;
-            }
-         }
-      }
+   auto update_correction = [&](name arbitrator, uint8_t correct_times) {
+      auto arbitrator_tb = arbitrators(get_self(), get_self().value);
       auto arbitrator_itr = arbitrator_tb.find(arbitrator.value);
+      check(arbitrator_itr != arbitrator_tb.end(), "Could not find such arbitrator in update_arbitration_correction");
 
       arbitrator_tb.modify(arbitrator_itr, get_self(), [&](auto& p) {
-         p.arbitration_times = total;
-         p.arbitration_correct_times = correct;
+         p.arbitration_times += 1;
+         p.arbitration_correct_times += correct_times;
       });
+   };
+
+   auto clear_results = [&](uint8_t round) {
+      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+      auto arbiresults_itr = arbiresults_tb.begin();
+      while (arbiresults_itr != arbiresults_tb.end()) {
+         arbiresults_tb.erase(arbiresults_itr);
+         arbiresults_itr = arbiresults_tb.begin();
+      }
+   };
+
+   for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
+      auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
+      auto arbiprocess_itr = arbiprocess_tb.find(round);
+      check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process calculate correction");
+
+      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+      for (auto arbiresults_itr = arbiresults_tb.begin(); arbiresults_itr != arbiresults_tb.end(); ++arbiresults_itr) {
+         update_correction(arbiresults_itr->arbitrator, (arbiresults_itr->result == arbiprocess_itr->arbitration_result ? 1 : 0));
+      }
+
+      clear_results(round);
    }
 }
 
@@ -735,7 +746,7 @@ void bos_oracle::timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_
    t.delay_sec = time_length;
    uint128_t deferred_id = make_deferred_id(arbitration_id, timer_type);
    cancel_deferred(deferred_id);
-   print(">>>===timertimeout=", deferred_id, "=id=", arbitration_id, "=round=", round, "=timer_type=", timer_type, "=time_length=", time_length);
+   print("\n>>>===timertimeout=", deferred_id, "=id=", arbitration_id, "=round=", round, "=timer_type=", timer_type, "=time_length=", time_length);
    t.send(deferred_id, get_self(), true);
 }
 
@@ -748,7 +759,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
 
    auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
    auto arbiprocess_itr = arbiprocess_tb.find(round);
-   check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such process.");
+   check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process.");
 
    uint8_t half_count = arbiprocess_itr->required_arbitrator / 2;
    uint8_t consumer_results = arbiprocess_itr->total_result();
