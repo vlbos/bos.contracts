@@ -19,11 +19,7 @@
 using namespace eosio;
 
 // EOSIO_DISPATCH(bos_oracle,
-// (write)(setoracles)(clear)(addoracle)(removeoracle)(ask)(once)(disable)(push)
-// (regservice)(unregservice)(execaction)(stakeasset)(unstakeasset)(innerpush)(pushdata)(multipush)(innerpublish)(publishdata)(multipublish)(oraclepush)(addfeetypes)(addfeetype)(claim)
-// (subscribe)(requestdata)(payservice)(starttimer)
-// (regarbitrat)(appeal)(uploadeviden)(uploadresult)(acceptarbi)(respcase)
-// (deposit)(withdraw)
+// (regservice)(unregservice)(execaction)
 // )
 
 struct transferx {

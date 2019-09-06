@@ -275,45 +275,6 @@ std::vector<name> bos_oracle::get_subscription_list(uint64_t service_id) {
    return receive_contracts;
 }
 
-/**
- * @brief
- *
- * @param service_id
- * @param request_id
- * @return std::vector<std::tuple<name, name, uint64_t>>
- */
-std::vector<std::tuple<name, uint64_t>> bos_oracle::get_request_list(uint64_t service_id, uint64_t request_id) {
-   // print("=-=============get_request_list in===========");
-   static constexpr int64_t request_time_deadline = 2; // 2 hours
-   std::vector<std::tuple<name, uint64_t>> receive_contracts;
-   std::vector<uint64_t> ids;
-   data_service_requests reqtable(_self, service_id);
-   auto request_time_idx = reqtable.get_index<"bytime"_n>();
-   auto lower = request_time_idx.begin();
-   auto upper = request_time_idx.end();
-
-   // print("=-=============get_request_list while before===========");
-   while (lower != upper) {
-      // print("=-=============get_request_list while (lower !=
-      // upper)===========");
-      auto req = lower++;
-      if (req->status == request_status::reqeust_valid && bos_oracle::current_time_point_sec() - req->request_time > eosio::hours(request_time_deadline)) {
-         // print("=-=============get_request_list while  if===========");
-         receive_contracts.push_back(std::make_tuple(req->contract_account, req->request_id));
-
-         ids.push_back(req->request_id);
-      }
-   }
-
-   for (auto& id : ids) {
-      data_service_requests reqtable(_self, service_id);
-      auto req_itr = reqtable.find(request_id);
-      check(req_itr != reqtable.end(), "request id could not be found");
-      reqtable.modify(req_itr, _self, [&](auto& r) { r.status = request_status::reqeust_finish; });
-   }
-
-   return receive_contracts;
-}
 
 /**
  * @brief

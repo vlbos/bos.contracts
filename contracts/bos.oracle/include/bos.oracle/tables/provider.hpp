@@ -9,7 +9,6 @@ using namespace eosio;
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   uint64_t service_id;
-  // uint8_t fee_type;
   uint8_t data_type;
   uint8_t status;
   uint8_t injection_method;
@@ -88,8 +87,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   uint64_t by_time() const {
     return static_cast<uint64_t>(-update_time.sec_since_epoch());
   }
-  uint64_t by_number() const { return update_number; }
-  uint64_t by_request() const { return request_id; }
+  uint64_t by_number() const { return update_number|request_id; }
 };
 
 /**
@@ -132,15 +130,12 @@ typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply> svc_pro
 
 typedef eosio::multi_index<"provisionlog"_n, data_service_provision_log,
                            indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_time>>,
-                           indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_number>>,
-                           indexed_by<"byrequest"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_request>>>
+                           indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_number>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;
 
 typedef eosio::multi_index<"ppushrecords"_n, provider_push_record> provider_push_records;
-
-
 
 // //   ///bos.oraclize end
 // };

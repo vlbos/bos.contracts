@@ -80,28 +80,28 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
       name account = from;
       switch (transfer_category) {
       case tc_service_stake:
-         stake_asset(s2int(index_id), account, quantity,memo);
-       //oracle_transfer(_self, provider_account, quantity, memo, true);
+         stake_asset(s2int(index_id), account, quantity, memo);
+         // oracle_transfer(_self, provider_account, quantity, memo, true);
          break;
       case tc_pay_service:
          pay_service(s2int(index_id), account, quantity);
-       //oracle_transfer(_self, consumer_account, quantity, memo, true);
+         // oracle_transfer(_self, consumer_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_appeal:
          _appeal(account, s2int(index_id), quantity, parameters[index_reason], parameters[index_evidence], s2int(index_provider));
-       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+         // oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_arbitrator:
          _regarbitrat(account, s2int(index_type), quantity, "");
-       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+         // oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_arbitration_stake_resp_case:
          _respcase(account, s2int(index_id), quantity, parameters[index_evidence]);
-       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+         // oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       case tc_risk_guarantee:
          add_guarantee(s2int(index_id), account, quantity, s2int(index_duration));
-       //oracle_transfer(_self, arbitrat_account, quantity, memo, true);
+         // oracle_transfer(_self, arbitrat_account, quantity, memo, true);
          break;
       default:
          //  check(false, "unknown  transfer category ");
@@ -209,8 +209,6 @@ void bos_oracle::withdraw(uint64_t service_id, name from, name to, asset quantit
    } else {
 
       add_delay(svcsubs_itr->service_id, from, bos_oracle::current_time_point_sec(), time_length, quantity);
-
-  
    }
 }
 
@@ -266,13 +264,16 @@ void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec st
 
    // unfreeze_amount  freeze amount from provider who stake amount greater than
    // base stake amount.
-   unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
+   if (unfreeze_amount > 0 && finish_providers.size() > 0) {
+      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
+   }
 
    add_freeze_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, amount - asset(unfreeze_amount, core_symbol()), transfer_type::tt_freeze);
 
-   // delay
-   add_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, amount);
-
+   if (unfreeze_amount > 0 && finish_providers.size() > 0) {
+      // delay
+      add_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, asset(unfreeze_amount, core_symbol()));
+   }
 }
 
 void bos_oracle::add_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount) {
@@ -302,6 +303,7 @@ uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set
          real_freeze_amount = average_amount;
          finish_providers.insert(account);
       } else {
+         print("\nunfreeze_amount", unfreeze_amount, ",average_amount=", average_amount, ",real_freeze_amount=", real_freeze_amount);
          unfreeze_amount += average_amount - real_freeze_amount;
       }
 
@@ -309,7 +311,7 @@ uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set
    }
 
    if (unfreeze_amount > 0 && finish_providers.size() > 0) {
-      freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
+      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
    }
 
    return unfreeze_amount;
@@ -332,7 +334,7 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
 
    add_freeze_log(service_id, account, amount);
 
-   update_service_provider_status(service_id,account);
+   update_service_provider_status(service_id, account);
 }
 
 void bos_oracle::add_freeze_log(uint64_t service_id, name account, asset amount) {

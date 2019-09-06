@@ -20,6 +20,10 @@ using eosio::public_key;
 using eosio::time_point_sec;
 using std::string;
 
+/**
+ * @brief  scope  service_id*4+round
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
    name appeallant;
    std::string reason;
@@ -34,15 +38,17 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
    name account;
    uint8_t type;
    uint8_t status;
-   uint16_t arbitration_correct_times;            ///仲裁正确次数
-   uint16_t arbitration_times;                    ///仲裁次数
-   uint16_t invitations;                          ///邀请次数
-   uint16_t responses;                            ///接收邀请次数
-   uint16_t uncommitted_arbitration_result_times; ///未提交仲裁结果次数
+   uint16_t arbitration_correct_times;            
+   uint16_t arbitration_times;                   
+   uint16_t invitations;                          
+   uint16_t responses;                            
+   uint16_t uncommitted_arbitration_result_times; 
    std::string public_info;
 
    uint64_t primary_key() const { return account.value; }
-   double correct_rate() const { return 0 == arbitration_times || 0 == arbitration_correct_times ? 1.0f : 1.0f * arbitration_correct_times / arbitration_times; }
+   bool check_correct_rate() const {
+      return (arbitration_correct_times + 1) * arbitration_correct_rate_base >= (arbitration_times + 1) * arbitration_correct_rate_base * default_arbitration_correct_rate / percent_100;
+   }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
@@ -59,6 +65,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
    uint8_t round;
    uint8_t required_arbitrator;
+   uint8_t increment_arbitrator;
    std::vector<name> appeallants;
    std::vector<name> respondents;
    std::vector<name> arbitrators;
@@ -66,7 +73,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
    uint8_t role_type;
    std::vector<uint8_t> arbitrator_arbitration_results;
    uint8_t arbitration_result;
-   uint8_t arbi_method; // 本轮使用的仲裁方法
+   uint8_t arbi_method; 
 
    uint64_t primary_key() const { return round; }
 
@@ -91,6 +98,10 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_evidence {
    uint64_t primary_key() const { return evidence_id; }
 };
 
+/**
+ * @brief  scope  arbitration_id*4+round
+ * 
+ */
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_result {
    name arbitrator;
    uint8_t result;

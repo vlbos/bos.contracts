@@ -19,6 +19,8 @@ enum transfer_status : uint8_t { transfer_start, transfer_finish, transfer_faile
 
 enum request_status : uint8_t { reqeust_valid, request_cancel, reqeust_finish };
 
+enum log_status : uint8_t { log_init, log_fail, log_sent, log_paid,log_finish };
+
 enum fee_type : uint8_t { fee_times, fee_month, fee_type_count };
 
 enum data_type : uint8_t { data_deterministic, data_non_deterministic };
@@ -30,7 +32,7 @@ enum transfer_category : uint8_t { tc_service_stake, tc_pay_service, tc_deposit,
 
 enum deposit_index : uint8_t { index_category, index_from, index_to, index_notify, deposit_count };
 
-enum appeal_index : uint8_t { index_id = 1, index_evidence,index_info, index_reason,index_provider,appeal_count };
+enum appeal_index : uint8_t { index_id = 1, index_evidence, index_info, index_reason, index_provider, appeal_count };
 
 enum arbitrator_index : uint8_t { index_type = 1, arbitrator_count };
 
@@ -45,8 +47,7 @@ enum risk_guarantee_index : uint8_t { index_duration = 2, risk_guarantee_case_co
 // resp_case_category,index_id ,index_evidence
 // risk_guarantee_category,index_id,index_duration
 enum arbitration_timer_type : uint8_t {
-   appeal_timeout,
-   reappeal_timeout,
+   reappeal_timeout=1,
    resp_appeal_timeout,
    accept_arbitrate_invitation_timeout,
    upload_result_timeout,
@@ -63,8 +64,11 @@ enum arbi_step_type : uint8_t {
    arbi_wait_for_upload_result,
    arbi_wait_for_reappeal,
    arbi_reappeal_timeout_end,
-   arbi_reappeal,
    arbi_public_end
 };
 
 enum arbitration_role_type : uint8_t { pending = 0, consumer = 1, provider = 2, sponsor = 4, respodent = 8 };
+
+static int default_arbitration_correct_rate = 6000;
+static int arbitration_correct_rate_base = 100; 
+static int percent_100 = 10000;                 

@@ -34,8 +34,8 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
   // add consumer service subscription relation
   data_service_subscriptions substable(_self, service_id);
 
-  auto subs_itr = substable.find(contract_account.value);
-  check(subs_itr == substable.end(), "contract_account exist");
+  auto subs_itr = substable.find(account.value);
+  check(subs_itr == substable.end(), "account exist");
 
   substable.emplace(_self, [&](auto &subs) {
     // subs.subscription_id = id;
