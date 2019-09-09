@@ -763,6 +763,7 @@ void bos_oracle::check_service_current_update_number(uint64_t service_id, uint64
 
    uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
    uint32_t update_start_time = service_itr->update_start_time.sec_since_epoch();
+   check(now_sec >= update_start_time, "current time  should be greater than update_start_time");
    uint32_t update_cycle = service_itr->update_cycle;
    uint32_t duration = service_itr->duration;
    uint32_t expected_update_number = (now_sec - update_start_time) / update_cycle + 1;
