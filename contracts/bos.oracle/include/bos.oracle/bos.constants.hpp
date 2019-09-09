@@ -8,18 +8,13 @@ enum apply_status : uint8_t { apply_init, apply_cancel };
 
 enum subscription_status : uint8_t { subscription_subscribe, subscription_unsubscribe };
 
-enum provision_status : uint8_t {
-   provision_reg,
-   provision_unreg,
-   provision_suspend,
-   provision_freeze_suspend,
-};
+enum provision_status : uint8_t { provision_reg, provision_unreg, provision_suspend, provision_freeze_suspend };
 
 enum transfer_status : uint8_t { transfer_start, transfer_finish, transfer_failed };
 
 enum request_status : uint8_t { reqeust_valid, request_cancel, reqeust_finish };
 
-enum log_status : uint8_t { log_init, log_fail, log_sent, log_paid,log_finish };
+enum log_status : uint8_t { log_init, log_fail, log_sent, log_paid, log_finish };
 
 enum fee_type : uint8_t { fee_times, fee_month, fee_type_count };
 
@@ -47,7 +42,7 @@ enum risk_guarantee_index : uint8_t { index_duration = 2, risk_guarantee_case_co
 // resp_case_category,index_id ,index_evidence
 // risk_guarantee_category,index_id,index_duration
 enum arbitration_timer_type : uint8_t {
-   reappeal_timeout=1,
+   reappeal_timeout = 1,
    resp_appeal_timeout,
    accept_arbitrate_invitation_timeout,
    upload_result_timeout,
@@ -70,5 +65,5 @@ enum arbi_step_type : uint8_t {
 enum arbitration_role_type : uint8_t { pending = 0, consumer = 1, provider = 2, sponsor = 4, respodent = 8 };
 
 static int default_arbitration_correct_rate = 6000;
-static int arbitration_correct_rate_base = 100; 
-static int percent_100 = 10000;                 
+static int arbitration_correct_rate_base = 100;
+static int percent_100 = 10000;

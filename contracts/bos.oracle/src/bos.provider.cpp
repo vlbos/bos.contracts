@@ -32,7 +32,15 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
    std::string checkmsg = "set base stake amount could not be less than " + std::to_string(service_stake_limit);
    check(base_stake_amount.amount >= uint64_t(service_stake_limit) * pow(10, core_symbol().precision()), checkmsg);
 
-   check(provider_limit >= 3, "provider_limit could not be less than 3");
+   check(provider_limit >= 3 && provider_limit <= 100, "provider_limit could not be less than 3 or greater than 100");
+   check(update_cycle >= 60 && update_cycle <= 3600 * 24 * uint32_t(100), "update_cycle could not be less than 60 seconds or greater than 100 days");
+   check(duration >= 30 && duration <= 3600, "duration could not be less than 30 or greater than 3600 seconds");
+   check(injection_method == chain_indirect || injection_method == chain_direct || injection_method == chain_outside, "injection_method only set chain_indirect(0) or chain_direct(1)or chain_outside(2)");
+   check(data_type == data_deterministic || data_type == data_non_deterministic, "data_type only set value data_deterministic(0) or data_non_deterministic(1)1");
+   check(acceptance >= 3 && acceptance <= 100, "acceptance could not be less than 3 or greater than 100 ");
+   check(data_format.size() <= 256, "data_format could not greater than 256");
+   check(criteria.size() <= 256, "criteria could not greater than 256");
+   check(declaration.size() <= 256, "declaration could not greater than 256");
 
    data_services svctable(_self, _self.value);
 
@@ -305,6 +313,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
 
 void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
    require_auth(provider);
+    check(data_json.size() <= 256, "data_json could not greater than 256");
 
    check(!(0 != update_number && 0 != request_id), "both update_number and request_id could not be greater than 0");
 
@@ -508,6 +517,8 @@ void bos_oracle::execaction(uint64_t service_id, uint8_t action_type) {
 void bos_oracle::unregservice(uint64_t service_id, name account, uint8_t status) {
    require_auth(account);
 
+   check(provision_status::provision_unreg == status || provision_status::provision_suspend == status, "unknown status,support provision_unreg(1),provision_suspend(2)");
+
    data_service_provisions provisionstable(_self, service_id);
    auto provision_itr = provisionstable.find(account.value);
    check(provision_itr != provisionstable.end(), "provider does not subscribe service ");
@@ -550,7 +561,7 @@ void bos_oracle::unregservice(uint64_t service_id, name account, uint8_t status)
  */
 void bos_oracle::starttimer(uint32_t time) {
    require_auth(_self);
-   print("\n======starttimer===========",time);
+   print("\n======starttimer===========", time);
    check_publish_services();
 
    start_timer();
@@ -738,7 +749,7 @@ string bos_oracle::get_publish_data(uint64_t service_id, uint64_t update_number,
       result = data_count.begin()->first;
    } else if (provider_count >= provider_limit) {
       for (auto& d : data_count) {
-         if (d.second > provider_count / 2 + 1) {
+         if (d.second >= provider_count / 2 + 1) {
             result = data_count.begin()->first;
             print("get data that is greater than one half of providers  ");
             break;
@@ -829,10 +840,10 @@ std::map<uint64_t, uint64_t> bos_oracle::get_publish_service_update_number() {
       uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
       uint32_t update_number = (now_sec - s.update_start_time.sec_since_epoch()) / s.update_cycle + 1;
       uint32_t current_data_collection_duration_end_time = s.update_start_time.sec_since_epoch() + (update_number - 1) * s.update_cycle + s.duration;
-         print("\nif get_publish_service_update_number update_number=",update_number,",current_data_collection_duration_end_time=",current_data_collection_duration_end_time,",now_sec=",now_sec);
+      print("\nif get_publish_service_update_number update_number=", update_number, ",current_data_collection_duration_end_time=", current_data_collection_duration_end_time, ",now_sec=", now_sec);
 
       if (current_data_collection_duration_end_time < now_sec && check_update_number_push_data(s.service_id, update_number)) {
-         print("\nget_publish_service_update_number update_number=",update_number);
+         print("\nget_publish_service_update_number update_number=", update_number);
          service_numbers.insert(std::pair(s.service_id, update_number));
       }
    }
