@@ -41,12 +41,7 @@ enum risk_guarantee_index : uint8_t { index_duration = 2, risk_guarantee_case_co
 // arbitrator_category,index_type
 // resp_case_category,index_id ,index_evidence
 // risk_guarantee_category,index_id,index_duration
-enum arbitration_timer_type : uint8_t {
-   reappeal_timeout = 1,
-   resp_appeal_timeout,
-   accept_arbitrate_invitation_timeout,
-   upload_result_timeout,
-};
+enum arbitration_timer_type : uint8_t { reappeal_timeout = 1, resp_appeal_timeout, accept_arbitrate_invitation_timeout, upload_result_timeout };
 
 enum arbitrator_type : uint8_t { fulltime = 1, crowd = 2, wps = 5 };
 enum arbi_method_type : uint8_t { multiple_rounds = 1, public_arbitration = 2 };

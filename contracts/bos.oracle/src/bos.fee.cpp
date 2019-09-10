@@ -331,30 +331,4 @@ std::vector<std::tuple<name, asset>> bos_oracle::get_provider_list(uint64_t serv
    return providers;
 }
 
-// std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>
-// bos_oracle::stat_freeze_amounts(uint64_t service_id, name account) {
-// }
-
-std::tuple<asset, asset> bos_oracle::stat_freeze_amounts(uint64_t service_id, name account) {
-
-   account_freeze_logs freezelogtable(_self, service_id);
-
-   //  std::map<name,uint64_t> provider2pushtimes;
-   //   auto account_idx = account_freeze_logs.get_index<"byaccount"_n>();
-   // asset total_amount(0,core_symbole());
-   // auto lower =action_idx.lower_bound(account.value);
-   // auto upper =action_idx.upper_bound(account.value);
-   asset total_amount(0, core_symbol());
-   asset account_total_amount(0, core_symbol());
-   for (const auto& f : freezelogtable) {
-
-      if (f.account == account) {
-         account_total_amount += f.amount;
-      }
-      total_amount += f.amount;
-   }
-
-   return std::make_tuple(total_amount, account_total_amount);
-}
-
 // } // namespace bosoracle

@@ -7,13 +7,13 @@
 
 */
 
+#include "bos.constants.hpp"
 #include "bos.oracle/tables/arbitration.hpp"
 #include "bos.oracle/tables/consumer.hpp"
 #include "bos.oracle/tables/oracle.hpp"
 #include "bos.oracle/tables/oracle_api.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
-#include "bos.constants.hpp"
 #include <eosio/eosio.hpp>
 using namespace eosio;
 
@@ -118,7 +118,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void save_id(uint8_t id_type, uint64_t id);
    // provider
    void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
-   void update_service_current_log_status(uint64_t service_id, uint64_t update_number,uint64_t request_id, uint8_t status=log_status::log_sent);
+   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
    void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
    void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
@@ -140,8 +140,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
    std::vector<std::tuple<name, asset>> get_provider_list(uint64_t service_id);
 
-   void freeze_asset(uint64_t service_id, name account, asset amount);
-   uint64_t freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount);
+   void freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id = 0);
+   uint64_t freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount, uint64_t arbitration_id = 0);
 
    void multipush(uint64_t service_id, name provider, string data_json, uint64_t request_id);
 
@@ -150,7 +150,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
    void start_timer();
    void check_publish_services();
-   void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id,bool is_expired=false);
+   void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired = false);
    void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string value);
    uint64_t get_provider_count(uint64_t service_id);
 
@@ -160,8 +160,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    std::map<uint64_t, uint64_t> get_publish_service_update_number();
    void check_publish_service_request();
    bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id);
-   
-     /// consumer
+
+   /// consumer
    void pay_service(uint64_t service_id, name contract_account, asset amount);
    std::vector<name> get_subscription_list(uint64_t service_id);
    std::vector<uint64_t> get_request_list(uint64_t service_id);
@@ -172,16 +172,15 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred);
    void call_deposit(name from, name to, asset quantity, bool is_notify);
    void add_freeze_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount, uint64_t type);
-   void add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount);
+   void add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount, uint64_t arbitration_id = 0);
    void add_delay(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount);
 
    uint64_t add_guarantee(uint64_t service_id, name account, asset amount, uint32_t duration);
    void sub_balance(name owner, asset value);
    void add_balance(name owner, asset value, name ram_payer);
-   void add_freeze_log(uint64_t service_id, name account, asset amount);
-   void add_freeze_stat(uint64_t service_id, name account, asset amount);
+   void add_freeze_stat(uint64_t service_id, name account, asset amount, uint64_t arbitration_id = 0);
    std::tuple<asset, asset> get_freeze_stat(uint64_t service_id, name account);
-   std::tuple<asset, asset> stat_freeze_amounts(uint64_t service_id, name account);
+   void unfreeze_asset(uint64_t service_id, uint64_t arbitration_id);
 
    /// arbitration
    void _regarbitrat(name account, uint8_t type, asset amount, std::string public_info);
@@ -209,6 +208,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo);
    void check_stake_arbitration(uint64_t id, name account, uint8_t round);
    void add_income(name account, asset quantity);
+   std::vector<name> get_arbitrators_of_uploading_arbitration_result(uint64_t arbitration_id);
 
    /// common
    symbol core_symbol() const { return _core_symbol; };

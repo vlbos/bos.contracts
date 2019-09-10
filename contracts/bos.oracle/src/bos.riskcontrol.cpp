@@ -239,7 +239,7 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account, time_point_
    });
 }
 
-void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount) {
+void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount, uint64_t arbitration_id) {
 
    std::vector<std::tuple<name, asset>> providers = get_provider_list(service_id);
 
@@ -259,13 +259,13 @@ void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec st
          unfreeze_amount += average_amount - real_freeze_amount;
       }
 
-      freeze_asset(service_id, std::get<0>(p), asset(real_freeze_amount, core_symbol()));
+      freeze_asset(service_id, std::get<0>(p), asset(real_freeze_amount, core_symbol()), arbitration_id);
    }
 
    // unfreeze_amount  freeze amount from provider who stake amount greater than
    // base stake amount.
    if (unfreeze_amount > 0 && finish_providers.size() > 0) {
-      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
+      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()), arbitration_id);
    }
 
    add_freeze_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, amount - asset(unfreeze_amount, core_symbol()), transfer_type::tt_freeze);
@@ -281,7 +281,7 @@ void bos_oracle::add_delay(uint64_t service_id, name account, time_point_sec sta
    add_freeze_delay(service_id, account, bos_oracle::current_time_point_sec(), duration, amount, transfer_type::tt_delay);
 }
 
-uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount) {
+uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount, uint64_t arbitration_id) {
 
    std::vector<std::tuple<name, asset>> providers = get_provider_list(service_id);
 
@@ -307,17 +307,17 @@ uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set
          unfreeze_amount += average_amount - real_freeze_amount;
       }
 
-      freeze_asset(service_id, account, asset(real_freeze_amount, core_symbol()));
+      freeze_asset(service_id, account, asset(real_freeze_amount, core_symbol()), arbitration_id);
    }
 
    if (unfreeze_amount > 0 && finish_providers.size() > 0) {
-      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()));
+      unfreeze_amount = freeze_providers_amount(service_id, finish_providers, asset(unfreeze_amount, core_symbol()), arbitration_id);
    }
 
    return unfreeze_amount;
 }
 
-void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
+void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id) {
 
    data_providers providertable(_self, _self.value);
    auto provider_itr = providertable.find(account.value);
@@ -332,26 +332,68 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount) {
 
    provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.freeze_amount += amount; });
 
-   add_freeze_log(service_id, account, amount);
+   add_freeze_stat(service_id, account, amount, arbitration_id);
 
    update_service_provider_status(service_id, account);
 }
 
-void bos_oracle::add_freeze_log(uint64_t service_id, name account, asset amount) {
-   account_freeze_logs freezelogtable(_self, service_id);
+void bos_oracle::unfreeze_asset(uint64_t service_id, uint64_t arbitration_id) {
+       auto update_amount = [&](const asset& sub_amount, asset& amount) {
+         if (amount >= sub_amount) {
+            amount -= sub_amount;
+         } else {
+            amount = asset(0, core_symbol());
+         }
+      };
+      
+   auto unfreeze_asset_by_account = [&](uint64_t service_id, name account, asset amount) {
+      data_providers providertable(_self, _self.value);
+      auto provider_itr = providertable.find(account.value);
+      check(provider_itr != providertable.end(), "no provider found in freeze asset");
 
-   freezelogtable.emplace(_self, [&](auto& t) {
-      t.log_id = freezelogtable.available_primary_key();
-      t.service_id = service_id;
-      t.account = account;
-      t.amount = amount;
-      t.update_time = bos_oracle::current_time_point_sec();
-   });
+      data_service_provisions provisionstable(_self, service_id);
 
-   add_freeze_stat(service_id, account, amount);
+      auto provision_itr = provisionstable.find(account.value);
+      check(provision_itr != provisionstable.end(), "account does not subscribe the service");
+
+  
+
+      providertable.modify(provider_itr, same_payer, [&](auto& p) { update_amount(amount, p.total_freeze_amount); });
+
+      provisionstable.modify(provision_itr, same_payer, [&](auto& p) { update_amount(amount, p.freeze_amount); });
+
+      update_service_provider_status(service_id, account);
+   };
+
+   if (0 != arbitration_id) {
+      account_freeze_stats freezestatstable(_self, (uint64_t(0x1) << 63) | arbitration_id);
+      for (auto& f : freezestatstable) {
+         unfreeze_asset_by_account(service_id, f.account,f.amount);
+      }
+
+      auto itr = freezestatstable.begin();
+      while(itr!=freezestatstable.end())
+      {
+         freezestatstable.erase(itr);
+         itr = freezestatstable.begin();
+      }
+   }
 }
 
-void bos_oracle::add_freeze_stat(uint64_t service_id, name account, asset amount) {
+void bos_oracle::add_freeze_stat(uint64_t service_id, name account, asset amount, uint64_t arbitration_id) {
+   if (0 != arbitration_id) {
+      account_freeze_stats freezestatstable(_self, (uint64_t(0x1) << 63) | arbitration_id);
+      auto freeze_stats = freezestatstable.find(account.value);
+      if (freeze_stats == freezestatstable.end()) {
+         freezestatstable.emplace(_self, [&](auto& f) {
+            f.account = account;
+            f.amount = amount;
+         });
+      } else {
+         freezestatstable.modify(freeze_stats, same_payer, [&](auto& f) { f.amount += amount; });
+      }
+   }
+
    account_freeze_stats freezestatstable(_self, service_id);
    auto freeze_stats = freezestatstable.find(account.value);
    if (freeze_stats == freezestatstable.end()) {

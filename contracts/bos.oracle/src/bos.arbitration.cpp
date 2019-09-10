@@ -42,8 +42,8 @@ void bos_oracle::importwps(vector<name> auditors) {
          p.account = account;
          p.type = arbitrator_type::wps;
          p.public_info = "";
-         p.arbitration_correct_times = 1;            ///仲裁正确次数
-         p.arbitration_times = 1;                    ///仲裁次数
+         p.arbitration_correct_times = 0;            ///仲裁正确次数
+         p.arbitration_times = 0;                    ///仲裁次数
          p.invitations = 0;                          ///邀请次数
          p.responses = 0;                            ///接收邀请次数
          p.uncommitted_arbitration_result_times = 0; ///未提交仲裁结果次数
@@ -73,8 +73,8 @@ void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::str
       p.account = account;
       p.type = type;
       p.public_info = public_info;
-      p.arbitration_correct_times = 1;            ///仲裁正确次数
-      p.arbitration_times = 1;                    ///仲裁次数
+      p.arbitration_correct_times = 0;            ///仲裁正确次数
+      p.arbitration_times = 0;                    ///仲裁次数
       p.invitations = 0;                          ///邀请次数
       p.responses = 0;                            ///接收邀请次数
       p.uncommitted_arbitration_result_times = 0; ///未提交仲裁结果次数
@@ -109,7 +109,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
       const uint8_t arbi_freeze_stake_duration = 1; // days
       // add_freeze
       const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
-      add_freeze(service_id, appeallant, bos_oracle::current_time_point_sec(), duration, amount);
+      add_freeze(service_id, appeallant, bos_oracle::current_time_point_sec(), duration, amount, arbitration_id);
    }
 
    const uint8_t arbi_case_deadline = 1; // hours
@@ -728,6 +728,27 @@ void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id
    });
 }
 
+std::vector<name> bos_oracle::get_arbitrators_of_uploading_arbitration_result(uint64_t arbitration_id) {
+   uint64_t service_id = arbitration_id;
+
+   auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
+   auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+   check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration in update_arbitration_correction");
+
+   std::vector<name> arbitrators;
+   for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
+      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+      auto arbiresults_itr = arbiresults_tb.begin();
+      while (arbiresults_itr != arbiresults_tb.end()) {
+         arbitrators.push_back(arbiresults_itr->arbitrator);
+         arbiresults_tb.erase(arbiresults_itr);
+         arbiresults_itr = arbiresults_tb.begin();
+      }
+   }
+
+   return arbitrators;
+}
+
 /**
  * 更新仲裁正确率
  */
@@ -749,15 +770,6 @@ void bos_oracle::update_arbitration_correction(uint64_t arbitration_id) {
       });
    };
 
-   auto clear_results = [&](uint8_t round) {
-      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
-      auto arbiresults_itr = arbiresults_tb.begin();
-      while (arbiresults_itr != arbiresults_tb.end()) {
-         arbiresults_tb.erase(arbiresults_itr);
-         arbiresults_itr = arbiresults_tb.begin();
-      }
-   };
-
    for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
       auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
       auto arbiprocess_itr = arbiprocess_tb.find(round);
@@ -767,8 +779,6 @@ void bos_oracle::update_arbitration_correction(uint64_t arbitration_id) {
       for (auto arbiresults_itr = arbiresults_tb.begin(); arbiresults_itr != arbiresults_tb.end(); ++arbiresults_itr) {
          update_correction(arbiresults_itr->arbitrator, (arbiresults_itr->result == arbiprocess_itr->arbitration_result ? 1 : 0));
       }
-
-      clear_results(round);
    }
 }
 
@@ -809,7 +819,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
             p.last_round = round;
             p.arbi_step = arbi_step_type::arbi_reappeal_timeout_end;
             p.final_result = p.arbitration_result;
-            print("\narbitration_id==", arbitration_id, " \n  p.final_result = p.arbitration_result;752=", p.final_result);
+            print("\narbitration_id==", arbitration_id, " \n  p.final_result = p.arbitration_result;final_result=", p.final_result);
          });
          handle_arbitration_result(arbitration_id);
 
@@ -840,7 +850,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
          arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
             p.arbi_step = arbi_step_type::arbi_resp_appeal_timeout_end;
             p.final_result = arbiprocess_itr->role_type;
-            print("\n785", p.final_result);
+            print("\final_result=", p.final_result);
          });
 
          handle_arbitration_result(arbitration_id);
@@ -852,12 +862,6 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
 
          for (auto& a : arbiprocess_itr->appeallants) {
             transfer(get_self(), a, notify_amount, memo);
-         }
-
-         check(arbiprocess_itr->respondents.size() > 0, "no respondents in the round ");
-
-         for (auto& r : arbiprocess_itr->respondents) {
-            transfer(get_self(), r, notify_amount, memo);
          }
       }
       break;
@@ -939,11 +943,16 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
       print(asa.size(), "=slash_amount_dividend_part=", slash_amount_dividend_part);
    }
 
-   if (slash_amount_fee_part > 0 && !arbitration_case_itr->arbitrators.empty()) {
+   std::vector<name> arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
+   if (slash_amount_fee_part > 0 && !arbitrators.empty()) {
       // pay all arbitrators' arbitration fee
-      pay_arbitration_fee(arbitration_id, arbitration_case_itr->arbitrators, slash_amount_fee_part);
+      pay_arbitration_fee(arbitration_id, arbitrators, slash_amount_fee_part);
    } else {
-      print(arbitration_case_itr->arbitrators.size(), "=slash_amount_fee_part=", slash_amount_fee_part);
+      print(arbitrators.size(), "=slash_amount_fee_part=", slash_amount_fee_part);
+   }
+
+   if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
+      unfreeze_asset(service_id, arbitration_id);
    }
 
    // clear 申诉者表

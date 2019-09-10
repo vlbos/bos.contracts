@@ -34,7 +34,8 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
 
    check(provider_limit >= 3 && provider_limit <= 100, "provider_limit could not be less than 3 or greater than 100");
    check(update_cycle >= 60 && update_cycle <= 3600 * 24 * uint32_t(100), "update_cycle could not be less than 60 seconds or greater than 100 days");
-   check(duration >= 30 && duration <= 3600, "duration could not be less than 30 or greater than 3600 seconds");
+   check(duration >= 30 && duration <= 3600 , "duration could not be less than 30 or greater than 3600 seconds");
+   check(duration < update_cycle-10 , "duration could not be  greater than update_cycle-10 seconds");
    check(injection_method == chain_indirect || injection_method == chain_direct || injection_method == chain_outside, "injection_method only set chain_indirect(0) or chain_direct(1)or chain_outside(2)");
    check(data_type == data_deterministic || data_type == data_non_deterministic, "data_type only set value data_deterministic(0) or data_non_deterministic(1)1");
    check(acceptance >= 3 && acceptance <= 100, "acceptance could not be less than 3 or greater than 100 ");
