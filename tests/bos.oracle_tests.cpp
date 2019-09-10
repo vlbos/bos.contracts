@@ -608,7 +608,7 @@ class bos_oracle_tester : public tester {
 
    /// accept invitation
    void accept_invitation(uint64_t arbitration_id, uint8_t round) {
-      uint8_t arbi_count = pow(2, round + 1) + round - 2;
+      uint8_t arbi_count = pow(2, round ) + 1;
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
@@ -620,7 +620,7 @@ class bos_oracle_tester : public tester {
    }
 
    void test_accept_invitation(uint64_t arbitration_id, uint8_t round) {
-      uint8_t arbi_count = pow(2, round + 1) + round - 2;
+      uint8_t arbi_count = pow(2, round ) + 1;
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["invited_arbitrators"].as<vector<name>>();
@@ -631,8 +631,8 @@ class bos_oracle_tester : public tester {
    }
 
    /// upload result
-   void upload_result(uint64_t arbitration_id, uint8_t round, uint8_t result) {
-      uint8_t arbi_count = pow(2, round + 1) + round - 2;
+   void upload_result(uint64_t arbitration_id, uint8_t round, uint8_t result) {  
+      uint8_t arbi_count = pow(2, round ) + 1;
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
@@ -1706,7 +1706,7 @@ try {
    {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
-      BOOST_TEST_REQUIRE(11 == arbivec.size());
+      BOOST_TEST_REQUIRE(8 == arbivec.size());
       for (uint8_t i = 3; i < arbivec.size(); i++) {
          acceptarbi(arbivec[i], arbitration_id);
          produce_blocks(1);
@@ -1718,7 +1718,7 @@ try {
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
-      BOOST_TEST_REQUIRE(8 == arbivec.size());
+      BOOST_TEST_REQUIRE(5 == arbivec.size());
       for (auto& arbi : arbivec) {
          uploadresult(arbi, arbitration_id, result, "");
          produce_blocks(1);
@@ -1758,8 +1758,8 @@ try {
    {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
-      BOOST_TEST_REQUIRE(28 == arbivec.size());
-      for (uint8_t i = 11; i < arbivec.size(); i++) {
+      BOOST_TEST_REQUIRE(17 == arbivec.size());
+      for (uint8_t i = 8; i < arbivec.size(); i++) {
          acceptarbi(arbivec[i], arbitration_id);
          produce_blocks(1);
       }
@@ -1770,7 +1770,7 @@ try {
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
-      BOOST_TEST_REQUIRE(17 == arbivec.size());
+      BOOST_TEST_REQUIRE(9 == arbivec.size());
       for (auto& arbi : arbivec) {
          uploadresult(arbi, arbitration_id, result, "");
          produce_blocks(1);
@@ -2017,7 +2017,6 @@ try {
    produce_blocks(60 * 60 * 2 + 10);
    /// get final result
    {
-      uint8_t result = 1;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
       get_arbitration_income_account(N(appeallant11), "4,BOS");
@@ -2025,7 +2024,7 @@ try {
       produce_blocks(1);
    }
 
-   uint8_t arbi_count = pow(2, round + 1) + round - 2;
+   uint8_t arbi_count = pow(2, round) + 1;
    auto arbis = get_arbitration_process(arbitration_id, round);
    vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
    BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
@@ -2037,10 +2036,61 @@ try {
       name receive_account = account;
       auto token = claimarbi(arbitration_id, account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("11040.0001"), get_balance(acc));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("10346.6668"), get_balance(acc));
    }
 }
 FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(arbi_claimarbi_provider_win_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appeallant11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+   uint8_t result = 2;
+   /// upload result
+   upload_result(arbitration_id, round, result);
+   produce_blocks(60 * 60 * 2 + 10);
+   /// get final result
+   {
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint64_t final_result = arbis["final_result"].as<uint8_t>();
+      get_arbitration_income_account(N(appeallant11), "4,BOS");
+      BOOST_TEST_REQUIRE(result == final_result);
+      produce_blocks(1);
+   }
+
+   uint8_t arbi_count = pow(2, round) + 1;
+   auto arbis = get_arbitration_process(arbitration_id, round);
+   vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+   BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
+
+   string acc = (*arbivec.begin()).to_string();
+   // BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
+   {
+      name account = name(acc.c_str());
+      name receive_account = account;
+      auto token = claimarbi(arbitration_id, account, receive_account);
+
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("10013.3335"), get_balance(acc));
+   }
+}
+FC_LOG_AND_RETHROW()
+
 
 BOOST_FIXTURE_TEST_CASE(arbi_unstakearbi_test, bos_oracle_tester)
 try {
@@ -2170,8 +2220,8 @@ try {
    // BOOST_REQUIRE_EQUAL(wasm_assert_msg("no provider"), _appeal(arbitration_id, appeal_name, round, amount, role_type));
 
    //  BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
-   BOOST_TEST_REQUIRE(core_sym::from_string("1000.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
-   BOOST_TEST_REQUIRE(core_sym::from_string("1000.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
+   // BOOST_TEST_REQUIRE(core_sym::from_string("1000.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
+   // BOOST_TEST_REQUIRE(core_sym::from_string("1000.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
 }
 FC_LOG_AND_RETHROW()
 

@@ -192,7 +192,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    }
 
    uint8_t arbi_method = arbi_method_type::multiple_rounds;
-   uint8_t arbi_count = pow(2, current_round + 1) + current_round - 2;
+   uint8_t arbi_count = pow(2, current_round) + 1;
    if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds && arbi_count > fulltime_count) {
       arbi_method = arbi_method_type::public_arbitration;
       arbi_count = 2 * fulltime_count;
@@ -936,20 +936,28 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    slash_arbitration_stake(arbitration_id, std::get<0>(slash_stake_accounts));
 
    std::vector<name> asa = std::get<0>(award_stake_accounts);
-   if (slash_amount_dividend_part > 0 && !asa.empty()) {
-      // pay all winners' award
-      pay_arbitration_award(arbitration_id, std::get<0>(award_stake_accounts), slash_amount_dividend_part);
-   } else {
-      print(asa.size(), "=slash_amount_dividend_part=", slash_amount_dividend_part);
-   }
+
+   auto pay_arbitration = [&](std::vector<name>& award_accounts, double dividend_amount) {
+      if (award_accounts.empty()) {
+         print("\n=no accounts in award_accounts =");
+         return;
+      }
+      int64_t average_award_amount = static_cast<int64_t>(dividend_amount / award_accounts.size());
+      if (average_award_amount <= 0) {
+         print("\n=if (average_award_amount <= 0) =");
+         return;
+      }
+
+      for (auto& a : award_accounts) {
+         add_income(a, asset(average_award_amount, core_symbol()));
+      }
+   };
+
+   pay_arbitration(std::get<0>(award_stake_accounts), slash_amount_dividend_part);
 
    std::vector<name> arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
-   if (slash_amount_fee_part > 0 && !arbitrators.empty()) {
-      // pay all arbitrators' arbitration fee
-      pay_arbitration_fee(arbitration_id, arbitrators, slash_amount_fee_part);
-   } else {
-      print(arbitrators.size(), "=slash_amount_fee_part=", slash_amount_fee_part);
-   }
+   // pay all arbitrators' arbitration fee
+   pay_arbitration(arbitrators, slash_amount_fee_part);
 
    if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
       unfreeze_asset(service_id, arbitration_id);
@@ -965,6 +973,7 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
       }
    }
 }
+
 
 /**
  * @brief
@@ -1108,26 +1117,6 @@ void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id, std::vector<na
    }
 }
 
-/**
- * @brief
- *
- * @param arbitration_id
- * @param award_accounts
- * @param dividend_amount
- */
-void bos_oracle::pay_arbitration_award(uint64_t arbitration_id, std::vector<name>& award_accounts, double dividend_amount) {
-   print("=====pay_arbitration_award=====");
-   check(!award_accounts.empty(), "no accounts in award_accounts");
-   int64_t average_award_amount = static_cast<int64_t>(dividend_amount / award_accounts.size());
-   if (average_award_amount > 0) {
-      for (auto& a : award_accounts) {
-         add_income(a, asset(average_award_amount, core_symbol()));
-         print("=====pay_arbitration_award===in==");
-      }
-   }
-   print("=====pay_arbitration_award==end===");
-}
-
 void bos_oracle::add_income(name account, asset quantity) {
    arbitration_income_accounts incometable(_self, account.value);
    auto acc = incometable.find(quantity.symbol.code().raw());
@@ -1140,26 +1129,6 @@ void bos_oracle::add_income(name account, asset quantity) {
    } else {
       incometable.modify(acc, same_payer, [&](auto& a) { a.income += quantity; });
    }
-}
-
-/**
- * @brief
- *
- * @param arbitration_id
- * @param fee_accounts
- * @param fee_amount
- */
-void bos_oracle::pay_arbitration_fee(uint64_t arbitration_id, const std::vector<name>& fee_accounts, double fee_amount) {
-   print("=====pay_arbitration_fee=====");
-
-   auto abr_table = arbitrators(get_self(), get_self().value);
-
-   for (auto& a : fee_accounts) {
-      add_income(a, asset(static_cast<int64_t>(fee_amount), core_symbol()));
-      print("=====pay_arbitration_fee==in===");
-   }
-
-   print("=====pay_arbitration_fee===end==");
 }
 
 void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo) {
