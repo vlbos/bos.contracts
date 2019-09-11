@@ -60,6 +60,8 @@ void bos_oracle::importwps(vector<name> auditors) {
 // }
 
 void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::string public_info) {
+   check(public_info.size() <= 256, "public_info could not greater than 256");
+
    check(type == arbitrator_type::fulltime || type == arbitrator_type::crowd, "Arbitrator type can only be 1 or 2.");
    auto abr_table = arbitrators(get_self(), get_self().value);
    auto itr = abr_table.find(account.value);
@@ -81,15 +83,9 @@ void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::str
    });
 }
 
-/**
- * 申诉者申诉
- */
-// void bos_oracle::appeal( name appeallant, uint64_t service_id, asset amount,std::string reason, uint8_t arbi_method , std::string evidence) {
-//     require_auth( appeallant );
-//     _appeal(  appeallant,  service_id,  amount,  reason,  arbi_method,evidence) ;
-// }
-
 void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std::string reason, std::string evidence, uint8_t role_type) {
+   check(evidence.size() <= 256, "evidence could not greater than 256");
+
    check(consumer == role_type || provider == role_type, "role type only support consume(1) and provider(2)");
 
    print("appeal >>>>>>role_type", role_type);
@@ -295,16 +291,9 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    }
 }
 
-/**
- * (数据提供者/数据使用者)应诉
- */
-// void bos_oracle::respcase( name respondent, uint64_t arbitration_id, asset
-// amount,uint8_t round, std::string evidence) {
-//     require_auth( respondent );
-//     _respcase(  respondent,  arbitration_id,  amount, round,evidence);
-// }
-
 void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amount, std::string evidence) {
+   check(evidence.size() <= 256, "evidence could not greater than 256");
+
    uint64_t service_id = arbitration_id;
    // 检查仲裁案件状态
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
@@ -356,6 +345,8 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
 }
 
 void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string evidence) {
+   check(evidence.size() <= 256, "evidence could not greater than 256");
+
    require_auth(account);
    uint64_t service_id = arbitration_id;
 
@@ -378,6 +369,8 @@ void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string
  * 仲裁员上传仲裁结果
  */
 void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t result, std::string comment) {
+   check(comment.size() <= 256, "comment could not greater than 256");
+
    require_auth(arbitrator);
    check(result == consumer || result == provider, "`result` can only be consumer(1) or provider(2).");
    uint64_t service_id = arbitration_id;
@@ -718,6 +711,8 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t roun
  * 新增仲裁结果表
  */
 void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round, std::string comment) {
+   check(comment.size() <= 256, "comment could not greater than 256");
+
    auto arbi_result_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
    auto arbi_result_itr = arbi_result_tb.find(arbitrator.value);
    check(arbi_result_itr == arbi_result_tb.end(), "the arbitrator has uploaded result in the round and the arbitration case");
@@ -974,7 +969,6 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    }
 }
 
-
 /**
  * @brief
  *
@@ -1132,6 +1126,8 @@ void bos_oracle::add_income(name account, asset quantity) {
 }
 
 void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    uint64_t id_round = (id << 3) | round;
    arbitration_stake_records staketable(_self, id_round);
 
@@ -1159,7 +1155,24 @@ void bos_oracle::check_stake_arbitration(uint64_t id, name account, uint8_t roun
 }
 
 void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    require_auth(account);
+
+   if (0 != arbitration_id) {
+      uint64_t service_id = arbitration_id;
+      auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
+      auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
+      check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration. unstakearbi");
+      check(arbitration_case_itr->final_result != 0, "arbitration case is processing");
+   } else {
+      auto abr_table = arbitrators(get_self(), get_self().value);
+      auto itr = abr_table.find(account.value);
+      if (itr != abr_table.end()) {
+         check(itr->type != arbitrator_type::wps, "wps auditor could not unstake");
+         check(itr->status == 0, "arbitrator status could not be non zero");
+      }
+   }
 
    check(amount.amount > 0, "stake amount could not be  equal to zero");
 

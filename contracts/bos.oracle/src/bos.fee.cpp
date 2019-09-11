@@ -25,29 +25,6 @@ uint8_t bos_oracle::get_service_status(uint64_t service_id) {
  * @brief
  *
  * @param service_id
- * @param provider
- * @return uint64_t
- */
-uint64_t bos_oracle::get_request_by_last_push(uint64_t service_id, name provider) {
-
-   data_service_provision_logs logtable(_self, service_id);
-   auto update_time_idx = logtable.get_index<"bytime"_n>();
-
-   uint64_t request_id = 0;
-   for (const auto& u : update_time_idx) {
-      if (provider == u.account && 0 != u.request_id) {
-         request_id = u.request_id;
-         break;
-      }
-   }
-
-   return request_id;
-}
-
-/**
- * @brief
- *
- * @param service_id
  * @param account
  * @param contract_account
  * @param is_request

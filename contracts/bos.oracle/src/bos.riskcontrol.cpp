@@ -9,6 +9,8 @@
 #include <eosio/transaction.hpp>
 
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
    print_f("On notify : % % % %", from, to, quantity, memo);
    if (from == _self || memo.empty()) {
@@ -122,6 +124,8 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) { oracle_transfer(from, to, quantity, memo, false); }
 
 void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    check(from != to, "cannot transfer to self");
    //  require_auth( from );
    check(is_account(to), "to account does not exist");
@@ -162,6 +166,8 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo
 
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to, asset quantity, string memo, bool is_notify) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    require_auth(_self);
    call_deposit(from, to, quantity, is_notify);
 }
@@ -187,14 +193,15 @@ void bos_oracle::call_deposit(name from, name to, asset quantity, bool is_notify
  * @param memo
  */
 void bos_oracle::withdraw(uint64_t service_id, name from, name to, asset quantity, string memo) {
+   check(memo.size() <= 256, "memo could not greater than 256");
+
    require_auth(_self);
    sub_balance(from, quantity);
 
    // find service
    data_service_subscriptions svcsubstable(_self, service_id);
-   auto acc_idx = svcsubstable.get_index<"byaccount"_n>();
-   auto svcsubs_itr = acc_idx.find(from.value);
-   check(svcsubs_itr != acc_idx.end(), "account does not subscribe services");
+   auto svcsubs_itr = svcsubstable.find(from.value);
+   check(svcsubs_itr != svcsubstable.end(), "account does not subscribe services");
 
    // find stake
    data_service_stakes svcstaketable(_self, _self.value);
@@ -338,14 +345,14 @@ void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount, u
 }
 
 void bos_oracle::unfreeze_asset(uint64_t service_id, uint64_t arbitration_id) {
-       auto update_amount = [&](const asset& sub_amount, asset& amount) {
-         if (amount >= sub_amount) {
-            amount -= sub_amount;
-         } else {
-            amount = asset(0, core_symbol());
-         }
-      };
-      
+   auto update_amount = [&](const asset& sub_amount, asset& amount) {
+      if (amount >= sub_amount) {
+         amount -= sub_amount;
+      } else {
+         amount = asset(0, core_symbol());
+      }
+   };
+
    auto unfreeze_asset_by_account = [&](uint64_t service_id, name account, asset amount) {
       data_providers providertable(_self, _self.value);
       auto provider_itr = providertable.find(account.value);
@@ -355,8 +362,6 @@ void bos_oracle::unfreeze_asset(uint64_t service_id, uint64_t arbitration_id) {
 
       auto provision_itr = provisionstable.find(account.value);
       check(provision_itr != provisionstable.end(), "account does not subscribe the service");
-
-  
 
       providertable.modify(provider_itr, same_payer, [&](auto& p) { update_amount(amount, p.total_freeze_amount); });
 
@@ -368,12 +373,11 @@ void bos_oracle::unfreeze_asset(uint64_t service_id, uint64_t arbitration_id) {
    if (0 != arbitration_id) {
       account_freeze_stats freezestatstable(_self, (uint64_t(0x1) << 63) | arbitration_id);
       for (auto& f : freezestatstable) {
-         unfreeze_asset_by_account(service_id, f.account,f.amount);
+         unfreeze_asset_by_account(service_id, f.account, f.amount);
       }
 
       auto itr = freezestatstable.begin();
-      while(itr!=freezestatstable.end())
-      {
+      while (itr != freezestatstable.end()) {
          freezestatstable.erase(itr);
          itr = freezestatstable.begin();
       }

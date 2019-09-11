@@ -43,7 +43,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void claim(name account, name receive_account);
    [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
    [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
-   [[eosio::action]] void starttimer(uint32_t time);
+   [[eosio::action]] void starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
 
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
    using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
@@ -136,20 +136,13 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint8_t get_service_status(uint64_t service_id);
    void fee_service(uint64_t service_id, name contract_account, uint8_t fee_type);
    asset get_price_by_fee_type(uint64_t service_id, uint8_t fee_type);
-   uint64_t get_request_by_last_push(uint64_t service_id, name provider);
 
    std::vector<std::tuple<name, asset>> get_provider_list(uint64_t service_id);
 
    void freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id = 0);
    uint64_t freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount, uint64_t arbitration_id = 0);
 
-   void multipush(uint64_t service_id, name provider, string data_json, uint64_t request_id);
-
-   void multipublish(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json);
-   void publishdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
-
-   void start_timer();
-   void check_publish_services();
+   void start_timer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
    void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired = false);
    void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string value);
    uint64_t get_provider_count(uint64_t service_id);
@@ -157,14 +150,11 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
 
    string get_publish_data(uint64_t service_id, uint64_t update_number, uint8_t provider_limit, uint64_t request_id);
-   std::map<uint64_t, uint64_t> get_publish_service_update_number();
-   void check_publish_service_request();
    bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id);
 
    /// consumer
    void pay_service(uint64_t service_id, name contract_account, asset amount);
    std::vector<name> get_subscription_list(uint64_t service_id);
-   std::vector<uint64_t> get_request_list(uint64_t service_id);
    std::tuple<uint64_t, uint64_t> get_consumption(uint64_t service_id);
 
    /// risk control

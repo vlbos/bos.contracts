@@ -53,6 +53,9 @@ class bos_oracle_tester : public tester {
       create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
 
+      transfer("eosio", "alice1111111", ("3000.0000"), "eosio");
+      transfer("eosio", "bob111111111", ("3000.0000"), "eosio");
+      transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
       transfer("eosio", "carol", ("3000.0000"), "eosio");
@@ -224,12 +227,6 @@ class bos_oracle_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("provider_push_record", data, abi_serializer_max_time);
    }
 
-   // consumer
-   fc::variant get_data_consumer(const name& account) {
-      vector<char> data = get_row_by_account(N(oracle.bos), N(oracle.bos), N(dataconsumer), account);
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("data_consumer", data, abi_serializer_max_time);
-   }
-
    fc::variant get_data_service_subscription(const uint64_t& service_id, const name& contract_account) {
       vector<char> data = get_row_by_account(N(oracle.bos), service_id, N(subscription), contract_account);
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("data_service_subscription", data, abi_serializer_max_time);
@@ -369,7 +366,9 @@ class bos_oracle_tester : public tester {
                          mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data_json", data_json)("contract_account", contract_account));
    }
 
-   action_result starttimer(uint32_t time) { return push_action(N(oracle.bos), N(starttimer), mvo()("time", time)); }
+   action_result starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
+      return push_action(N(oracle.bos), N(starttimer), mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id));
+   }
 
    action_result addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
@@ -439,9 +438,30 @@ class bos_oracle_tester : public tester {
 
       auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, declaration, injection_method, duration, provider_limit, update_cycle, update_start_time);
 
-      uint64_t new_service_id = get_oracle_id(0);
+      service_id = get_oracle_id(0);
 
-      return new_service_id;
+      std::string a = "provider";
+
+      for (int j = 1; j <= 5; ++j) {
+         std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
+         name acc = name(acc_name.c_str());
+
+         stake_asset(service_id, acc, core_sym::from_string("1000.0000"));
+
+         produce_blocks(1);
+      }
+
+      a = "consumer";
+      for (int j = 1; j <= 5; ++j) {
+         std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
+         name acc = name(acc_name.c_str());
+         subscribe_service(service_id, acc, acc);
+         pay_service(service_id, acc, core_sym::from_string("10.0000"));
+
+         produce_blocks(1);
+      }
+
+      return service_id;
    }
 
    /// stake asset
@@ -503,7 +523,7 @@ class bos_oracle_tester : public tester {
       //   name to = N(bob);
       std::string quantity = "1.0000";
       bool is_notify = false;
-      std::string memo = "2," + std::to_string(service_id) + ",dappuser," + to.to_string() + ",0";
+      std::string memo = "2,dappuser," + to.to_string() + ",0";
       transfer(from, N(oracle.bos), quantity, from.to_string().c_str(), memo);
    }
 
@@ -527,7 +547,6 @@ class bos_oracle_tester : public tester {
       uint64_t service_id = reg_service(account, update_start_time);
       // BOOST_TEST0 == service_id);
       add_fee_type(service_id);
-      re_stake_svc_for_arbi(service_id);
       return service_id;
    }
 
@@ -608,7 +627,7 @@ class bos_oracle_tester : public tester {
 
    /// accept invitation
    void accept_invitation(uint64_t arbitration_id, uint8_t round) {
-      uint8_t arbi_count = pow(2, round ) + 1;
+      uint8_t arbi_count = pow(2, round) + 1;
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
@@ -620,7 +639,7 @@ class bos_oracle_tester : public tester {
    }
 
    void test_accept_invitation(uint64_t arbitration_id, uint8_t round) {
-      uint8_t arbi_count = pow(2, round ) + 1;
+      uint8_t arbi_count = pow(2, round) + 1;
       uint64_t service_id = arbitration_id;
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["invited_arbitrators"].as<vector<name>>();
@@ -631,8 +650,8 @@ class bos_oracle_tester : public tester {
    }
 
    /// upload result
-   void upload_result(uint64_t arbitration_id, uint8_t round, uint8_t result) {  
-      uint8_t arbi_count = pow(2, round ) + 1;
+   void upload_result(uint64_t arbitration_id, uint8_t round, uint8_t result) {
+      uint8_t arbi_count = pow(2, round) + 1;
       auto arbis = get_arbitration_process(arbitration_id, round);
       vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
@@ -664,17 +683,18 @@ try {
 
    name account = N(alice);
    uint64_t service_id = 0;
-   uint8_t data_type = 1;
+   uint8_t data_type = 0;
    uint8_t status = 0;
    uint8_t injection_method = 0;
    uint8_t acceptance = 3;
-   uint32_t duration = 1;
+   uint32_t duration = 30;
    uint8_t provider_limit = 3;
-   uint32_t update_cycle = 1;
+   uint32_t update_cycle = 600;
+   uint64_t last_update_number = 0;
    uint64_t appeal_freeze_period = 0;
    uint64_t exceeded_risk_control_freeze_period = 0;
    uint64_t guarantee_id = 0;
-   asset amount = core_sym::from_string("10.0000");
+   asset amount = core_sym::from_string("1000.0000");
    asset risk_control_amount = core_sym::from_string("0.0000");
    asset pause_service_stake_amount = core_sym::from_string("0.0000");
    std::string data_format = "";
@@ -685,19 +705,19 @@ try {
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
 
    auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, declaration, injection_method, duration, provider_limit, update_cycle, update_start_time);
-   // BOOST_TEST"" == "reg service after");
+   // BOOST_TEST("" == "reg service after");
    uint64_t create_time_sec = static_cast<uint64_t>(update_start_time.sec_since_epoch());
 
    uint64_t new_service_id = get_oracle_id(0);
 
    auto services = get_data_service(new_service_id);
    REQUIRE_MATCHING_OBJECT(
-       services, mvo()("service_id", service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
-                     "provider_limit", provider_limit)("update_cycle", update_cycle)("appeal_freeze_period", appeal_freeze_period)(
+       services, mvo()("service_id", new_service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
+                     "provider_limit", provider_limit)("update_cycle", update_cycle)("last_update_number", last_update_number)("appeal_freeze_period", appeal_freeze_period)(
                      "exceeded_risk_control_freeze_period", exceeded_risk_control_freeze_period)("guarantee_id", guarantee_id)("base_stake_amount", amount)("risk_control_amount", risk_control_amount)(
                      "pause_service_stake_amount", pause_service_stake_amount)("data_format", data_format)("criteria", criteria)("declaration", declaration)("update_start_time", update_start_time));
 
-   // BOOST_TEST"" == "reg service after");
+   // BOOST_TEST("" == "reg service after");
    //  BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
    // BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(),
    // producer_names.begin()+26)) ); BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
@@ -721,13 +741,15 @@ try {
    {
       uint64_t service_id = new_service_id;
       name account = N(alice);
-      asset amount = core_sym::from_string("1.0000");
+      asset amount = core_sym::from_string("1000.0000");
       string memo = "";
       //   push_action();
-      // BOOST_TEST"" == "push_permission_update_auth_action before");
-      push_permission_update_auth_action(account);
-      // BOOST_TEST"" == "push_permission_update_auth_action");
+      // BOOST_TEST("" == "push_permission_update_auth_action before");
+      // push_permission_update_auth_action(account);
+      // BOOST_TEST("" == "push_permission_update_auth_action");
       stake_asset(service_id, account, amount);
+      stake_asset(service_id, N(alice1111111), amount);
+      stake_asset(service_id, N(bob111111111), amount);
       BOOST_TEST_REQUIRE(amount == get_data_provider(account)["total_stake_amount"].as<asset>());
    }
 
@@ -735,21 +757,19 @@ try {
    {
       service_id = new_service_id;
       name contract_account = N(dappuser.bos);
-      asset amount = core_sym::from_string("0.0000");
+      asset amount = core_sym::from_string("0000.0000");
       std::string memo = "";
-      auto subs = subscribe(service_id, contract_account, account, memo);
+      // BOOST_TEST(0 == service_id);
       name account = N(bob);
-      auto consumer = get_data_consumer(account);
-      auto time = consumer["create_time"];
-      //  //BOOST_TEST"" == "1221ss");
-      BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
-      //  //BOOST_TEST"" == "11ss");
-      auto subscription = get_data_service_subscription(service_id, contract_account);
-      // BOOST_TEST"" == "ss");
-      BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
-      BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
+      auto subs = subscribe(service_id, contract_account, account, memo);
+      // BOOST_TEST("" == "11ss");
+      auto subscription1 = get_data_service_subscription(service_id, account);
+      // BOOST_TEST("" == "ss");
+      BOOST_TEST_REQUIRE(amount == subscription1["payment"].as<asset>());
+      BOOST_TEST_REQUIRE(account == subscription1["account"].as<name>());
    }
 
+   // BOOST_TEST("" == "subscription");
    produce_blocks(1);
    /// pay service
    {
@@ -760,7 +780,7 @@ try {
       std::string memo = "";
       pay_service(service_id, account, amount);
    }
-
+   // BOOST_TEST("" == "pay_service");
    /// push data
    {
       service_id = new_service_id;
@@ -768,11 +788,12 @@ try {
       name contract_account = N(dappuser.bos);
       const string data_json = "test data json";
       uint64_t request_id = 0;
-
+      push_permission_update_auth_action(N(oracle.bos));
+      produce_blocks(1);
       auto data = pushdata(service_id, provider, 1, request_id, data_json);
    }
 
-   // BOOST_TEST"" == "====pushdata");
+   // BOOST_TEST("" == "====pushdata");
 
    produce_blocks(1);
 
@@ -786,7 +807,7 @@ try {
    }
    produce_blocks(1);
 
-   // BOOST_TEST"" == "====requestdata");
+   // BOOST_TEST("" == "====requestdata");
 
    produce_blocks(1);
    /// deposit
@@ -794,16 +815,16 @@ try {
       uint64_t service_id = new_service_id;
       name from = N(dappuser);
       name to = N(bob);
-      asset quantity = core_sym::from_string("1.0000");
+      string quantity = "1.0000";
       bool is_notify = false;
-      std::string memo = "2," + std::to_string(service_id) + ",dappuser,bob,0";
-      transfer(from, N(oracle.bos), quantity.to_string(), from.to_string().c_str(), memo);
+      std::string memo = "2,dappuser,bob,0";
+      transfer(from, N(oracle.bos), quantity, from.to_string().c_str(), memo);
 
       auto app_balance = get_riskcontrol_account(to, "4,BOS");
       REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "1.0000 BOS"));
    }
 
-   // BOOST_TEST"" == "====deposit ");
+   // BOOST_TEST("" == "====deposit ");
    /// withdraw
    {
       uint64_t service_id = new_service_id;
@@ -817,7 +838,7 @@ try {
       REQUIRE_MATCHING_OBJECT(app_balance, mvo()("balance", "0.9000 BOS"));
    }
 
-   // BOOST_TEST"" == "====withdraw ");
+   // BOOST_TEST("" == "====withdraw ");
    // produce_blocks(2*24*60*60);
    {
       name account = N(alice);
@@ -825,7 +846,7 @@ try {
       push_permission_update_auth_action(N(consumer.bos));
       auto token = claim(account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("1003.8000"), get_balance("alice"));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("2000.2666"), get_balance("alice"));
    }
 }
 FC_LOG_AND_RETHROW()
@@ -836,6 +857,9 @@ try {
    name account = N(alice);
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
    uint64_t service_id = reg_service(account, update_start_time);
+   asset amount = core_sym::from_string("1000.0000");
+   stake_asset(service_id, account, amount);
+
    const uint8_t status_cancel = 1;
    const uint8_t status_pause = 2;
    auto token = unregservice(service_id, account, status_pause);
@@ -851,8 +875,8 @@ try {
    name account = N(alice);
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
    uint64_t service_id = reg_service(account, update_start_time);
-   const uint8_t freeze_action_type = 3;
-   const uint8_t emergency_action_type = 4;
+   const uint8_t freeze_action_type = 5;
+   const uint8_t emergency_action_type = 6;
    auto token = execaction(service_id, freeze_action_type);
    BOOST_TEST_REQUIRE(freeze_action_type == get_data_service(service_id)["status"].as<uint8_t>());
    token = execaction(service_id, emergency_action_type);
@@ -868,7 +892,7 @@ try {
    uint64_t new_service_id = reg_service(account, update_start_time);
    uint64_t new_second_service_id = reg_service(account, update_start_time);
 
-   // BOOST_TEST"" == "====reg test true");
+   // BOOST_TEST("" == "====reg test true");
    produce_blocks(1);
    /// stake asset
    {
@@ -891,8 +915,8 @@ try {
       asset amount = core_sym::from_string("1000.0000");
       string memo = "";
       BOOST_REQUIRE_EXCEPTION(stake_asset(service_id, account, core_sym::from_string("100.0000")), eosio_assert_message_exception,
-                              eosio_assert_message_is("stake amount could not be less than  the base_stake amount of the sevice"));
-      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("stake amount could not be less than  the base_stake amount of the sevice"), stake_asset(service_id, account, core_sym::from_string("100.0000")));
+                              eosio_assert_message_is("stake amount could not be less than  the base_stake amount of the service"));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("stake amount could not be less than  the base_stake amount of the service"), stake_asset(service_id, account, core_sym::from_string("100.0000")));
       stake_asset(service_id, account, amount);
       auto services = get_data_provider(account)["services"].as<vector<uint64_t>>();
       BOOST_TEST_REQUIRE(services.size() == 2);
@@ -910,7 +934,7 @@ try {
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
    uint64_t service_id = reg_service(account, update_start_time);
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
    pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
 
@@ -935,32 +959,9 @@ try {
    uint64_t service_id = reg_service(N(provider1111), update_start_time);
    add_fee_type(service_id);
 
-   std::string a = "provider";
-
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-
-      stake_asset(service_id, acc, core_sym::from_string("1000.0000"));
-
-      produce_blocks(1);
-   }
-
-   a = "consumer";
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-      subscribe_service(service_id, acc, acc);
-      pay_service(service_id, acc, core_sym::from_string("10.0000"));
-
-      produce_blocks(1);
-   }
-
    /// publish data
    {
       auto services = get_data_service(service_id);
-
-      starttimer(0);
 
       // produce_block(fc::hours(1));
       uint32_t update_cycle = services["update_cycle"].as<uint32_t>();
@@ -989,7 +990,7 @@ try {
       // BOOST_TEST(0 == update_number);
       // BOOST_TEST(0 == current_duration_end_time);
       // BOOST_TEST(0 == current_time.sec_since_epoch());
-      a = "provider";
+      std::string a = "provider";
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
@@ -1024,27 +1025,6 @@ try {
    uint64_t service_id = reg_service(N(provider1111), update_start_time);
    add_fee_type(service_id);
 
-   std::string a = "provider";
-
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-
-      stake_asset(service_id, acc, core_sym::from_string("1000.0000"));
-
-      produce_blocks(1);
-   }
-
-   a = "consumer";
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-      subscribe_service(service_id, acc, acc);
-      pay_service(service_id, acc, core_sym::from_string("10.0000"));
-
-      produce_blocks(1);
-   }
-
    /// publish data
    {
       auto services = get_data_service(service_id);
@@ -1071,7 +1051,7 @@ try {
       const string data_json = "publish test data json";
       uint64_t request_id = 0;
 
-      a = "provider";
+      std::string a = "provider";
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
@@ -1081,7 +1061,7 @@ try {
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      BOOST_REQUIRE_EQUAL(wasm_assert_msg("repeat push data"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
 
       // BOOST_TEST0 == 8);
       auto oracledata = get_oracle_data(service_id, update_number);
@@ -1103,47 +1083,40 @@ try {
    uint64_t service_id = reg_service(N(provider1111), update_start_time);
    add_fee_type(service_id);
 
-   std::string a = "provider";
-
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-
-      stake_asset(service_id, acc, core_sym::from_string("1000.0000"));
-
-      produce_blocks(1);
-   }
-
-   a = "consumer";
-   for (int j = 1; j <= 5; ++j) {
-      std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
-      name acc = name(acc_name.c_str());
-      subscribe_service(service_id, acc, acc);
-      pay_service(service_id, acc, core_sym::from_string("10.0000"));
-
-      produce_blocks(1);
-   }
-
    /// publish data
    {
       auto services = get_data_service(service_id);
 
-      uint32_t update_cycle = services["update_cycle"].as<uint64_t>();
+      uint32_t update_cycle = services["update_cycle"].as<uint32_t>();
       BOOST_REQUIRE(update_cycle > 0);
-      uint32_t duration = services["duration"].as<uint64_t>();
+      uint32_t duration = services["duration"].as<uint32_t>();
+      time_point_sec update_start_time = services["update_start_time"].as<time_point_sec>();
       BOOST_REQUIRE(duration > 0);
-      uint64_t update_number = update_start_time.sec_since_epoch() / update_cycle;
+      time_point_sec current_time = time_point_sec(control->head_block_time());
+
+      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint32_t current_duration_end_time = current_duration_begin_time + duration;
+      if (current_time.sec_since_epoch() > current_duration_end_time) {
+         produce_block(fc::seconds(duration));
+      }
+
+      current_time = time_point_sec(control->head_block_time());
+
+      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+
       const string data_json = "publish test data json";
-      const string differ_data_json = "publish test differ data json";
       uint64_t request_id = 0;
 
-      a = "provider";
+      std::string a = "provider";
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
          auto data = pushdata(service_id, acc, update_number, request_id, data_json);
          produce_blocks(2);
       }
+
+      const string differ_data_json = " publish test differ data json";
 
       auto data = pushdata(service_id, N(provider5555), update_number, request_id, differ_data_json);
 
@@ -1184,7 +1157,7 @@ try {
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
    uint64_t service_id = reg_service(account, update_start_time);
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
 
    // subscribe service
    {
@@ -1192,15 +1165,13 @@ try {
       name account = N(bob);
       asset amount = core_sym::from_string("0.0000");
       std::string memo = "";
+      // BOOST_TEST(0 == service_id);
+
       auto subs = subscribe(service_id, contract_account, account, memo);
 
-      auto consumer = get_data_consumer(account);
-      auto time = consumer["create_time"];
-      //  //BOOST_TEST"" == "1221ss");
-      BOOST_REQUIRE(0 == consumer["status"].as<uint8_t>());
-      //  //BOOST_TEST"" == "11ss");
-      auto subscription = get_data_service_subscription(service_id, contract_account);
-      // BOOST_TEST"" == "ss");
+      // BOOST_TEST("" == "11ss");
+      auto subscription = get_data_service_subscription(service_id, account);
+      // BOOST_TEST("" == "ss");
       BOOST_TEST_REQUIRE(amount == subscription["payment"].as<asset>());
       BOOST_TEST_REQUIRE(account == subscription["account"].as<name>());
    }
@@ -1215,7 +1186,7 @@ try {
    uint64_t service_id = reg_service(account, update_start_time);
 
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
    pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
 
@@ -1236,7 +1207,7 @@ try {
    uint64_t service_id = reg_service(account, update_start_time);
 
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
 
    /// pay service
@@ -1256,7 +1227,7 @@ try {
    uint64_t service_id = reg_service(account, update_start_time);
 
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
    pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    request_data(service_id, N(bob));
@@ -1270,7 +1241,7 @@ try {
       push_permission_update_auth_action(N(consumer.bos));
       auto token = claim(account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("994.8000"), get_balance("alice"));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("2000.1333"), get_balance("alice"));
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1282,7 +1253,7 @@ try {
    uint64_t service_id = reg_service(account, update_start_time);
 
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
    pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    /// deposit
@@ -1292,7 +1263,7 @@ try {
       std::string quantity = "1.0000";
       bool is_notify = false;
       // auto token = deposit(service_id, from, to, quantity, memo, is_notify);
-      std::string memo = "2," + std::to_string(service_id) + ",dappuser,bob,0";
+      std::string memo = "2,dappuser,bob,0";
       transfer(from, N(oracle.bos), quantity, from.to_string().c_str(), memo);
 
       auto app_balance = get_riskcontrol_account(to, "4,BOS");
@@ -1308,7 +1279,7 @@ try {
    uint64_t service_id = reg_service(account, update_start_time);
 
    add_fee_type(service_id);
-   stake_asset(service_id, N(alice), core_sym::from_string("10.0000"));
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
    pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
    request_data(service_id, N(bob));
@@ -2091,7 +2062,6 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE(arbi_unstakearbi_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
@@ -2210,14 +2180,17 @@ try {
 
    name provider_name = N(provider1111);
 
-   // BOOST_TESTcore_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
-   // BOOST_TESTcore_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
+   // BOOST_TEST(core_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
+   // BOOST_TEST(core_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
+
    // //BOOST_TESTcore_sym::from_string("19800.0002") == get_balance(acc));
 
    /// appeal
    // _appeal(arbitration_id, appeal_name, round, amount, role_type);
    BOOST_REQUIRE_EXCEPTION(_appeal(arbitration_id, appeal_name, round, amount, role_type), eosio_assert_message_exception, eosio_assert_message_is("no provider"));
    // BOOST_REQUIRE_EQUAL(wasm_assert_msg("no provider"), _appeal(arbitration_id, appeal_name, round, amount, role_type));
+   // BOOST_TEST(core_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
+   // BOOST_TEST(core_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());
 
    //  BOOST_REQUIRE_EQUAL(core_sym::from_string("20000.0002"), get_balance(acc));
    // BOOST_TEST_REQUIRE(core_sym::from_string("1000.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
