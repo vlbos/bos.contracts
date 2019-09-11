@@ -27,7 +27,6 @@ using std::string;
 struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
    name appeallant;
    std::string reason;
-   asset amount;
    uint8_t role_type; // 1110 is_respondent is_sponsor is_provider
    time_point_sec appeal_time;
 

@@ -217,7 +217,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    uint8_t sponsor_bit = 0;
    uint8_t provider_bit = 0;
    // 空或申请结束两种情况又产生新的申诉
-   if (appeal_request_tb.begin() != appeal_request_tb.end()) {
+   if (appeal_request_tb.begin() == appeal_request_tb.end()) {
       sponsor_bit = arbitration_role_type::sponsor;
    }
    if (arbitration_role_type::provider == role_type) {

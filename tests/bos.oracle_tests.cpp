@@ -1653,6 +1653,11 @@ try {
       name from = name(appeal_name.c_str());
       transfer(from, to, amount, appeal_name.c_str(), memo);
       produce_blocks(1);
+
+      
+      auto appeal_req_t = get_appeal_request(arbitration_id<<2|round, from.value);
+      uint64_t role_type_t = appeal_req_t["role_type"].as<uint8_t>();
+      BOOST_TEST(6 == role_type_t);
       auto arbis = get_arbitration_process(arbitration_id, round);
       uint64_t id = arbis["round"].as<uint8_t>();
       BOOST_TEST_REQUIRE(round == id);
