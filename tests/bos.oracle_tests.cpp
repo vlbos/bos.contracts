@@ -1654,8 +1654,7 @@ try {
       transfer(from, to, amount, appeal_name.c_str(), memo);
       produce_blocks(1);
 
-      
-      auto appeal_req_t = get_appeal_request(arbitration_id<<2|round, from.value);
+      auto appeal_req_t = get_appeal_request(arbitration_id << 2 | round, from.value);
       uint64_t role_type_t = appeal_req_t["role_type"].as<uint8_t>();
       BOOST_TEST(6 == role_type_t);
       auto arbis = get_arbitration_process(arbitration_id, round);
@@ -1893,6 +1892,66 @@ try {
 
    produce_blocks(60 * 60 * 2 + 10);
 
+   /// get arbitration result
+   {
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint64_t arbitration_result = arbis["arbitration_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == arbitration_result);
+      uint64_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == final_result);
+      produce_blocks(1);
+   }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(arbi_upload_result_same_timeout_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appeallant11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   // accept_invitation(arbitration_id, round);
+   {
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      vector<name> arbivec = arbis["chosen_arbitrators"].as<vector<name>>();
+      BOOST_TEST_REQUIRE(3 == arbivec.size());
+      for (uint8_t i = 0; i < arbivec.size(); i++) {
+         acceptarbi(arbivec[i], arbitration_id);
+         produce_blocks(1);
+      }
+   }
+   uint8_t result = 1;
+   /// upload result
+   // upload_result(arbitration_id, round, result);
+   {
+      auto arbis = get_arbitration_process(arbitration_id, round);
+      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      BOOST_TEST_REQUIRE(3 == arbivec.size());
+
+      for (uint8_t i = 0; i < arbivec.size() - 1; i++) {
+         uploadresult(arbivec[i], arbitration_id, result, "");
+         produce_blocks(1);
+      }
+   }
+
+   produce_blocks(60 * 60 * 2 + 10);
+
+   produce_blocks(60 * 60 * 2 + 10);
    /// get arbitration result
    {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
