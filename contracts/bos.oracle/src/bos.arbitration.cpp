@@ -312,7 +312,9 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration case . _respcase");
-   check(arbitration_case_itr->arbi_step != arbi_step_type::arbi_wait_for_upload_result, "arbitration setp shoule not be arbi_started");
+    std::set<uint8_t> steps = {arbi_step_type::arbi_wait_for_upload_result,arbi_step_type::arbi_reappeal_timeout_end, arbi_step_type::arbi_resp_appeal_timeout_end, arbi_step_type::arbi_public_end};
+   auto steps_itr = steps.find(arbitration_case_itr->arbi_step);
+   check(steps_itr == steps.end(), "arbitration setp shoule not be arbi_started");
 
    uint8_t current_round = arbitration_case_itr->last_round;
 
