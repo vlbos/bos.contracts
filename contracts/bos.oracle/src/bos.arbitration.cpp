@@ -100,11 +100,12 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    check(svc_itr->status == service_status::service_in, "service status shoule be service_in");
 
    uint64_t arbitration_id = service_id;
-
+   print("\nif (arbitration_role_type::consumer == role_type) ");
    if (arbitration_role_type::consumer == role_type) {
       const uint8_t arbi_freeze_stake_duration = 1; // days
       // add_freeze
       const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
+       print("\nif (arbitration_role_type::consumer == role_type) in");
       add_freeze(service_id, appeallant, bos_oracle::current_time_point_sec(), duration, amount, arbitration_id);
    }
 
@@ -258,24 +259,36 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
          }
 
       } else {
+         //recheck service status is 'in'
+         data_services svctable(get_self(), get_self().value);
+         auto svc_itr = svctable.find(service_id);
+         check(svc_itr != svctable.end(), "service does not exist");
+         print( "\n no status=",svc_itr->status );
+         check(svc_itr->status == service_status::service_in, "service status is not service_in when notify");
          // Data provider
          auto svcprovider_tb = data_service_provisions(get_self(), service_id);
          check(svcprovider_tb.begin() != svcprovider_tb.end(), "Such service has no providers.");
-
-         // Service data providers
-         bool hasProvider = false;
-         // 对所有的数据提供者发送通知, 通知数据提供者应诉
-         for (auto itr = svcprovider_tb.begin(); itr != svcprovider_tb.end(); ++itr) {
-            if (itr->status == provision_status::provision_reg) {
-               hasProvider = true;
-               auto notify_amount = eosio::asset(1, core_symbol());
-               // Transfer to provider
-               auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-               transfer(get_self(), itr->account, notify_amount, memo);
+         std::vector<name> reg_providers;
+         for(auto& p:svcprovider_tb)
+         {
+            if (p.status == provision_status::provision_reg) 
+            {
+               reg_providers.push_back(p.account);
             }
          }
 
-         check(hasProvider, "no provider");
+         check(reg_providers.size()>=svc_itr->provider_limit, "current available providers is insufficient");
+         // Service data providers
+
+         // 对所有的数据提供者发送通知, 通知数据提供者应诉
+         for (auto& account:reg_providers) {
+               auto notify_amount = eosio::asset(1, core_symbol());
+               // Transfer to provider
+               auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
+               transfer(get_self(), account, notify_amount, memo);
+         }
+
+        
       }
 
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {

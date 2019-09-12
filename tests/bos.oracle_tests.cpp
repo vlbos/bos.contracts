@@ -2170,7 +2170,7 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(arbi_arbi_freeze_stake_large_test, bos_oracle_tester)
+BOOST_FIXTURE_TEST_CASE(arbi_freeze_stake_large_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
    /// reg arbitrator
@@ -2192,7 +2192,7 @@ try {
 
    /// appeal
    // _appeal(arbitration_id, appeal_name, round, amount, role_type);
-   BOOST_REQUIRE_EXCEPTION(_appeal(arbitration_id, appeal_name, round, amount, role_type), eosio_assert_message_exception, eosio_assert_message_is("no provider"));
+   BOOST_REQUIRE_EXCEPTION(_appeal(arbitration_id, appeal_name, round, amount, role_type), eosio_assert_message_exception, eosio_assert_message_is("service status is not service_in when notify"));
    // BOOST_REQUIRE_EQUAL(wasm_assert_msg("no provider"), _appeal(arbitration_id, appeal_name, round, amount, role_type));
    // BOOST_TEST(core_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
    // BOOST_TEST(core_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());

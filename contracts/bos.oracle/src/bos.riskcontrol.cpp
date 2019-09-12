@@ -247,6 +247,7 @@ void bos_oracle::add_freeze_delay(uint64_t service_id, name account, time_point_
 }
 
 void bos_oracle::add_freeze(uint64_t service_id, name account, time_point_sec start_time, uint32_t duration, asset amount, uint64_t arbitration_id) {
+   print("\nadd_freeze in");
 
    std::vector<std::tuple<name, asset>> providers = get_provider_list(service_id);
 
@@ -325,7 +326,7 @@ uint64_t bos_oracle::freeze_providers_amount(uint64_t service_id, const std::set
 }
 
 void bos_oracle::freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id) {
-
+   print("\freeze_asset in");
    data_providers providertable(_self, _self.value);
    auto provider_itr = providertable.find(account.value);
    check(provider_itr != providertable.end(), "no provider found in freeze asset");

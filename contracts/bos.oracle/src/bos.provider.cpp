@@ -152,9 +152,11 @@ void bos_oracle::update_service_status(uint64_t service_id) {
       }
    }
 
-   print("\navailable_service_providers_count=", available_service_providers_count);
+   print("\navailable_service_providers_count=", available_service_providers_count,"status",service_itr->status);
    if (available_service_providers_count < service_itr->provider_limit && service_status::service_in == service_itr->status) {
-      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_pause_insufficient_providers; });
+      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_pause_insufficient_providers; 
+         print("\navailable_service_providers_count=", available_service_providers_count,"status",service_itr->status);
+         });
    } else if (available_service_providers_count >= service_itr->provider_limit &&
               (service_status::service_init == service_itr->status || service_status::service_pause_insufficient_providers == service_itr->status)) {
       print("\n ======svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });");
