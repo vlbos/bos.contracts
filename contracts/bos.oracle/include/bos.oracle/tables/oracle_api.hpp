@@ -8,9 +8,21 @@
 */
 
 #include <eosio/eosio.hpp>
+#include <string>
 //
 
 using namespace eosio;
+
+struct  push_json
+{
+  uint64_t service_id;
+  name provider;
+  name contract_account;
+  uint64_t request_id;
+  std::string data_json;
+ 
+  EOSLIB_SERIALIZE(push_json, (service_id)(provider)(contract_account)(request_id)(data_json))
+};
 
 /**
  * @brief 推送数据
@@ -18,7 +30,7 @@ using namespace eosio;
  */
 struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_data_record {
   uint64_t update_number;
-  string value;
+  std::string value;
   uint64_t timestamp;
 
   uint64_t primary_key() const { return update_number; }
@@ -29,7 +41,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_data_record {
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_request_data_record {
   uint64_t request_id;
-  string value;
+  std::string value;
   uint64_t timestamp;
 
   uint64_t primary_key() const { return request_id; }

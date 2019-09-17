@@ -69,6 +69,16 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
       assert_sha256( prop.packed_transaction.data(), prop.packed_transaction.size(), *proposal_hash );
    }
 
+   //check whether opposed or abstained to this proposal.
+   opposes oppotable(_self, proposer.value );
+   auto oppos_it = oppotable.find(proposal_name.value );
+   if(oppos_it != oppotable.end() ){
+	  auto check_itr = std::find( oppos_it->opposed_approvals.begin(), oppos_it->opposed_approvals.end(), level );
+	  check( check_itr == oppos_it->opposed_approvals.end(), "you already opposed this proposal" );
+	  check_itr = std::find( oppos_it->abstained_approvals.begin(), oppos_it->abstained_approvals.end(), level );
+	  check( check_itr == oppos_it->abstained_approvals.end(), "you already abstained this proposal" );
+   }
+
    approvals apptable(  _self, proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
    if ( apps_it != apptable.end() ) {
@@ -139,6 +149,138 @@ void multisig::cancel( name proposer, name proposal_name, name canceler ) {
       check( apps_it != old_apptable.end(), "proposal not found" );
       old_apptable.erase(apps_it);
    }
+
+   //remove from oppose table
+   opposes oppotable(_self, proposer.value );
+   auto oppo_it = oppotable.find( proposal_name.value );
+   if( oppo_it != oppotable.end() ){
+   	  oppotable.erase(oppo_it);
+   	}
+}
+
+void multisig::oppose( name proposer, name proposal_name, permission_level level,
+                        const eosio::binary_extension<eosio::checksum256>& proposal_hash ){
+   require_auth( level );
+   if( proposal_hash ) {
+	  proposals proptable( _self, proposer.value );
+	  auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+	  assert_sha256( prop.packed_transaction.data(), prop.packed_transaction.size(), *proposal_hash );
+   }
+
+   //check whether level is in requested approvals or already approved to it
+   approvals apptable( _self, proposer.value );
+   auto app_it = apptable.find(proposal_name.value );
+   if( app_it != apptable.end() ){
+      auto requested_it = std::find_if( app_it->requested_approvals.begin(), app_it->requested_approvals.end(), [&](const approval& a) { return a.level == level; } );
+      bool requested = (requested_it != app_it->requested_approvals.end());
+      auto approved_it = std::find_if( app_it->provided_approvals.begin(), app_it->provided_approvals.end(), [&](const approval &a){ return a.level == level;} );
+      bool approved = (approved_it != app_it->provided_approvals.end());
+	  check( requested && !approved , "provided permission not requested, or you have approved to this proposal" );
+   }else{
+      old_approvals old_apptable( _self, proposer.value );
+      auto old_app_it = old_apptable.find( proposal_name.value );
+      if( old_app_it != old_apptable.end() ){
+         auto requested_it = std::find( old_app_it->requested_approvals.begin(), old_app_it->requested_approvals.end(), level );
+         bool requested =  (requested_it != old_app_it->requested_approvals.end());
+         auto approved_it = std::find( old_app_it->provided_approvals.begin(), old_app_it->provided_approvals.end(), level );
+		 bool approved = (approved_it != old_app_it->provided_approvals.end());
+         check( requested && !approved , "provided permission not requested, or you have approved to this proposal" );
+      }
+   }
+
+   //check whether abstained/opposed to this proposal
+   //update opposed
+   opposes oppotable(	_self, proposer.value );
+   auto oppo_it = oppotable.find( proposal_name.value );
+   if ( oppo_it != oppotable.end() ) {
+	  auto abs_check_it = std::find( oppo_it->abstained_approvals.begin(), oppo_it->abstained_approvals.end(), level );
+	  check( abs_check_it == oppo_it->abstained_approvals.end(), "you have abstained to this proposal" );
+      auto oppo_check_it = std::find( oppo_it->opposed_approvals.begin(), oppo_it->opposed_approvals.end(), level);
+	  check( oppo_check_it == oppo_it->opposed_approvals.end(), "you have opposed to this proposal" );
+	  oppotable.modify( oppo_it, proposer, [&]( auto& o ) {
+			o.opposed_approvals.push_back( level );
+	     });
+   }else{
+      oppotable.emplace( proposer, [&]( auto& o ) {
+            o.proposal_name       = proposal_name;
+            o.opposed_approvals.push_back( level );
+         });
+   }
+}
+
+void multisig::unoppose( name proposer, name proposal_name, permission_level level ){
+   require_auth( level );
+
+   opposes oppotable(  _self, proposer.value );
+   auto& oppo_it = oppotable.get( proposal_name.value, "can't find this proposal in opposes table" );
+   auto itr = std::find( oppo_it.opposed_approvals.begin(), oppo_it.opposed_approvals.end(), level );
+   check( itr != oppo_it.opposed_approvals.end(), "no oppose found" );
+   oppotable.modify( oppo_it, proposer, [&]( auto& o ) {
+         o.opposed_approvals.erase( itr );
+      });
+}
+
+void multisig::abstain( name proposer, name proposal_name, permission_level level,
+                        const eosio::binary_extension<eosio::checksum256>& proposal_hash ){
+   require_auth( level );
+
+   if( proposal_hash ) {
+	  proposals proptable( _self, proposer.value );
+	  auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+	  assert_sha256( prop.packed_transaction.data(), prop.packed_transaction.size(), *proposal_hash );
+   }
+
+   //check whether level is in requested approvals or already approved to it
+   approvals apptable( _self, proposer.value );
+   auto app_it = apptable.find(proposal_name.value );
+   if( app_it != apptable.end() ){
+      auto requested_it = std::find_if( app_it->requested_approvals.begin(), app_it->requested_approvals.end(), [&](const approval& a) { return a.level == level; } );
+      bool requested = (requested_it != app_it->requested_approvals.end());
+      auto approved_it = std::find_if( app_it->provided_approvals.begin(), app_it->provided_approvals.end(), [&](const approval &a){ return a.level == level;} );
+      bool approved = (approved_it != app_it->provided_approvals.end());
+	  check( requested && !approved , "provided permission not requested, or you have approved to this proposal" );
+   }else{
+      old_approvals old_apptable( _self, proposer.value );
+      auto old_app_it = old_apptable.find( proposal_name.value );
+      if( old_app_it != old_apptable.end() ){
+         auto requested_it = std::find( old_app_it->requested_approvals.begin(), old_app_it->requested_approvals.end(), level );
+         bool requested = (requested_it != old_app_it->requested_approvals.end());
+         auto approved_it = std::find( old_app_it->provided_approvals.begin(), old_app_it->provided_approvals.end(), level );
+		 bool approved = (approved_it != old_app_it->provided_approvals.end());
+         check( requested && !approved , "provided permission not requested, or you have approved to this proposal" );
+      }
+   }
+
+   //check whether abstained/opposed to this proposal
+   //update abstained
+   opposes oppotable(	_self, proposer.value );
+   auto abs_it = oppotable.find( proposal_name.value );
+   if ( abs_it != oppotable.end() ) {
+	  auto abs_check_it = std::find( abs_it->abstained_approvals.begin(), abs_it->abstained_approvals.end(), level );
+	  check( abs_check_it == abs_it->abstained_approvals.end(), "you have abstained to this proposal" );
+      auto oppo_check_it = std::find( abs_it->opposed_approvals.begin(), abs_it->opposed_approvals.end(), level);
+	  check( oppo_check_it == abs_it->opposed_approvals.end(), "you have opposed to this proposal" );
+	  oppotable.modify( abs_it, proposer, [&]( auto& a ) {
+			a.abstained_approvals.push_back( level );
+	     });
+   }else{
+      oppotable.emplace( proposer, [&]( auto& a ) {
+            a.proposal_name       = proposal_name;
+            a.abstained_approvals.push_back( level );
+         });
+   }
+}
+
+void multisig::unabstain( name proposer, name proposal_name, permission_level level ){
+   require_auth( level );
+
+   opposes oppotable(  _self, proposer.value );
+   auto& abs_it = oppotable.get( proposal_name.value, "can't find this proposal in opposes table" );
+   auto itr = std::find( abs_it.abstained_approvals.begin(), abs_it.abstained_approvals.end(), level );
+   check( itr != abs_it.abstained_approvals.end(), "no abstain found" );
+   oppotable.modify( abs_it, proposer, [&]( auto& a ) {
+         a.abstained_approvals.erase( itr );
+      });
 }
 
 void multisig::exec( name proposer, name proposal_name, name executer ) {
@@ -186,6 +328,13 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
                   prop.packed_transaction.data(), prop.packed_transaction.size() );
 
    proptable.erase(prop);
+
+   //clear opposes
+   opposes oppotable(_self, proposer.value);
+   auto oppos_it = oppotable.find( proposal_name.value );
+   if( oppos_it != oppotable.end() ){
+      oppotable.erase( oppos_it );
+   }
 }
 
 void multisig::invalidate( name account ) {
@@ -206,4 +355,4 @@ void multisig::invalidate( name account ) {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )
+EOSIO_DISPATCH( eosio::multisig, (propose)(approve)(unapprove)(cancel)(oppose)(unoppose)(abstain)(unabstain)(exec)(invalidate) )

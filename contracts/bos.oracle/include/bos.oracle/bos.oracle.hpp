@@ -174,7 +174,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
    /// arbitration
    void _regarbitrat(name account, uint8_t type, asset amount, std::string public_info);
-   void _appeal(name appeallant, uint64_t service_id, asset amount, std::string reason, std::string evidence, uint8_t role_type);
+   void _appeal(name appellant, uint64_t service_id, asset amount, std::string reason, std::string evidence, uint8_t role_type);
    void _respcase(name respondent, uint64_t arbitration_id, asset amount, std::string evidence);
 
    void handle_arbitration(uint64_t arbitration_id);

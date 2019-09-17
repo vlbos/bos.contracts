@@ -25,12 +25,12 @@ using std::string;
  * 
  */
 struct [[eosio::table, eosio::contract("bos.oracle")]] appeal_request {
-   name appeallant;
+   name appellant;
    std::string reason;
    uint8_t role_type; // 1110 is_respondent is_sponsor is_provider
    time_point_sec appeal_time;
 
-   uint64_t primary_key() const { return appeallant.value; }
+   uint64_t primary_key() const { return appellant.value; }
 };
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
@@ -65,7 +65,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
    uint8_t round;
    uint8_t required_arbitrator;
    uint8_t increment_arbitrator;
-   std::vector<name> appeallants;
+   std::vector<name> appellants;
    std::vector<name> respondents;
    std::vector<name> arbitrators;
    std::vector<name> invited_arbitrators;
