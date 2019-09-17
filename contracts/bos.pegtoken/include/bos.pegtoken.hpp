@@ -31,9 +31,9 @@ public:
 
     [[eosio::action]] void retire( asset quantity, string memo );
 
-    [[eosio::action]] void setpartner( symbol_code sym_code, string action, name appeallant );
+    [[eosio::action]] void setpartner( symbol_code sym_code, string action, name applicant );
 
-    [[eosio::action]] void applyaddr( name appeallant, symbol_code sym_code, name to );
+    [[eosio::action]] void applyaddr( name applicant, symbol_code sym_code, name to );
 
     [[eosio::action]] void assignaddr( symbol_code sym_code, name to, string address );
 
@@ -80,10 +80,10 @@ private:
         uint64_t primary_key() const { return sym.code().raw(); }
     };
 
-    struct [[eosio::table]] appeallant_ts {
-        name appeallant;
+    struct [[eosio::table]] applicant_ts {
+        name applicant;
 
-        uint64_t primary_key() const { return appeallant.value; }
+        uint64_t primary_key() const { return applicant.value; }
     };
 
     struct [[eosio::table]] addr_ts {
@@ -220,7 +220,7 @@ private:
 
     using symbols = eosio::multi_index< "symbols"_n, symbol_ts >;
 
-    using appeallants = eosio::multi_index< "appeallants"_n, appeallant_ts >;
+    using applicants = eosio::multi_index< "applicants"_n, applicant_ts >;
 
     using addrs = eosio::multi_index< "addrs"_n, addr_ts,
         indexed_by< "addr"_n, const_mem_fun< addr_ts, uint64_t, &addr_ts::by_addr > >,
