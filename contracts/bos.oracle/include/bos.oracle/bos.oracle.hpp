@@ -187,7 +187,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
    void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
    void handle_upload_result(uint64_t arbitration_id, uint8_t round);
-   std::tuple<std::vector<name>, asset> get_balances(uint64_t arbitration_id, uint8_t role_type);
+   std::tuple<std::vector<name>, asset,std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
    std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
    void slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount);
    void slash_arbitration_stake(uint64_t arbitration_id, std::vector<name> & slash_accounts);

@@ -80,6 +80,7 @@ void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::str
       p.invitations = 0;                          ///邀请次数
       p.responses = 0;                            ///接收邀请次数
       p.uncommitted_arbitration_result_times = 0; ///未提交仲裁结果次数
+      p.status = 0xff;                            /// oracel version 1.0 set unstakearbi disable for arbitrator
    });
 }
 
@@ -105,7 +106,7 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
       const uint8_t arbi_freeze_stake_duration = 1; // days
       // add_freeze
       const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
-       print("\nif (arbitration_role_type::consumer == role_type) in");
+      print("\nif (arbitration_role_type::consumer == role_type) in");
       add_freeze(service_id, appeallant, bos_oracle::current_time_point_sec(), duration, amount, arbitration_id);
    }
 
@@ -242,66 +243,88 @@ void bos_oracle::_appeal(name appeallant, uint64_t service_id, asset amount, std
    print("appeal 2 >>>>>>role_type", role_type);
    stake_arbitration(arbitration_id, appeallant, amount, current_round, role_type, "");
 
-   if (first_one) {
-      if (arbitration_role_type::provider == role_type) {
-         uint8_t previous_round = current_round - 1;
-         check(previous_round > 0, "wrong round");
-         auto arbiprocess_itr = arbiprocess_tb.find(previous_round);
-         check(arbiprocess_itr != arbiprocess_tb.end(), "no round info");
-
-         check(arbiprocess_itr->appeallants.size() > 0, "no appeallant in the round ");
-
-         for (auto& a : arbiprocess_itr->appeallants) {
-            auto notify_amount = eosio::asset(1, core_symbol());
-            // Transfer to appeallant
-            auto memo = "resp appeallant >arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-            transfer(get_self(), a, notify_amount, memo);
-         }
-
-      } else {
-         //recheck service status is 'in'
-         data_services svctable(get_self(), get_self().value);
-         auto svc_itr = svctable.find(service_id);
-         check(svc_itr != svctable.end(), "service does not exist");
-         print( "\n no status=",svc_itr->status );
-         check(svc_itr->status == service_status::service_in, "service status is not service_in when notify");
-         // Data provider
-         auto svcprovider_tb = data_service_provisions(get_self(), service_id);
-         check(svcprovider_tb.begin() != svcprovider_tb.end(), "Such service has no providers.");
-         std::vector<name> reg_providers;
-         for(auto& p:svcprovider_tb)
-         {
-            if (p.status == provision_status::provision_reg) 
-            {
-               reg_providers.push_back(p.account);
-            }
-         }
-
-         check(reg_providers.size()>=svc_itr->provider_limit, "current available providers is insufficient");
-         // Service data providers
-
-         // 对所有的数据提供者发送通知, 通知数据提供者应诉
-         for (auto& account:reg_providers) {
-               auto notify_amount = eosio::asset(1, core_symbol());
-               // Transfer to provider
-               auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-               transfer(get_self(), account, notify_amount, memo);
-         }
-
-        
-      }
-
-      arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
-         p.arbi_step = arbi_step_type::arbi_wait_for_resp_appeal;
-         p.last_round = current_round;
-      });
-      const uint8_t arbi_resp_appeal_timeout_value = 1; // hours
-      timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout, eosio::hours(arbi_resp_appeal_timeout_value).to_seconds());
-   }
-
    if (!evidence.empty()) {
       uploadeviden(appeallant, arbitration_id, evidence);
    }
+
+   if (!first_one) {
+      return;
+   }
+
+   auto sent_notify = [&](const vector<name>& accounts) {
+      for (auto& a : accounts) {
+         auto notify_amount = eosio::asset(1, core_symbol());
+         auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
+         transfer(get_self(), a, notify_amount, memo);
+      }
+   };
+
+   auto get_providers_by_service_id = [&](const uint64_t service_id) -> std::vector<name> {
+      // Data provider
+      auto svcprovider_tb = data_service_provisions(get_self(), service_id);
+      check(svcprovider_tb.begin() != svcprovider_tb.end(), "Such service has no providers.");
+      std::vector<name> reg_providers;
+      for (auto& p : svcprovider_tb) {
+         if (p.status == provision_status::provision_reg) {
+            reg_providers.push_back(p.account);
+         }
+      }
+
+      return reg_providers;
+   };
+
+   if (arbitration_role_type::provider == role_type) {
+      uint8_t previous_round = current_round - 1;
+      check(previous_round > 0, "wrong round");
+      auto arbiprocess_itr = arbiprocess_tb.find(previous_round);
+      check(arbiprocess_itr != arbiprocess_tb.end(), "no round info");
+
+      check(arbiprocess_itr->appeallants.size() > 0, "no appeallant in the round ");
+      sent_notify(arbiprocess_itr->appeallants);
+      // for (auto& a : arbiprocess_itr->appeallants) {
+      //    auto notify_amount = eosio::asset(1, core_symbol());
+      //    // Transfer to appeallant
+      //    auto memo = "resp appeallant >arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
+      //    transfer(get_self(), a, notify_amount, memo);
+      // }
+
+   } else {
+      // recheck service status is 'in'
+      data_services svctable(get_self(), get_self().value);
+      auto svc_itr = svctable.find(service_id);
+      check(svc_itr != svctable.end(), "service does not exist");
+      print("\n no status=", svc_itr->status);
+      check(svc_itr->status == service_status::service_in, "service status is not service_in when notify");
+      // // Data provider
+      // auto svcprovider_tb = data_service_provisions(get_self(), service_id);
+      // check(svcprovider_tb.begin() != svcprovider_tb.end(), "Such service has no providers.");
+      std::vector<name> reg_providers = get_providers_by_service_id(service_id);
+      // for (auto& p : svcprovider_tb) {
+      //    if (p.status == provision_status::provision_reg) {
+      //       reg_providers.push_back(p.account);
+      //    }
+      // }
+
+      check(reg_providers.size() >= svc_itr->provider_limit, "current available providers is insufficient");
+      // Service data providers
+
+      // 对所有的数据提供者发送通知, 通知数据提供者应诉
+      sent_notify(reg_providers);
+      // for (auto& account : reg_providers) {
+      //    auto notify_amount = eosio::asset(1, core_symbol());
+      //    // Transfer to provider
+      //    auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
+      //    transfer(get_self(), account, notify_amount, memo);
+      // }
+   }
+
+   arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
+      p.arbi_step = arbi_step_type::arbi_wait_for_resp_appeal;
+      p.last_round = current_round;
+   });
+
+   const uint8_t arbi_resp_appeal_timeout_value = 1; // hours
+   timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout, eosio::hours(arbi_resp_appeal_timeout_value).to_seconds());
 }
 
 void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amount, std::string evidence) {
@@ -312,9 +335,7 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration case . _respcase");
-    std::set<uint8_t> steps = {arbi_step_type::arbi_wait_for_upload_result,arbi_step_type::arbi_reappeal_timeout_end, arbi_step_type::arbi_resp_appeal_timeout_end, arbi_step_type::arbi_public_end};
-   auto steps_itr = steps.find(arbitration_case_itr->arbi_step);
-   check(steps_itr == steps.end(), "arbitration setp shoule not be arbi_started");
+   check(arbitration_case_itr->arbi_step < arbi_step_type::arbi_wait_for_upload_result, "arbitration setp shoule not be arbi_started");
 
    uint8_t current_round = arbitration_case_itr->last_round;
 
@@ -924,50 +945,43 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
       loser_role_type = arbitration_role_type::consumer;
    }
-   std::tuple<std::vector<name>, asset> slash_stake_accounts = get_balances(arbitration_id, loser_role_type);
-   int64_t slash_amount = std::get<1>(slash_stake_accounts).amount;
+
+   std::tuple<std::vector<name>, asset, std::vector<name>> slash_stake_accounts = get_stake_accounts_and_asset(arbitration_id, loser_role_type);
+
+   // slash all losers' arbitration stake
+   slash_arbitration_stake(arbitration_id, std::get<0>(slash_stake_accounts));
+   asset slash_arbitration_stake_amount = std::get<1>(slash_stake_accounts);
+   asset slash_service_stake_amount = asset(0, core_symbol());
 
    // if final winner is not provider then slash  all service providers' stakes
    if (arbitration_role_type::provider == loser_role_type) {
       std::tuple<std::vector<name>, asset> service_stakes = get_provider_service_stakes(service_id);
-      slash_amount += std::get<1>(service_stakes).amount; //  add slash service stake from all service providers
       slash_service_stake(service_id, std::get<0>(service_stakes), std::get<1>(service_stakes));
+      slash_service_stake_amount = std::get<1>(service_stakes);
    }
 
-   double dividend_percent = 0.8;
-   double slash_amount_dividend_part = slash_amount * dividend_percent;
-   double slash_amount_fee_part = slash_amount * (1 - dividend_percent);
-   bool check_value = (slash_amount_dividend_part > 0 && slash_amount_fee_part > 0);
-   // check(check_value, "slash_amount_dividend_part > 0 && slash_amount_fee_part > 0");
-
-   // award stake accounts
-   std::tuple<std::vector<name>, asset> award_stake_accounts = get_balances(arbitration_id, arbitration_case_itr->final_result);
-   // slash all losers' arbitration stake
-   slash_arbitration_stake(arbitration_id, std::get<0>(slash_stake_accounts));
-
-   std::vector<name> asa = std::get<0>(award_stake_accounts);
-
-   auto pay_arbitration = [&](std::vector<name>& award_accounts, double dividend_amount) {
+   auto pay_arbitration = [&](std::vector<name>& award_accounts, asset dividend_amount) {
       if (award_accounts.empty()) {
          print("\n=no accounts in award_accounts =");
          return;
       }
-      int64_t average_award_amount = static_cast<int64_t>(dividend_amount / award_accounts.size());
-      if (average_award_amount <= 0) {
+      asset average_award_amount = dividend_amount / award_accounts.size();
+      if (average_award_amount <= asset(0, core_symbol())) {
          print("\n=if (average_award_amount <= 0) =");
          return;
       }
 
       for (auto& a : award_accounts) {
-         add_income(a, asset(average_award_amount, core_symbol()));
+         add_income(a, average_award_amount);
       }
    };
 
-   pay_arbitration(std::get<0>(award_stake_accounts), slash_amount_dividend_part);
+   // award stake accounts
+   pay_arbitration(std::get<2>(slash_stake_accounts), slash_service_stake_amount);
 
    std::vector<name> arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
    // pay all arbitrators' arbitration fee
-   pay_arbitration(arbitrators, slash_amount_fee_part);
+   pay_arbitration(arbitrators, slash_arbitration_stake_amount);
 
    if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
       unfreeze_asset(service_id, arbitration_id);
@@ -1030,24 +1044,21 @@ void bos_oracle::add_balance(name owner, asset value, uint64_t arbitration_id, u
  * @param role_type
  * @return std::tuple<std::vector<name>,asset>
  */
-std::tuple<std::vector<name>, asset> bos_oracle::get_balances(uint64_t arbitration_id, uint8_t role_type) {
-   uint64_t stake_type = static_cast<uint64_t>(role_type);
+std::tuple<std::vector<name>, asset, std::vector<name>> bos_oracle::get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type) {
    arbitration_stake_accounts stake_acnts(_self, arbitration_id);
-   auto type_index = stake_acnts.get_index<"type"_n>();
-   auto type_itr = type_index.lower_bound(stake_type);
-   auto upper = type_index.upper_bound(stake_type);
    std::vector<name> accounts;
+   std::vector<name> opposant_accounts;
    asset stakes = asset(0, core_symbol());
-   for (; type_itr != upper; ++type_itr) {
-      if (type_itr->role_type == role_type) {
-         accounts.push_back(type_itr->account);
-         stakes += type_itr->balance;
+   for (auto& a : stake_acnts) {
+      if (a.role_type == role_type) {
+         accounts.push_back(a.account);
+         stakes += a.balance;
       } else {
-         break;
+         opposant_accounts.push_back(a.account);
       }
    }
 
-   return std::make_tuple(accounts, stakes);
+   return std::make_tuple(accounts, stakes, opposant_accounts);
 }
 
 /**

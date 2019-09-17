@@ -127,7 +127,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_stake_account
    asset balance; /// stake amount
    uint8_t role_type;
    uint64_t primary_key() const { return account.value; }
-   uint64_t by_type() const { return static_cast<uint64_t>(role_type); }
 };
 
 /**
@@ -160,8 +159,7 @@ typedef eosio::multi_index<"arbiprocess"_n, arbitration_process> arbitration_pro
 typedef eosio::multi_index<"arbievidence"_n, arbitration_evidence> arbitration_evidences;
 typedef eosio::multi_index<"arbiresults"_n, arbitration_result> arbitration_results;
 typedef eosio::multi_index<"fairawards"_n, fair_award> fair_awards;
-typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account, indexed_by<"type"_n, const_mem_fun<arbitration_stake_account, uint64_t, &arbitration_stake_account::by_type>>>
-    arbitration_stake_accounts;
+typedef eosio::multi_index<"arbistakeacc"_n, arbitration_stake_account>    arbitration_stake_accounts;
 
 typedef eosio::multi_index<"arbistakes"_n, arbitration_stake_record> arbitration_stake_records;
 typedef eosio::multi_index<"arbiincomes"_n, arbitration_income_account> arbitration_income_accounts;

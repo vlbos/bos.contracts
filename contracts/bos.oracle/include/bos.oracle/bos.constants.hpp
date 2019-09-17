@@ -49,10 +49,10 @@ enum arbi_step_type : uint8_t {
    arbi_init = 1,
    arbi_choosing_arbitrator,
    arbi_wait_for_resp_appeal,
-   arbi_resp_appeal_timeout_end,
    arbi_wait_for_accept_arbitrate_invitation,
    arbi_wait_for_upload_result,
    arbi_wait_for_reappeal,
+   arbi_resp_appeal_timeout_end,
    arbi_reappeal_timeout_end,
    arbi_public_end
 };

@@ -90,7 +90,7 @@ void bos_oracle::reg_service_provider(uint64_t service_id, name account) {
 
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
+   check(service_itr != svctable.end(), "no service id in reg_service_provider");
 
    // add provider
    data_providers providertable(_self, _self.value);
@@ -132,7 +132,7 @@ void bos_oracle::reg_service_provider(uint64_t service_id, name account) {
 void bos_oracle::check_service_status(uint64_t service_id) {
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
+   check(service_itr != svctable.end(), "no service id in check_service_status");
 
    check(service_itr->status == service_status::service_in, " service status is not 'in(1)' ");
 }
@@ -179,7 +179,7 @@ void bos_oracle::check_service_provider_status(uint64_t service_id, name account
 void bos_oracle::update_service_provider_status(uint64_t service_id, name account) {
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
+   check(service_itr != svctable.end(), "no service id in update_service_provider_status");
 
    data_service_provisions provisionstable(_self, service_id);
    auto provision_itr = provisionstable.find(account.value);
@@ -228,7 +228,7 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
    // }
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
+   check(service_itr != svctable.end(), "no service id in update_stake_asset");
 
    data_providers providertable(_self, _self.value);
    auto provider_itr = providertable.find(account.value);
@@ -297,8 +297,8 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
    require_auth(_self);
 
    data_services svctable(get_self(), get_self().value);
-   auto svc_iter = svctable.find(service_id);
-   check(svc_iter != svctable.end(), "no service id");
+   auto service_itr = svctable.find(service_id);
+   check(service_itr != svctable.end(), "no service id in addfeetype");
 
    data_service_fees feetable(_self, service_id);
    check(fee_type >= fee_type::fee_times && fee_type < fee_type::fee_type_count, "unknown fee type");
@@ -335,7 +335,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_nu
 
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
-   check(service_itr != svctable.end(), "no service id");
+   check(service_itr != svctable.end(), "no service id in pushdata");
 
    if (service_itr->data_type == data_type::data_deterministic) {
       innerpublish(service_id, provider, update_number, request_id, data_json);
@@ -356,9 +356,9 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
    check(data_json.size() <= 256, "data_json could not greater than 256");
    require_auth(_self);
    data_services svctable(get_self(), get_self().value);
-   auto svc_iter = svctable.find(service_id);
-   check(svc_iter != svctable.end(), "no service id");
-   uint64_t servic_injection_method = svc_iter->injection_method;
+   auto service_itr = svctable.find(service_id);
+   check(service_itr != svctable.end(), "no service id in innerpush");
+   uint64_t servic_injection_method = service_itr->injection_method;
 
    check(service_status::service_in == get_service_status(service_id), "service and subscription must be available");
 

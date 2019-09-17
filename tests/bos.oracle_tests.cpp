@@ -2035,7 +2035,7 @@ try {
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
    std::string appeal_name = "appeallant11";
-   string amount = "200.0000";
+   string amount = "200.0003";
    uint8_t role_type = 1; /// consumer
    /// appeal
    _appeal(arbitration_id, appeal_name, round, amount, role_type);
@@ -2055,7 +2055,7 @@ try {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
       get_arbitration_income_account(N(appeallant11), "4,BOS");
-      BOOST_TEST_REQUIRE(1 == final_result);
+      BOOST_TEST_REQUIRE(result == final_result);
       produce_blocks(1);
    }
 
@@ -2065,13 +2065,22 @@ try {
    BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
 
    string acc = (*arbivec.begin()).to_string();
-   // BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
+   BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
    {
       name account = name(acc.c_str());
       name receive_account = account;
       auto token = claimarbi(arbitration_id, account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("10346.6668"), get_balance(acc));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("10066.6669"), get_balance(acc));
+   }
+
+   BOOST_TEST(core_sym::from_string("19799.9999") == get_balance(appeal_name));
+   {
+      name account = name(appeal_name.c_str());
+      name receive_account = account;
+      auto token = claimarbi(arbitration_id, account, receive_account);
+
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("24799.9999"), get_balance(appeal_name));
    }
 }
 FC_LOG_AND_RETHROW()
@@ -2085,7 +2094,7 @@ try {
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
    std::string appeal_name = "appeallant11";
-   string amount = "200.0000";
+   string amount = "200.0003";
    uint8_t role_type = 1; /// consumer
    /// appeal
    _appeal(arbitration_id, appeal_name, round, amount, role_type);
@@ -2115,13 +2124,13 @@ try {
    BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
 
    string acc = (*arbivec.begin()).to_string();
-   // BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
+   BOOST_TEST(core_sym::from_string("10000.0002") == get_balance(acc));
    {
       name account = name(acc.c_str());
       name receive_account = account;
       auto token = claimarbi(arbitration_id, account, receive_account);
 
-      BOOST_REQUIRE_EQUAL(core_sym::from_string("10013.3335"), get_balance(acc));
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("10066.6669"), get_balance(acc));
    }
 }
 FC_LOG_AND_RETHROW()
@@ -2159,7 +2168,7 @@ try {
       uint8_t result = 1;
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
-      BOOST_TEST_REQUIRE(1 == final_result);
+      BOOST_TEST_REQUIRE(result == final_result);
       produce_blocks(1);
    }
 
