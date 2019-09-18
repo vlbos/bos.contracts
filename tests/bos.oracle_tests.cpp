@@ -28,8 +28,8 @@ class bos_oracle_tester : public tester {
 
       set_code(N(oracle.bos), contracts::oracle_wasm());
       set_abi(N(oracle.bos), contracts::oracle_abi().data());
-      set_code(N(dappuser.bos), contracts::dappuser_wasm());
-      set_abi(N(dappuser.bos), contracts::dappuser_abi().data());
+      set_code(N(dappuser.bos), contracts::consumer_wasm());
+      set_abi(N(dappuser.bos), contracts::consumer_abi().data());
 
       produce_blocks();
 
@@ -63,7 +63,7 @@ class bos_oracle_tester : public tester {
       transfer("eosio", "dappuser", ("3000.0000"), "eosio");
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
 
-      std::vector<string> accounts_prefix = {"provider", "consumer", "appeallant", "arbitrators"};
+      std::vector<string> accounts_prefix = {"provider", "consumer", "appellants", "arbitrators"};
       for (auto& a : accounts_prefix) {
          for (int j = 1; j <= 5; ++j) {
             std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
@@ -89,8 +89,8 @@ class bos_oracle_tester : public tester {
          transfer("eosio", con_name.c_str(), ("20000.0000"), "eosio");
          produce_blocks(1);
          name consumer = name(con_name.c_str());
-         set_code(consumer, contracts::dappuser_wasm());
-         set_abi(consumer, contracts::dappuser_abi().data());
+         set_code(consumer, contracts::consumer_wasm());
+         set_abi(consumer, contracts::consumer_abi().data());
          produce_blocks(1);
       }
    }
@@ -601,7 +601,7 @@ class bos_oracle_tester : public tester {
 
       name to = N(oracle.bos);
       std::string memo = "3,1,'evidence','info','reason'," + std::to_string(role_type);
-      // std::string appeal_name = "appeallant11";
+      // std::string appeal_name = "appellants11";
       name from = name(appeal_name.c_str());
       transfer(from, to, amount, appeal_name.c_str(), memo);
       produce_blocks(1);
@@ -1357,7 +1357,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1400,7 +1400,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1439,7 +1439,7 @@ try {
    {
       name to = N(oracle.bos);
       std::string memo = "3,1,'evidence','info','reason'," + std::to_string(role_type);
-      // std::string appeal_name = "appeallant11";
+      // std::string appeal_name = "appellants11";
       name from = name(appeal_name.c_str());
       transfer(from, to, amount, appeal_name.c_str(), memo);
       produce_blocks(1);
@@ -1464,8 +1464,8 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
-   std::string second_appeal_name = "appeallant22";
+   std::string appeal_name = "appellants11";
+   std::string second_appeal_name = "appellants22";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1512,7 +1512,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1572,7 +1572,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
 
@@ -1625,7 +1625,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1669,7 +1669,7 @@ try {
    /// resp reappeal
    {
       std::string memo = "5,1,''";
-      std::string provider_name = "appeallant11";
+      std::string provider_name = "appellants11";
       name from = name(provider_name.c_str());
       transfer(from, to, amount, provider_name.c_str(), memo);
       produce_blocks(1);
@@ -1721,7 +1721,7 @@ try {
    /// resp reappeal
    {
       std::string memo = "5,1,''";
-      std::string provider_name = "appeallant11";
+      std::string provider_name = "appellants11";
       name from = name(provider_name.c_str());
       transfer(from, to, amount, provider_name.c_str(), memo);
       produce_blocks(1);
@@ -1773,7 +1773,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1834,7 +1834,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1913,7 +1913,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -1973,7 +1973,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2002,7 +2002,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2034,7 +2034,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0003";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2054,7 +2054,7 @@ try {
    {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
-      get_arbitration_income_account(N(appeallant11), "4,BOS");
+      get_arbitration_income_account(N(appellants11), "4,BOS");
       BOOST_TEST_REQUIRE(result == final_result);
       produce_blocks(1);
    }
@@ -2093,7 +2093,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0003";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2113,7 +2113,7 @@ try {
    {
       auto arbis = get_arbitration_case(service_id, arbitration_id);
       uint64_t final_result = arbis["final_result"].as<uint8_t>();
-      get_arbitration_income_account(N(appeallant11), "4,BOS");
+      get_arbitration_income_account(N(appellants11), "4,BOS");
       BOOST_TEST_REQUIRE(result == final_result);
       produce_blocks(1);
    }
@@ -2144,7 +2144,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2194,7 +2194,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    /// appeal
@@ -2219,7 +2219,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
 
@@ -2247,7 +2247,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "5000.0000";
    uint8_t role_type = 1; /// consumer
 
@@ -2281,7 +2281,7 @@ try {
    uint64_t service_id = reg_svc_for_arbi();
    uint64_t arbitration_id = service_id;
    uint8_t round = 1;
-   std::string appeal_name = "appeallant11";
+   std::string appeal_name = "appellants11";
    string amount = "200.0000";
    uint8_t role_type = 1; /// consumer
    name provider_name = N(provider1111);
