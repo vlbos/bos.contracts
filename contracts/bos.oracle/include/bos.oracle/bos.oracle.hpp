@@ -14,6 +14,7 @@
 #include "bos.oracle/tables/oracle_api.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
+#include <cmath>
 #include <eosio/eosio.hpp>
 using namespace eosio;
 
@@ -22,7 +23,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    static constexpr eosio::name token_account{"eosio.token"_n};
    static constexpr eosio::name active_permission{"active"_n};
    static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
-   static constexpr uint64_t arbi_process_time_limit = 3600;
+
 
    static time_point_sec current_time_point_sec();
 
@@ -187,7 +188,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint128_t make_deferred_id(uint64_t arbitration_id, uint8_t timer_type);
    void timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_t timer_type, uint32_t time_length);
    void handle_upload_result(uint64_t arbitration_id, uint8_t round);
-   std::tuple<std::vector<name>, asset,std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
+   std::tuple<std::vector<name>, asset, std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
    std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
    void slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount);
    void slash_arbitration_stake(uint64_t arbitration_id, std::vector<name> & slash_accounts);
@@ -197,6 +198,11 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void check_stake_arbitration(uint64_t id, name account, uint8_t round);
    void add_income(name account, asset quantity);
    std::vector<name> get_arbitrators_of_uploading_arbitration_result(uint64_t arbitration_id);
+   uint64_t make_scope_value(uint64_t id, uint8_t round, bool is_check = true);
+   std::vector<name> get_fulltime_arbitrators();
+   int get_fulltime_arbitrators_count();
+   void send_notify(const vector<name>& accounts, const std::string& memo, std::string checkmsg = "");
+   void send_notify(const vector<name>& accounts, const vector<name>& resp_accounts, const std::string& memo);
 
    /// common
    symbol core_symbol() const { return _core_symbol; };

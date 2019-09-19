@@ -31,7 +31,7 @@ uint8_t bos_oracle::get_service_status(uint64_t service_id) {
  */
 void bos_oracle::add_times(uint64_t service_id, name account, name contract_account, bool is_request) {
 
-   const uint64_t one_time = 1;
+  
    auto add_time = [is_request](uint64_t& times, uint64_t& month_times, bool is_new = false) {
       if (is_new) {
          times = 0;
@@ -133,18 +133,6 @@ asset bos_oracle::get_price_by_fee_type(uint64_t service_id, uint8_t fee_type) {
  * @param fee_type
  */
 void bos_oracle::fee_service(uint64_t service_id, name contract_account, uint8_t fee_type) {
-   // static constexpr uint32_t month_seconds = 30 * 24 * 60 * 60;
-   // //   token::transfer_action transfer_act{ token_account, { account,
-   // active_permission } };
-   // //          transfer_act.send( account, consumer_account, amount, memo );
-
-   //       INLINE_ACTION_SENDER(eosio::token, transfer)(
-   //          token_account, { {account, active_permission} },
-   //          { account, consumer_account, amount, memo }
-   //       );
-   // require_auth(account);
-   // require_auth(contract_account);
-   // transfer(account, consumer_account, amount, memo);
    asset price_by_times = get_price_by_fee_type(service_id, fee_type);
 
    check(price_by_times.amount > 0, " get price by times cound not be greater than zero");
@@ -261,7 +249,6 @@ std::vector<name> bos_oracle::get_subscription_list(uint64_t service_id) {
  */
 std::tuple<uint64_t, uint64_t> bos_oracle::get_consumption(uint64_t service_id) {
 
-   static constexpr uint64_t update_time_deadline = 1; // 24 hours
    data_service_subscriptions substable(_self, service_id);
 
    service_consumptions consumptionstable(_self, service_id);

@@ -62,3 +62,18 @@ enum arbitration_role_type : uint8_t { pending = 0, consumer = 1, provider = 2, 
 static int default_arbitration_correct_rate = 6000;
 static int arbitration_correct_rate_base = 100;
 static int percent_100 = 10000;
+
+static const uint64_t arbi_process_time_limit = 3600;
+static const uint8_t round_limit = 3;
+static const uint8_t arbi_resp_appeal_timeout_value = 1;    // hours
+static const uint8_t arbi_upload_result_timeout_value = 1;  // hours
+static const uint8_t arbi_reappeal_timeout_value = 1;       /// hours
+static const uint8_t arbi_resp_arbitrate_timeout_value = 1; // hours
+static const uint8_t arbi_freeze_stake_duration = 1;        // days
+static const uint8_t arbi_case_deadline = 1;                // hours
+static const int8_t request_time_deadline = 1;          // 1 hours
+static const uint8_t update_time_deadline = 1;          // 1 hours
+static const uint32_t service_stake_limit = 1000;
+static const uint64_t one_time = 1;
+static const uint8_t first_round = 1;
+static const uint8_t first_respondent = 1;

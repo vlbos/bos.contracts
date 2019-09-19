@@ -29,7 +29,7 @@ using std::string;
  * @param memo
  */
 void bos_oracle::subscribe(uint64_t service_id, name contract_account, name account, std::string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
    require_auth(account);
 
    // add consumer service subscription relation
@@ -61,7 +61,7 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
  * @param request_content
  */
 void bos_oracle::requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content) {
-   check(request_content.size() <= 256, "request_content could not greater than 256");
+   check(request_content.size() <= 256, "request_content could not be greater than 256");
 
    // print("======requestdata");
    require_auth(requester);
@@ -73,9 +73,13 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account, name re
    fee_service(service_id, requester, fee_type::fee_times);
 
    data_service_requests reqtable(_self, service_id);
+   uint64_t id = reqtable.available_primary_key();
+   if (0 == id) {
+      id++;
+   }
 
    reqtable.emplace(_self, [&](auto& r) {
-      r.request_id = reqtable.available_primary_key() + (0 == reqtable.available_primary_key() ? 1 : 0);
+      r.request_id = id;
       r.service_id = service_id;
       r.contract_account = contract_account;
       r.requester = requester;

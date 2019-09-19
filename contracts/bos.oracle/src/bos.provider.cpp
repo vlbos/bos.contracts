@@ -28,7 +28,6 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
                             uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time) {
    require_auth(account);
 
-   const uint32_t service_stake_limit = 1000;
    std::string checkmsg = "set base stake amount could not be less than " + std::to_string(service_stake_limit);
    check(base_stake_amount.amount >= uint64_t(service_stake_limit) * pow(10, core_symbol().precision()), checkmsg);
 
@@ -40,15 +39,22 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
          "injection_method only set chain_indirect(0) or chain_direct(1)or chain_outside(2)");
    check(data_type == data_deterministic || data_type == data_non_deterministic, "data_type only set value data_deterministic(0) or data_non_deterministic(1)1");
    check(acceptance >= 3 && acceptance <= 100, "acceptance could not be less than 3 or greater than 100 ");
-   check(data_format.size() <= 256, "data_format could not greater than 256");
-   check(criteria.size() <= 256, "criteria could not greater than 256");
-   check(declaration.size() <= 256, "declaration could not greater than 256");
+   check(data_format.size() <= 256, "data_format could not be greater than 256");
+   check(criteria.size() <= 256, "criteria could not be greater than 256");
+   check(declaration.size() <= 256, "declaration could not be greater than 256");
 
    data_services svctable(_self, _self.value);
 
+  uint64_t id = svctable.available_primary_key();
+   if (0 == id) {
+      id++;
+   }
+   
+   save_id(0, id);
+
    // add service
    svctable.emplace(_self, [&](auto& s) {
-      s.service_id = svctable.available_primary_key() + (0 == svctable.available_primary_key() ? 1 : 0);
+      s.service_id = id;
       s.data_format = data_format;
       s.data_type = data_type;
       s.criteria = criteria;
@@ -67,8 +73,6 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
       s.risk_control_amount = asset(0, core_symbol());
       s.pause_service_stake_amount = asset(0, core_symbol());
       s.status = service_status::service_init;
-
-      save_id(0, s.service_id);
    });
 }
 
@@ -200,14 +204,14 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
 }
 
 void bos_oracle::unstakeasset(uint64_t service_id, name account, asset amount, std::string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    require_auth(account);
    update_stake_asset(service_id, account, -amount);
 }
 
 void bos_oracle::stake_asset(uint64_t service_id, name account, asset amount, std::string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    require_auth(account);
    reg_service_provider(service_id, account);
@@ -321,7 +325,7 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
 
 void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
    require_auth(provider);
-   check(data_json.size() <= 256, "data_json could not greater than 256");
+   check(data_json.size() <= 256, "data_json could not be greater than 256");
 
    check(!(0 != update_number && 0 != request_id), "both update_number and request_id could not be greater than 0");
 
@@ -353,7 +357,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_nu
  * @param request_id
  */
 void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
-   check(data_json.size() <= 256, "data_json could not greater than 256");
+   check(data_json.size() <= 256, "data_json could not be greater than 256");
    require_auth(_self);
    data_services svctable(get_self(), get_self().value);
    auto service_itr = svctable.find(service_id);
@@ -378,7 +382,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
    if (injection_method::chain_indirect == servic_injection_method) {
       save_publish_data(service_id, 0, request_id, data_json);
    } else {
-
+      /////////////////reserve  version 2.0 above
       //  check(service_status::service_in == get_service_status(service_id) && subscription_status::subscription_subscribe == get_subscription_status(service_id, contract_account),
       //    "service and subscription must be available");
       // // subscription
@@ -406,13 +410,13 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
 }
 
 void bos_oracle::oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json, name contract_account) {
-   check(data_json.size() <= 256, "data_json could not greater than 256");
+   check(data_json.size() <= 256, "data_json could not be greater than 256");
    require_auth(_self);
    require_recipient(contract_account);
 }
 
 void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
-   check(data_json.size() <= 256, "data_json could not greater than 256");
+   check(data_json.size() <= 256, "data_json could not be greater than 256");
    print(" innerpublish in");
    name contract_account = _self; // placeholder
    // require_auth(_self);
@@ -579,7 +583,6 @@ void bos_oracle::starttimer(uint64_t service_id, uint64_t update_number, uint64_
 void bos_oracle::start_timer(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
 
    auto get_time = [&](uint64_t service_id, uint64_t id) -> uint32_t {
-      static constexpr int64_t request_time_deadline = 1; // 1 hours
       data_service_requests reqtable(_self, service_id);
       auto req_itr = reqtable.find(id);
       check(req_itr != reqtable.end(), "request id could not be found");
@@ -768,7 +771,6 @@ string bos_oracle::get_publish_data(uint64_t service_id, uint64_t update_number,
    auto update_number_idx = logtable.get_index<"bynumber"_n>(); //
 
    std::map<string, int64_t> data_count;
-   const int64_t one_time = 1;
    uint64_t provider_count = 0;
 
    uint64_t id = update_number;

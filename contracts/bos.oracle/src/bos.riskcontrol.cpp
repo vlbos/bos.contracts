@@ -9,11 +9,11 @@
 #include <eosio/transaction.hpp>
 
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
    print_f("On notify : % % % %", from, to, quantity, memo);
-   if (from == _self || memo.empty()) {
+   if (from == _self || to != _self ||  memo.empty()) {
       // print("memo is empty on trasfer");
       return;
    }
@@ -124,7 +124,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) { oracle_transfer(from, to, quantity, memo, false); }
 
 void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    check(from != to, "cannot transfer to self");
    //  require_auth( from );
@@ -166,7 +166,7 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo
 
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to, asset quantity, string memo, bool is_notify) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    require_auth(_self);
    call_deposit(from, to, quantity, is_notify);
@@ -193,7 +193,7 @@ void bos_oracle::call_deposit(name from, name to, asset quantity, bool is_notify
  * @param memo
  */
 void bos_oracle::withdraw(uint64_t service_id, name from, name to, asset quantity, string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    require_auth(_self);
    sub_balance(from, quantity);

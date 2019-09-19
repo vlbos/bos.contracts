@@ -60,7 +60,7 @@ void bos_oracle::importwps(vector<name> auditors) {
 // }
 
 void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::string public_info) {
-   check(public_info.size() <= 256, "public_info could not greater than 256");
+   check(public_info.size() <= 256, "public_info could not be greater than 256");
 
    check(type == arbitrator_type::fulltime || type == arbitrator_type::crowd, "Arbitrator type can only be 1 or 2.");
    auto abr_table = arbitrators(get_self(), get_self().value);
@@ -85,7 +85,7 @@ void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::str
 }
 
 void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std::string reason, std::string evidence, uint8_t role_type) {
-   check(evidence.size() <= 256, "evidence could not greater than 256");
+   check(evidence.size() <= 256, "evidence could not be greater than 256");
 
    check(consumer == role_type || provider == role_type, "role type only support consume(1) and provider(2)");
 
@@ -103,14 +103,12 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    uint64_t arbitration_id = service_id;
    print("\nif (arbitration_role_type::consumer == role_type) ");
    if (arbitration_role_type::consumer == role_type) {
-      const uint8_t arbi_freeze_stake_duration = 1; // days
       // add_freeze
       const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
       print("\nif (arbitration_role_type::consumer == role_type) in");
       add_freeze(service_id, appellant, bos_oracle::current_time_point_sec(), duration, amount, arbitration_id);
    }
 
-   const uint8_t arbi_case_deadline = 1; // hours
    uint8_t current_round = 1;
 
    // Arbitration case application
@@ -167,7 +165,6 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.last_round = current_round; });
    }
 
-   const uint8_t first_round = 1;
    if (first_round == current_round) {
       check(arbitration_role_type::consumer == role_type, "only support consume(1) role type  in the first round");
    } else {
@@ -182,12 +179,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       arbitrator_type = arbitrator_type::crowd;
    }
 
-   uint8_t fulltime_count = 0;
-   // 遍历仲裁员表, 找出可以选择的仲裁员
-   auto arb_table = arbitrators(get_self(), get_self().value);
-   for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->check_correct_rate(); ++itr) {
-      ++fulltime_count;
-   }
+   uint8_t fulltime_count = get_fulltime_arbitrators_count();
 
    uint8_t arbi_method = arbi_method_type::multiple_rounds;
    uint8_t arbi_count = pow(2, current_round) + 1;
@@ -214,7 +206,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    }
 
    // 申诉者表
-   auto appeal_request_tb = appeal_requests(get_self(), (service_id << 2) | (0x03 & current_round));
+   auto appeal_request_tb = appeal_requests(get_self(), make_scope_value(service_id, current_round));
 
    uint8_t sponsor_bit = 0;
    uint8_t provider_bit = 0;
@@ -251,14 +243,6 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       return;
    }
 
-   auto sent_notify = [&](const vector<name>& accounts) {
-      for (auto& a : accounts) {
-         auto notify_amount = eosio::asset(1, core_symbol());
-         auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-         transfer(get_self(), a, notify_amount, memo);
-      }
-   };
-
    auto get_providers_by_service_id = [&](const uint64_t service_id) -> std::vector<name> {
       // Data provider
       auto svcprovider_tb = data_service_provisions(get_self(), service_id);
@@ -273,20 +257,15 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       return reg_providers;
    };
 
+   auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
+
    if (arbitration_role_type::provider == role_type) {
       uint8_t previous_round = current_round - 1;
       check(previous_round > 0, "wrong round");
       auto arbiprocess_itr = arbiprocess_tb.find(previous_round);
       check(arbiprocess_itr != arbiprocess_tb.end(), "no round info");
 
-      check(arbiprocess_itr->appellants.size() > 0, "no appellant in the round ");
-      sent_notify(arbiprocess_itr->appellants);
-      // for (auto& a : arbiprocess_itr->appellants) {
-      //    auto notify_amount = eosio::asset(1, core_symbol());
-      //    // Transfer to appellant
-      //    auto memo = "resp appellant >arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-      //    transfer(get_self(), a, notify_amount, memo);
-      // }
+      send_notify(arbiprocess_itr->appellants, memo,"no appellant in the round ");
 
    } else {
       // recheck service status is 'in'
@@ -295,27 +274,12 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       check(svc_itr != svctable.end(), "service does not exist");
       print("\n no status=", svc_itr->status);
       check(svc_itr->status == service_status::service_in, "service status is not service_in when notify");
-      // // Data provider
-      // auto svcprovider_tb = data_service_provisions(get_self(), service_id);
-      // check(svcprovider_tb.begin() != svcprovider_tb.end(), "Such service has no providers.");
       std::vector<name> reg_providers = get_providers_by_service_id(service_id);
-      // for (auto& p : svcprovider_tb) {
-      //    if (p.status == provision_status::provision_reg) {
-      //       reg_providers.push_back(p.account);
-      //    }
-      // }
-
       check(reg_providers.size() >= svc_itr->provider_limit, "current available providers is insufficient");
       // Service data providers
 
       // 对所有的数据提供者发送通知, 通知数据提供者应诉
-      sent_notify(reg_providers);
-      // for (auto& account : reg_providers) {
-      //    auto notify_amount = eosio::asset(1, core_symbol());
-      //    // Transfer to provider
-      //    auto memo = "resp>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id) + ", stake_amount " + amount.to_string();
-      //    transfer(get_self(), account, notify_amount, memo);
-      // }
+      send_notify(reg_providers, memo);
    }
 
    arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
@@ -323,12 +287,29 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       p.last_round = current_round;
    });
 
-   const uint8_t arbi_resp_appeal_timeout_value = 1; // hours
    timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout, eosio::hours(arbi_resp_appeal_timeout_value).to_seconds());
 }
 
+void bos_oracle::send_notify(const vector<name>& accounts, const std::string& memo, std::string checkmsg) {
+   if (!checkmsg.empty()) {
+      check(!accounts.empty(), checkmsg.c_str());
+   }
+
+   for (auto& a : accounts) {
+      auto notify_amount = eosio::asset(1, core_symbol());
+      transfer(get_self(), a, notify_amount, memo);
+   }
+}
+
+void bos_oracle::send_notify(const vector<name>& accounts, const vector<name>& resp_accounts, const std::string& memo) {
+   check(!accounts.empty(), "no appellant in the round ");
+   send_notify(accounts, memo);
+   check(!resp_accounts.empty(), "no respondents in the round ");
+   send_notify(resp_accounts, memo);
+}
+
 void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amount, std::string evidence) {
-   check(evidence.size() <= 256, "evidence could not greater than 256");
+   check(evidence.size() <= 256, "evidence could not be greater than 256");
 
    uint64_t service_id = arbitration_id;
    // 检查仲裁案件状态
@@ -358,7 +339,6 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    stake_arbitration(arbitration_id, respondent, amount, current_round, resp_role_type, "");
 
    bool first_one = false;
-   const uint8_t first_respondent = 1;
    // 新增应诉者
    arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) {
       p.respondents.push_back(respondent);
@@ -381,7 +361,7 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
 }
 
 void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string evidence) {
-   check(evidence.size() <= 256, "evidence could not greater than 256");
+   check(evidence.size() <= 256, "evidence could not be greater than 256");
 
    require_auth(account);
    uint64_t service_id = arbitration_id;
@@ -405,7 +385,7 @@ void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string
  * 仲裁员上传仲裁结果
  */
 void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t result, std::string comment) {
-   check(comment.size() <= 256, "comment could not greater than 256");
+   check(comment.size() <= 256, "comment could not be greater than 256");
 
    require_auth(arbitrator);
    check(result == consumer || result == provider, "`result` can only be consumer(1) or provider(2).");
@@ -468,25 +448,13 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
    update_arbitration_correction(arbitration_id);
 
    // 通知仲裁结果
-   auto notify_amount = eosio::asset(1, core_symbol());
    // Transfer to appellant
    auto memo = "result>arbitration_id: " + std::to_string(arbitration_id) + ", arbitration_result: " + std::to_string(arbi_result);
-   check(arbiprocess_itr->appellants.size() > 0, "no appellant in the round ");
-
-   for (auto& a : arbiprocess_itr->appellants) {
-      transfer(get_self(), a, notify_amount, memo);
-   }
-
-   check(arbiprocess_itr->respondents.size() > 0, "no respondents in the round ");
-
-   for (auto& r : arbiprocess_itr->respondents) {
-      transfer(get_self(), r, notify_amount, memo);
-   }
+   send_notify(arbiprocess_itr->appellants, arbiprocess_itr->respondents,memo);
 
    // 看是否有人再次申诉, 大众仲裁不允许再申诉    version 1.0 limits <=3
    if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds && round < 3) {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbi_step = arbi_step_type::arbi_wait_for_reappeal; });
-      const uint8_t arbi_reappeal_timeout_value = 1; /// hours
       timeout_deferred(arbitration_id, round, arbitration_timer_type::reappeal_timeout, eosio::hours(arbi_reappeal_timeout_value).to_seconds());
    } else {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
@@ -497,21 +465,8 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
 
       handle_arbitration_result(arbitration_id);
 
-      // 通知仲裁结果
-      auto notify_amount = eosio::asset(1, core_symbol());
-      // Transfer to appellant
       auto memo = "final result>arbitration_id:" + std::to_string(arbitration_id) + ",final_arbitration_result:" + std::to_string(arbi_result);
-      check(arbiprocess_itr->appellants.size() > 0, "no appellant in the round ");
-
-      for (auto& a : arbiprocess_itr->appellants) {
-         transfer(get_self(), a, notify_amount, memo);
-      }
-
-      check(arbiprocess_itr->respondents.size() > 0, "no respondents in the round ");
-
-      for (auto& r : arbiprocess_itr->respondents) {
-         transfer(get_self(), r, notify_amount, memo);
-      }
+      send_notify(arbiprocess_itr->appellants, arbiprocess_itr->respondents,memo);
    }
 }
 
@@ -555,16 +510,10 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbi_step = arbi_step_type::arbi_wait_for_upload_result; });
 
       // 通知仲裁结果
-      auto notify_amount = eosio::asset(1, core_symbol());
       // Transfer to appellant
       auto memo = "wait upload result>arbitration_id: " + std::to_string(arbitration_id);
-      check(arbiprocess_itr->arbitrators.size() > 0, "no arbitrators in the round ");
+      send_notify(arbiprocess_itr->arbitrators,memo,"no arbitrators in the round ");
 
-      for (auto& a : arbiprocess_itr->arbitrators) {
-         transfer(get_self(), a, notify_amount, memo);
-      }
-
-      const uint8_t arbi_upload_result_timeout_value = 1; // hours
       uint32_t timeout_sec = eosio::hours(arbi_upload_result_timeout_value).to_seconds();
       // 等待仲裁员上传结果
       timeout_deferred(arbitration_id, round, arbitration_timer_type::upload_result_timeout, timeout_sec);
@@ -602,15 +551,10 @@ void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint8_t round,
 
       print(arbitration_id, "==arbitration_case_itr->chosen_arbitrators=====================", arbitration_case_itr->chosen_arbitrators.size());
 
-      auto notify_amount = eosio::asset(1, core_symbol());
-
       // 通知选择的仲裁员
-      for (auto& arbitrator : chosen_arbitrators) {
-         auto memo = "invite>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id);
-         transfer(get_self(), arbitrator, notify_amount, memo);
-      }
+      auto memo = "invite>arbitration_id: " + std::to_string(arbitration_id) + ", service_id: " + std::to_string(service_id);
+      send_notify(chosen_arbitrators,memo);
 
-      const uint8_t arbi_resp_arbitrate_timeout_value = 1; // hours
       uint8_t timer_type = arbitration_timer_type::accept_arbitrate_invitation_timeout;
       uint32_t time_length = eosio::hours(arbi_resp_arbitrate_timeout_value).to_seconds();
       // 等待仲裁员响应
@@ -628,12 +572,7 @@ void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint8_t round,
       arbitrator_type = arbitrator_type::crowd;
    }
 
-   uint8_t fulltime_count = 0;
-   // 遍历仲裁员表, 找出可以选择的仲裁员
-   auto arb_table = arbitrators(get_self(), get_self().value);
-   for (auto itr = arb_table.begin(); itr != arb_table.end() && 0 != (arbitrator_type & itr->type) && itr->check_correct_rate(); ++itr) {
-      ++fulltime_count;
-   }
+   uint8_t fulltime_count = get_fulltime_arbitrators_count();
 
    //不重复选择的公式是 2^(n+1)+n-2,可重复选择的公式是2^n+1
    // 专业仲裁第一轮, 人数指数倍增加, 2^1+1, 2^2+1, 2^3+1, 2^num+1,
@@ -662,6 +601,23 @@ void bos_oracle::random_chose_arbitrator(uint64_t arbitration_id, uint8_t round,
    // 大众仲裁人数不够, TODO
    print("public arbitration processing ,to continue");
 }
+
+std::vector<name> bos_oracle::get_fulltime_arbitrators() {
+   std::vector<name> fulltime_arbitrators;
+
+   // 遍历仲裁员表, 找出可以选择的仲裁员
+   auto arb_table = arbitrators(get_self(), get_self().value);
+   for (auto& a : arb_table) {
+      if (0 == (arbitrator_type::fulltime & a.type) || !a.check_correct_rate()) {
+         continue;
+      }
+      fulltime_arbitrators.push_back(a.account);
+   }
+
+   return fulltime_arbitrators;
+}
+
+int bos_oracle::get_fulltime_arbitrators_count() { return get_fulltime_arbitrators().size(); }
 
 /**
  * 为某一个仲裁的某一轮随机选择 `required_arbitrator_count` 个仲裁员
@@ -693,15 +649,9 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t roun
    for (auto itr = arb_table.begin(); itr != arb_table.end(); ++itr) {
       ++arbi_count;
       if (0 == (arbitrator_type & itr->type)) {
-         print("\nif(0 == (arbitrator_type=", arbitrator_type, "&itr->type))=", itr->type);
          continue;
       }
       if (!itr->check_correct_rate()) {
-         print("\nif(!itr->check_correct_rate()),", "return (arbitration_correct_times + 1) * arbitration_correct_rate_base >= (arbitration_times + 1) * arbitration_correct_rate_base * ",
-               "default_arbitration_correct_rate / percent_100;,arbitration_correct_times = ", itr->arbitration_correct_times, " arbitration_times ", itr->arbitration_times,
-               " = (itr->arbitration_correct_times + 1)* arbitration_correct_rate_base =", (itr->arbitration_correct_times + 1) * arbitration_correct_rate_base,
-               "=(itr->arbitration_times + 1) * arbitration_correct_rate_base * default_arbitration_correct_rate / percent_100=",
-               (itr->arbitration_times + 1) * arbitration_correct_rate_base * default_arbitration_correct_rate / percent_100);
          continue;
       }
 
@@ -747,9 +697,8 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t roun
  * 新增仲裁结果表
  */
 void bos_oracle::add_arbitration_result(name arbitrator, uint64_t arbitration_id, uint8_t result, uint8_t round, std::string comment) {
-   check(comment.size() <= 256, "comment could not greater than 256");
-
-   auto arbi_result_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+   check(comment.size() <= 256, "comment could not be greater than 256");
+   auto arbi_result_tb = arbitration_results(get_self(), make_scope_value(arbitration_id, round));
    auto arbi_result_itr = arbi_result_tb.find(arbitrator.value);
    check(arbi_result_itr == arbi_result_tb.end(), "the arbitrator has uploaded result in the round and the arbitration case");
    arbi_result_tb.emplace(get_self(), [&](auto& p) {
@@ -766,9 +715,11 @@ std::vector<name> bos_oracle::get_arbitrators_of_uploading_arbitration_result(ui
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration in update_arbitration_correction");
 
+   (void)make_scope_value(arbitration_id, arbitration_case_itr->last_round);
+
    std::vector<name> arbitrators;
    for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
-      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+      auto arbiresults_tb = arbitration_results(get_self(), make_scope_value(arbitration_id, round, false));
       auto arbiresults_itr = arbiresults_tb.begin();
       while (arbiresults_itr != arbiresults_tb.end()) {
          arbitrators.push_back(arbiresults_itr->arbitrator);
@@ -790,25 +741,32 @@ void bos_oracle::update_arbitration_correction(uint64_t arbitration_id) {
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration in update_arbitration_correction");
 
-   auto update_correction = [&](name arbitrator, uint8_t correct_times) {
+   auto update_correction = [&](name arbitrator, bool is_correct) {
       auto arbitrator_tb = arbitrators(get_self(), get_self().value);
       auto arbitrator_itr = arbitrator_tb.find(arbitrator.value);
       check(arbitrator_itr != arbitrator_tb.end(), "Could not find such arbitrator in update_arbitration_correction");
 
+      uint8_t correct_times = 0;
+      if (is_correct) {
+         correct_times++;
+      }
+
       arbitrator_tb.modify(arbitrator_itr, get_self(), [&](auto& p) {
-         p.arbitration_times += 1;
+         p.arbitration_times++;
          p.arbitration_correct_times += correct_times;
       });
    };
+
+   (void)make_scope_value(arbitration_id, arbitration_case_itr->last_round);
 
    for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
       auto arbiprocess_tb = arbitration_processes(get_self(), arbitration_id);
       auto arbiprocess_itr = arbiprocess_tb.find(round);
       check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process calculate correction");
 
-      auto arbiresults_tb = arbitration_results(get_self(), ((arbitration_id << 2) | (0x03 & round)));
+      auto arbiresults_tb = arbitration_results(get_self(), make_scope_value(arbitration_id, round, false));
       for (auto arbiresults_itr = arbiresults_tb.begin(); arbiresults_itr != arbiresults_tb.end(); ++arbiresults_itr) {
-         update_correction(arbiresults_itr->arbitrator, (arbiresults_itr->result == arbiprocess_itr->arbitration_result ? 1 : 0));
+         update_correction(arbiresults_itr->arbitrator, arbiresults_itr->result == arbiprocess_itr->arbitration_result);
       }
    }
 }
@@ -854,21 +812,10 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
          });
          handle_arbitration_result(arbitration_id);
 
-         // 通知仲裁结果
-         auto notify_amount = eosio::asset(1, core_symbol());
          // Transfer to appellant
-         auto memo = "final result>arbitration_id:" + std::to_string(arbitration_id) + ",final_arbitration_result:" + std::to_string(arbiprocess_itr->role_type);
-         check(arbiprocess_itr->appellants.size() > 0, "no appellant in the round ");
-
-         for (auto& a : arbiprocess_itr->appellants) {
-            transfer(get_self(), a, notify_amount, memo);
-         }
-
-         check(arbiprocess_itr->respondents.size() > 0, "no respondents in the round ");
-
-         for (auto& r : arbiprocess_itr->respondents) {
-            transfer(get_self(), r, notify_amount, memo);
-         }
+         auto memo = "final result>arbitration_id:" + std::to_string(arbitration_id) + ",final_arbitration_result:" + std::to_string(arbitration_case_itr->arbitration_result);
+         send_notify(arbiprocess_itr->appellants, arbiprocess_itr->respondents,memo);
+        
       }
       break;
    }
@@ -885,15 +832,10 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
          });
 
          handle_arbitration_result(arbitration_id);
-         // 通知仲裁结果
-         auto notify_amount = eosio::asset(1, core_symbol());
+
          // Transfer to appellant
          auto memo = "final result>arbitration_id:" + std::to_string(arbitration_id) + ",final_arbitration_result:" + std::to_string(arbiprocess_itr->role_type);
-         check(arbiprocess_itr->appellants.size() > 0, "no appellant in the round ");
-
-         for (auto& a : arbiprocess_itr->appellants) {
-            transfer(get_self(), a, notify_amount, memo);
-         }
+         send_notify(arbiprocess_itr->appellants, memo,"no appellant in the round ");
       }
       break;
    }
@@ -987,9 +929,11 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
       unfreeze_asset(service_id, arbitration_id);
    }
 
+   (void)make_scope_value(service_id, arbitration_case_itr->last_round);
+
    // clear 申诉者表
    for (int i = 1; i <= arbitration_case_itr->last_round; ++i) {
-      auto appeal_request_tb = appeal_requests(get_self(), ((service_id << 2) | (0x03 & i)));
+      auto appeal_request_tb = appeal_requests(get_self(), make_scope_value(service_id, i, false));
       auto appeal_request_itr = appeal_request_tb.begin();
       while (appeal_request_itr != appeal_request_tb.end()) {
          appeal_request_tb.erase(appeal_request_itr);
@@ -1151,11 +1095,19 @@ void bos_oracle::add_income(name account, asset quantity) {
    }
 }
 
-void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+uint64_t bos_oracle::make_scope_value(uint64_t id, uint8_t round, bool is_check) {
+   if (is_check) {
+      uint8_t round_limit_value = pow(2, round_limit) - 1;
+      std::string checkmsg = "round could not be greater than " + std::to_string(round_limit_value);
+      check(round <= round_limit_value, checkmsg.c_str());
+   }
 
-   uint64_t id_round = (id << 3) | round;
-   arbitration_stake_records staketable(_self, id_round);
+   return (id << round_limit) | round;
+}
+
+void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo) {
+   check(memo.size() <= 256, "memo could not be greater than 256");
+   arbitration_stake_records staketable(_self, make_scope_value(id, round));
 
    auto stake_itr = staketable.find(account.value);
    if (stake_itr == staketable.end()) {
@@ -1173,15 +1125,14 @@ void bos_oracle::stake_arbitration(uint64_t id, name account, asset amount, uint
 }
 
 void bos_oracle::check_stake_arbitration(uint64_t id, name account, uint8_t round) {
-   uint64_t id_round = (id << 3) | round;
-   arbitration_stake_records staketable(_self, id_round);
+   arbitration_stake_records staketable(_self, make_scope_value(id, round));
 
    auto stake_itr = staketable.find(account.value);
    check(stake_itr != staketable.end(), "no stake");
 }
 
 void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo) {
-   check(memo.size() <= 256, "memo could not greater than 256");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    require_auth(account);
 
