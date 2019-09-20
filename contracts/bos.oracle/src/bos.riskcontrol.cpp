@@ -9,14 +9,16 @@
 #include <eosio/transaction.hpp>
 
 void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
 
    //  check(get_first_receiver() == "eosio.token"_n, "should be eosio.token");
    print_f("On notify : % % % %", from, to, quantity, memo);
-   if (from == _self || to != _self ||  memo.empty()) {
+   if (from == _self || to != _self || quantity.symbol != core_symbol() || memo.empty()) {
       // print("memo is empty on trasfer");
       return;
    }
+   check(quantity.is_valid(), "invalid quantity");
+   check(quantity.amount > 0, "must transfer positive quantity");
+   check(memo.size() <= 256, "memo could not be greater than 256");
 
    //  check(quantity.amount>100, "amount could not be less than 100");
    //
@@ -121,7 +123,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
  * @param quantity
  * @param memo
  */
-void bos_oracle::transfer(name from, name to, asset quantity, string memo) { oracle_transfer(from, to, quantity, memo, false); }
+void bos_oracle::transfer(name from, name to, asset quantity, string memo) { oracle_transfer(from, to, quantity, memo, true); }
 
 void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred) {
    check(memo.size() <= 256, "memo could not be greater than 256");

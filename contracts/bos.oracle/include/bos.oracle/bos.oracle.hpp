@@ -199,8 +199,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void add_income(name account, asset quantity);
    std::vector<name> get_arbitrators_of_uploading_arbitration_result(uint64_t arbitration_id);
    uint64_t make_scope_value(uint64_t id, uint8_t round, bool is_check = true);
-   std::vector<name> get_fulltime_arbitrators();
-   int get_fulltime_arbitrators_count();
+   std::vector<name> get_arbitrators(uint8_t arbitrator_type = arbitrator_type::fulltime);
+   int get_arbitrators_count();
    void send_notify(const vector<name>& accounts, const std::string& memo, std::string checkmsg = "");
    void send_notify(const vector<name>& accounts, const vector<name>& resp_accounts, const std::string& memo);
 

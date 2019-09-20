@@ -1,21 +1,25 @@
+
+
+#include "bos.oracle/example/consumer.contract.hpp"
+#include "bos.oracle/example/eosio.token.hpp"
+#include "bos.oracle/tables/oracle_api.hpp"
 #include <eosio/action.hpp>
 #include <eosio/eosio.hpp>
-#include <eosio/singleton.hpp>
-#include <eosio/system.hpp>
-#include <eosio/time.hpp>
+// #include <eosio/singleton.hpp>
+// #include <eosio/system.hpp>
+// #include <eosio/time.hpp>
 #include <string>
-#include "bos.oracle/tables/oracle_api.hpp"
-#include "bos.oracle/example/consumer.contract.hpp"
+using eosio::symbol;
 
 using namespace eosio;
 using std::string;
+static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
 
 void consumer_contract::receivejson(name self, name code) {
 
    auto payload = unpack_action_data<push_json>();
 
-
-   std::string p = payload.data_json; 
+   std::string p = payload.data_json;
 
    print(p.c_str());
 }
@@ -39,6 +43,35 @@ void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t upd
    }
 }
 
+void consumer_contract::transfer(name from, name to, asset quantity, string memo) {
+   if (from == _self || to != _self) {
+      return;
+   }
+
+   require_recipient("oracle.bos"_n);
+}
+
+void consumer_contract::dream(name who, asset value, string memo) {
+   require_auth(_self);
+   // auto eos_token = eosio::token("eosio.token"_n);
+   auto balance = eosio::token::get_balance("eosio.token"_n,_self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
+   // action(permission_level{_self, N(active)}, "eosio.token"_n, N(transfer), std::make_tuple(_self, who, value, memo)).send();
+   // action(permission_level{_self, N(active)}, _self, N(reality), std::make_tuple(balance)).send();
+   action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n, std::make_tuple(_self, who, value, memo)).send();
+   action(permission_level{_self, "active"_n}, _self, "reality"_n, std::make_tuple(balance)).send();
+}
+
+void consumer_contract::reality(asset data) {
+   require_auth(_self);
+   // auto eos_token = eosio::token("eosio.token"_n);
+   auto newBalance = eosio::token::get_balance("eosio.token"_n,_self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
+   check(newBalance.amount > data.amount, "bad day");
+   // action(
+   //     permission_level{ _self, N(active) },
+   //     _self, N(test),
+   //     std::make_tuple(newBalance)
+   // ).send();
+}
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
    name self = name(receiver);
@@ -59,7 +92,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
          EOSIO_DISPATCH_HELPER(consumer_contract, (fetchdata))
       }
    }
-
 
    if (code != self.value && action == "oraclepush"_n.value) {
       thiscontract.receivejson(name(receiver), name(code));
