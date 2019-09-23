@@ -737,7 +737,7 @@ bool bos_oracle::check_provider_no_push_data(uint64_t service_id, name provider,
 
    for (auto itr = update_number_itr_lower; itr != update_number_idx.end() && itr != update_number_itr_upper; ++itr) {
       if (itr->account == provider) {
-         print("check_provider_no_push_data u=",update_number,"r=",request_id,"id=",id,"p=",provider.to_string());
+         print("check_provider_no_push_data u=", update_number, "r=", request_id, "id=", id, "p=", provider.to_string());
          return false;
       }
    }
@@ -820,10 +820,16 @@ void bos_oracle::check_service_current_update_number(uint64_t service_id, uint64
 
 void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status, uint8_t data_type) {
 
+   auto is_push_finish = [&]() ->bool{
+      uint64_t pc = get_provider_count(service_id);
+      uint64_t ppc = get_publish_provider_count(service_id, update_number, request_id);
+      return ppc==pc;
+   };
+
    data_services svctable(_self, _self.value);
 
    uint128_t id = make_update_id(update_number, request_id);
-   if (data_deterministic == data_type && 0 != update_number) {
+   if (0 != update_number && (data_deterministic == data_type ||  log_status::log_fail==status || is_push_finish())) {
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");
       print("\n  update_service_current_log_status last update number", update_number, "data_type=", data_type);
