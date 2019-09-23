@@ -120,7 +120,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint128_t make_update_id(uint64_t update_number,uint64_t request_id);
    // provider
    void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
-   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status = log_status::log_sent,uint8_t data_type=data_deterministic);
+   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id,uint8_t data_type=data_deterministic, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
    void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
    void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);

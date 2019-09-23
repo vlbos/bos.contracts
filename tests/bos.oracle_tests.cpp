@@ -1175,7 +1175,7 @@ try {
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, update_number);
