@@ -117,9 +117,10 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
  private:
    void save_id(uint8_t id_type, uint64_t id);
+   uint128_t make_update_id(uint64_t update_number,uint64_t request_id);
    // provider
    void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
-   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status = log_status::log_sent);
+   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status = log_status::log_sent,uint8_t data_type=data_deterministic);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
    void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
    void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
@@ -145,7 +146,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
    void start_timer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
    void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired = false);
-   void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string value);
+   void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data,uint8_t data_type=data_deterministic);
    uint64_t get_provider_count(uint64_t service_id);
 
    uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
@@ -191,7 +192,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    std::tuple<std::vector<name>, asset, std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
    std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
    void slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount);
-   void slash_arbitration_stake(uint64_t arbitration_id, std::vector<name> & slash_accounts);
+   void slash_arbitration_stake(uint64_t arbitration_id, , uint8_t role_type);
    void sub_balance(name owner, asset value, uint64_t arbitration_id);
    void add_balance(name owner, asset value, uint64_t arbitration_id, uint8_t role_type);
    void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo);

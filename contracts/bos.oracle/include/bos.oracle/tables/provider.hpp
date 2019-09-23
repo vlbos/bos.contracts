@@ -87,7 +87,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_lo
   uint64_t by_time() const {
     return static_cast<uint64_t>(-update_time.sec_since_epoch());
   }
-  uint64_t by_number() const { return update_number|request_id; }
+  uint128_t by_number() const { return (uint128_t(request_id)<<64)|update_number; }
 };
 
 /**

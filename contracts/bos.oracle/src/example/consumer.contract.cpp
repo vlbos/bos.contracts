@@ -26,21 +26,21 @@ void consumer_contract::receivejson(name self, name code) {
 
 void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t update_number, uint64_t request_id) {
 
-   if (0 != update_number) {
-      oracle_data oracledatatable(oracle, service_id);
-      print("update number =", update_number);
-      check(oracledatatable.begin() != oracledatatable.end(), " no  data found ");
-      auto itr = oracledatatable.find(update_number);
-      check(itr != oracledatatable.end(), " no update number found ");
-      print(itr->value.c_str());
-   } else {
-      oracle_request_data oracledatatable(oracle, service_id);
-      print("update number =", update_number);
-      check(oracledatatable.begin() != oracledatatable.end(), " no  data found ");
-      auto itr = oracledatatable.find(request_id);
-      check(itr != oracledatatable.end(), " no request id  found ");
-      print(itr->value.c_str());
-   }
+   oracle_data oracledatatable(oracle, service_id);
+   check(oracledatatable.begin() != oracledatatable.end(), " no  data found ");
+
+   uint128_t id = (uint128_t(request_id) << 64) | update_number;
+
+   auto update_id_idx = oracledatatable.get_index<"bynumber"_n>();
+   // auto update_number_itr_lower = update_number_idx.lower_bound(id);
+   // auto update_number_itr_upper = update_number_idx.upper_bound(id);
+   // for (auto itr = update_number_itr_lower; itr != update_number_idx.end() && itr != update_number_itr_upper; ++itr) {
+   //    print(itr->value.c_str());
+   // }
+
+   auto itr = update_id_idx.find(id);
+   check(itr != update_id_idx.end(), " no  update id  found ");
+   print(itr->data.c_str());
 }
 
 void consumer_contract::transfer(name from, name to, asset quantity, string memo) {
@@ -54,7 +54,7 @@ void consumer_contract::transfer(name from, name to, asset quantity, string memo
 void consumer_contract::dream(name who, asset value, string memo) {
    require_auth(_self);
    // auto eos_token = eosio::token("eosio.token"_n);
-   auto balance = eosio::token::get_balance("eosio.token"_n,_self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
+   auto balance = eosio::token::get_balance("eosio.token"_n, _self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
    // action(permission_level{_self, N(active)}, "eosio.token"_n, N(transfer), std::make_tuple(_self, who, value, memo)).send();
    // action(permission_level{_self, N(active)}, _self, N(reality), std::make_tuple(balance)).send();
    action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n, std::make_tuple(_self, who, value, memo)).send();
@@ -64,7 +64,7 @@ void consumer_contract::dream(name who, asset value, string memo) {
 void consumer_contract::reality(asset data) {
    require_auth(_self);
    // auto eos_token = eosio::token("eosio.token"_n);
-   auto newBalance = eosio::token::get_balance("eosio.token"_n,_self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
+   auto newBalance = eosio::token::get_balance("eosio.token"_n, _self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
    check(newBalance.amount > data.amount, "bad day");
    // action(
    //     permission_level{ _self, N(active) },

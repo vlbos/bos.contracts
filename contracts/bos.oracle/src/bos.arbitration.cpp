@@ -929,11 +929,11 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
       loser_role_type = arbitration_role_type::consumer;
    }
 
-   std::tuple<std::vector<name>, asset, std::vector<name>> slash_stake_accounts = get_stake_accounts_and_asset(arbitration_id, loser_role_type);
+   std::tuple<std::vector<name>, asset, std::vector<name>> stake_accounts = get_stake_accounts_and_asset(arbitration_id, loser_role_type);
 
    // slash all losers' arbitration stake
-   slash_arbitration_stake(arbitration_id, std::get<0>(slash_stake_accounts));
-   asset slash_arbitration_stake_amount = std::get<1>(slash_stake_accounts);
+   slash_arbitration_stake(arbitration_id, loser_role_type);
+   asset slash_arbitration_stake_amount = std::get<1>(stake_accounts);
    asset slash_service_stake_amount = asset(0, core_symbol());
 
    // if final winner is not provider then slash  all service providers' stakes
@@ -960,7 +960,7 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    };
 
    // award stake accounts
-   pay_arbitration(std::get<2>(slash_stake_accounts), slash_service_stake_amount);
+   pay_arbitration(std::get<2>(stake_accounts), slash_service_stake_amount);
 
    std::vector<name> arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
    // pay all arbitrators' arbitration fee
@@ -1112,13 +1112,31 @@ void bos_oracle::slash_service_stake(uint64_t service_id, const std::vector<name
  * @param arbitration_id
  * @param slash_accounts
  */
-void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id, std::vector<name>& slash_accounts) {
+void bos_oracle::slash_arbitration_stake(uint64_t arbitration_id, uint8_t role_type) {
    arbitration_stake_accounts stake_acnts(_self, arbitration_id);
-   for (auto& a : slash_accounts) {
-      auto acc = stake_acnts.find(a.value);
-      check(acc != stake_acnts.end(), "no account in arbitration_stake_accounts");
 
-      stake_acnts.modify(acc, same_payer, [&](auto& a) { a.balance = asset(0, core_symbol()); });
+   auto move_accounts = [&](name owner, asset value, uint8_t role_type) {
+      arbitration_stake_accounts unstake_acnts(_self, (uint64_t(0x1) << 63) | arbitration_id);
+      auto acc = unstake_acnts.find(owner.value);
+      if (acc == unstake_acnts.end()) {
+         unstake_acnts.emplace(_self, [&](auto& a) {
+            a.account = owner;
+            a.balance = value;
+            a.role_type = role_type;
+         });
+      } else {
+         unstake_acnts.modify(acc, same_payer, [&](auto& a) { a.balance += value; });
+      }
+   };
+
+   auto itr = stake_acnts.begin();
+   while (itr != stake_acnts.end()) {
+      if (role_type != itr->role_type) {
+         move_accounts(itr->account, itr->balance, itr->role_type);
+      }
+
+      stake_acnts.erase(itr);
+      itr = stake_acnts.begin();
    }
 }
 
@@ -1194,7 +1212,7 @@ void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount
 
    check(amount.amount > 0, "stake amount could not be  equal to zero");
 
-   arbitration_stake_accounts stake_acnts(_self, arbitration_id);
+   arbitration_stake_accounts stake_acnts(_self, (uint64_t(0x1) << 63) | arbitration_id);
 
    auto acc = stake_acnts.find(account.value);
    check(acc != stake_acnts.end(), "no account found");

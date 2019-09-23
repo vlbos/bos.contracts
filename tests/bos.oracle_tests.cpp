@@ -413,12 +413,12 @@ class bos_oracle_tester : public tester {
    action_result setstatus(uint64_t arbitration_id, uint8_t status) { return push_action(N(oracle.bos), N(setstatus), mvo()("arbitration_id", arbitration_id)("status", status)); }
    action_result importwps(const std::vector<name>& auditors) { return push_action(N(oracle.bos), N(importwps), mvo()("auditors", auditors)); }
 
-   uint64_t reg_service(name account, time_point_sec update_start_time) { return reg_service(0, account, update_start_time); }
+   uint64_t reg_service(name account, time_point_sec update_start_time,uint8_t data_type=0) { return reg_service(0, account, update_start_time,data_type); }
 
-   uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time) {
+   uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time,uint8_t data_type=0) {
       //  name account = N(alice);
       //  uint64_t service_id =0;
-      uint8_t data_type = 0;
+      // uint8_t data_type = 0;
       uint8_t status = 0;
       uint8_t injection_method = 0;
       uint8_t acceptance = 3;
@@ -1007,10 +1007,10 @@ try {
 
       // current_time = time_point_sec(control->head_block_time());
       // BOOST_TEST(0 == current_time.sec_since_epoch());
-      auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, update_number);
 
-      uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      BOOST_TEST_REQUIRE(update_number_from_api == update_number);
+      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
       fetchdata(service_id, update_number, 0);
    }
 }
@@ -1064,10 +1064,10 @@ try {
       BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
 
       // BOOST_TEST0 == 8);
-      auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, update_number);
 
-      uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      BOOST_TEST_REQUIRE(update_number_from_api == update_number);
+      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
       // BOOST_TEST0 == update_number);
       fetchdata(service_id, update_number, 0);
    }
@@ -1121,10 +1121,67 @@ try {
       auto data = pushdata(service_id, N(provider5555), update_number, request_id, differ_data_json);
 
       // BOOST_TEST0 == 8);
-      auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, update_number);
+      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
+      // BOOST_TEST0 == update_number);
+      fetchdata(service_id, update_number, 0);
+   }
+}
+FC_LOG_AND_RETHROW()
 
-      uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      BOOST_TEST_REQUIRE(update_number_from_api == update_number);
+BOOST_FIXTURE_TEST_CASE(push_non_deterministic_data_to_table_test, bos_oracle_tester)
+try {
+
+   /// reg service
+   name account = N(alice);
+   time_point_sec update_start_time = time_point_sec(control->head_block_time());
+   uint64_t service_id = reg_service(N(provider1111), update_start_time,1);
+   add_fee_type(service_id);
+
+   /// publish data
+   {
+      auto services = get_data_service(service_id);
+
+      // produce_block(fc::hours(1));
+      uint32_t update_cycle = services["update_cycle"].as<uint32_t>();
+      BOOST_REQUIRE(update_cycle > 0);
+      uint32_t duration = services["duration"].as<uint32_t>();
+      time_point_sec update_start_time = services["update_start_time"].as<time_point_sec>();
+      BOOST_REQUIRE(duration > 0);
+      time_point_sec current_time = time_point_sec(control->head_block_time());
+
+      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint32_t current_duration_end_time = current_duration_begin_time + duration;
+      if (current_time.sec_since_epoch() > current_duration_end_time) {
+         produce_block(fc::seconds(duration));
+      }
+
+      current_time = time_point_sec(control->head_block_time());
+
+      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+
+      const string data_json = "publish test data json";
+      uint64_t request_id = 0;
+
+      std::string a = "provider";
+      for (int j = 1; j <= 5; ++j) {
+         std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
+         name acc = name(acc_name.c_str());
+         auto data = pushdata(service_id, acc, update_number, request_id, data_json);
+         produce_blocks(2);
+      }
+
+      //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
+      //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
+
+      // BOOST_TEST0 == 8);
+      // auto oracledata = get_oracle_data(service_id, update_number);
+
+      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
       // BOOST_TEST0 == update_number);
       fetchdata(service_id, update_number, 0);
    }
