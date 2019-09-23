@@ -37,4 +37,4 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] oracle_data_record {
    EOSLIB_SERIALIZE(oracle_data_record, (record_id)(request_id)(update_number)(data)(timestamp))
 };
 
-typedef eosio::multi_index<"oracledata"_n, oracle_data_record, indexed_by<"bynumber"_n, const_mem_fun<oracle_data_record, uint64_t, &oracle_data_record::by_number>>> oracle_data;
+typedef eosio::multi_index<"oracledata"_n, oracle_data_record, indexed_by<"bynumber"_n, const_mem_fun<oracle_data_record, uint128_t, &oracle_data_record::by_number>>> oracle_data;

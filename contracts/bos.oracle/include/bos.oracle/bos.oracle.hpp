@@ -192,7 +192,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    std::tuple<std::vector<name>, asset, std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
    std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
    void slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount);
-   void slash_arbitration_stake(uint64_t arbitration_id, , uint8_t role_type);
+   void slash_arbitration_stake(uint64_t arbitration_id,uint8_t role_type);
    void sub_balance(name owner, asset value, uint64_t arbitration_id);
    void add_balance(name owner, asset value, uint64_t arbitration_id, uint8_t role_type);
    void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo);

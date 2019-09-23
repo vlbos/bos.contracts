@@ -825,7 +825,7 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
 
    data_services svctable(_self, _self.value);
 
-   uint128_t id make_update_id(update_number,request_id);
+   uint128_t id = make_update_id(update_number,request_id);
     if(data_deterministic==data_type && 0 != update_number){
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");

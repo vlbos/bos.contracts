@@ -130,7 +130,7 @@ typedef eosio::multi_index<"cancelapplys"_n, svc_provision_cancel_apply> svc_pro
 
 typedef eosio::multi_index<"provisionlog"_n, data_service_provision_log,
                            indexed_by<"bytime"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_time>>,
-                           indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint64_t, &data_service_provision_log::by_number>>>
+                           indexed_by<"bynumber"_n, const_mem_fun<data_service_provision_log, uint128_t, &data_service_provision_log::by_number>>>
     data_service_provision_logs;
 
 typedef eosio::multi_index<"pushrecords"_n, push_record> push_records;
