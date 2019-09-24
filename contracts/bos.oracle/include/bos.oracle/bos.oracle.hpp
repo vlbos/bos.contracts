@@ -10,13 +10,13 @@
 #include "bos.constants.hpp"
 #include "bos.oracle/tables/arbitration.hpp"
 #include "bos.oracle/tables/consumer.hpp"
-#include "bos.oracle/tables/oracle.hpp"
 #include "bos.oracle/tables/oracle_api.hpp"
 #include "bos.oracle/tables/provider.hpp"
 #include "bos.oracle/tables/riskcontrol.hpp"
 #include <cmath>
 #include <eosio/eosio.hpp>
 using namespace eosio;
+using namespace std;
 
 class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
  public:

@@ -1,7 +1,6 @@
 #pragma once
 #include "bos.oracle/bos.constants.hpp"
 #include "bos.oracle/bos.functions.hpp"
-#include "bos.oracle/bos.types.hpp"
 #include <eosio/eosio.hpp>
 
 using namespace eosio;
@@ -45,7 +44,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_provider {
   asset unconfirmed_amount;
   asset claim_amount;
   time_point_sec last_claim_time;
-  vector<uint64_t> services;
+  std::vector<uint64_t> services;
   uint64_t primary_key() const { return account.value; }
 };
 

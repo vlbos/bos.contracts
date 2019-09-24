@@ -14,7 +14,6 @@
 #include <eosio/transaction.hpp>
 #include <set>
 #include <string>
-
 // namespace eosio {
 
 using eosio::asset;

@@ -236,6 +236,7 @@ contract_oracle_folder=bos.oracle
 contract_consumer=consumer1234
 contract_consumer_folder=consumer.contract
 
+
   ${!cleos} set contract ${contract_oracle} ${CONTRACTS_DIR}/${contract_oracle_folder} -x 1000 -p ${contract_oracle}
  
     ${!cleos} set contract ${contract_consumer} ${CONTRACTS_DIR}/${contract_consumer_folder} -x 1000 -p ${contract_consumer}@active

@@ -13,7 +13,6 @@
 
 #include "bos.oracle/bos.constants.hpp"
 #include "bos.oracle/bos.functions.hpp"
-#include "bos.oracle/bos.types.hpp"
 
 using namespace eosio;
 // namespace eosio {

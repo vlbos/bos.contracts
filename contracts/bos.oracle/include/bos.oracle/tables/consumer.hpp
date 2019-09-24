@@ -6,7 +6,6 @@
 
 #include "bos.oracle/bos.constants.hpp"
 #include "bos.oracle/bos.functions.hpp"
-#include "bos.oracle/bos.types.hpp"
 #include <eosio/asset.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>

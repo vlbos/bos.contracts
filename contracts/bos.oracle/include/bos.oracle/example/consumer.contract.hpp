@@ -1,5 +1,4 @@
 #pragma once
-#include "bos.oracle/bos.types.hpp"
 #include <eosio/eosio.hpp>
 #include <eosio/asset.hpp>
 
