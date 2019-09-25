@@ -32,6 +32,12 @@ class bos_oracle_tester : public tester {
       set_abi(N(dappuser.bos), contracts::consumer_abi().data());
 
       produce_blocks();
+      set_code(N(dappuser.bos), contracts::token_wasm());
+      set_abi(N(dappuser.bos), contracts::token_abi().data());
+
+      create_currency(N(dappuser.bos), N(dappuser.bos), core_sym::from_string("10000000000.0000"));
+      issue(N(dappuser.bos), core_sym::from_string("1000000000.0000"));
+      produce_blocks();
 
       const auto& accnt = control->db().get<account_object, by_name>(N(oracle.bos));
       abi_def abi;
@@ -44,6 +50,9 @@ class bos_oracle_tester : public tester {
       create_currency(N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000"));
       issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
       BOOST_REQUIRE_EQUAL(core_sym::from_string("1000000000.0000"), get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram"));
+
+      create_currency(N(eosio.token), config::system_account_name, eosio::chain::asset::from_string("10000000000.0000 BQS"));
+      issue(config::system_account_name, eosio::chain::asset::from_string("1000000000.0000 BQS"));
 
       set_code(config::system_account_name, contracts::system_wasm());
       set_abi(config::system_account_name, contracts::system_abi().data());
@@ -62,6 +71,8 @@ class bos_oracle_tester : public tester {
       transfer("eosio", "dappuser.bos", ("3000.0000"), "eosio");
       transfer("eosio", "dappuser", ("3000.0000"), "eosio");
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
+
+      transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
       std::vector<string> accounts_prefix = {"provider", "consumer", "appellants", "arbitrators"};
       for (auto& a : accounts_prefix) {
@@ -130,6 +141,10 @@ class bos_oracle_tester : public tester {
    }
    void transfer(name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
       base_tester::push_action(N(eosio.token), N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", core_sym::from_string(amount))("memo", memo));
+   }
+
+   void transferex(name account, name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
+      base_tester::push_action(account, N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", eosio::chain::asset::from_string(amount))("memo", memo));
    }
 
    asset get_balance(const account_name& act) {
@@ -413,9 +428,9 @@ class bos_oracle_tester : public tester {
    action_result setstatus(uint64_t arbitration_id, uint8_t status) { return push_action(N(oracle.bos), N(setstatus), mvo()("arbitration_id", arbitration_id)("status", status)); }
    action_result importwps(const std::vector<name>& auditors) { return push_action(N(oracle.bos), N(importwps), mvo()("auditors", auditors)); }
 
-   uint64_t reg_service(name account, time_point_sec update_start_time,uint8_t data_type=0) { return reg_service(0, account, update_start_time,data_type); }
+   uint64_t reg_service(name account, time_point_sec update_start_time, uint8_t data_type = 0) { return reg_service(0, account, update_start_time, data_type); }
 
-   uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time,uint8_t data_type=0) {
+   uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time, uint8_t data_type = 0) {
       //  name account = N(alice);
       //  uint64_t service_id =0;
       // uint8_t data_type = 0;
@@ -1136,7 +1151,7 @@ try {
    /// reg service
    name account = N(alice);
    time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(N(provider1111), update_start_time,1);
+   uint64_t service_id = reg_service(N(provider1111), update_start_time, 1);
    add_fee_type(service_id);
 
    /// publish data

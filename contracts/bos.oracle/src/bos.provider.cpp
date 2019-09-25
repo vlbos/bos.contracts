@@ -42,7 +42,8 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
    check(data_format.size() <= 256, "data_format could not be greater than 256");
    check(criteria.size() <= 256, "criteria could not be greater than 256");
    check(declaration.size() <= 256, "declaration could not be greater than 256");
-
+   check(update_start_time > bos_oracle::current_time_point_sec(), "update_start_time could not be earlier than current time");
+   
    data_services svctable(_self, _self.value);
 
    uint64_t id = svctable.available_primary_key();

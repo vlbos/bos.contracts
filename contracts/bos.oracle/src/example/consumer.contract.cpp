@@ -66,11 +66,6 @@ void consumer_contract::reality(asset data) {
    // auto eos_token = eosio::token("eosio.token"_n);
    auto newBalance = eosio::token::get_balance("eosio.token"_n, _self, _core_symbol.code()); // symbol_type(S(4, EOS)).name());
    check(newBalance.amount > data.amount, "bad day");
-   // action(
-   //     permission_level{ _self, N(active) },
-   //     _self, N(test),
-   //     std::make_tuple(newBalance)
-   // ).send();
 }
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
