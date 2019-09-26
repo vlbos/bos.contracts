@@ -1,10 +1,46 @@
 
+
+20190924 version
+
+transfer 安全检查
+###### 推送数据
+增加不确定性数据写表
+update_start_time 限制大于当前时间
+
+###### 仲裁
+仲裁结束，重新开始同一服务新仲裁时 抵押处理问题修复
+
+
+20190906 version
+###### 推送数据
+一个提供者表对多个服务存储
+update_number 检查验证
+push_data超时验证 单元测试 
+
+###### 仲裁
+修复多人申诉问题
+修复多人应诉问题
+修复接受邀请超时，上传结果超时问题，增加相应单元测试
+修改抵押金额超过服务提供者
+
+## 20190911 version
+###### 推送数据
+一个提供者pushdata 数据不相同大于等于1/2问题
+参数合法性检查
+pushdata超时定时器优化
+
+###### 仲裁
+修复应诉超时问题
+修复解抵押问题
+修复申诉表role_type发起者不对问题
+修复仲裁员收入计算错误问题
+
+
 ├── include
 │   └── bos.oracle
 │       ├── bos.constants.hpp
 │       ├── bos.functions.hpp
 │       ├── bos.oracle.hpp
-│       ├── bos.types.hpp
 │       ├── bos.util.hpp
 │       ├── example
 │       │   └── consumer.contract.hpp
@@ -12,7 +48,6 @@
 │       └── tables
 │           ├── arbitration.hpp
 │           ├── consumer.hpp
-│           ├── oracle.hpp
 │           ├── oracle_api.hpp
 │           ├── provider.hpp
 │           └── riskcontrol.hpp
@@ -68,29 +103,6 @@ arbiincomes
 appealreq    scope  service_id*4+round
 arbiresults  scope  arbitration_id*4+round
 
-20190906 version
-###### 推送数据
-一个提供者表对多个服务存储
-update_number 检查验证
-push_data超时验证 单元测试 
-
-###### 仲裁
-修复多人申诉问题
-修复多人应诉问题
-修复接受邀请超时，上传结果超时问题，增加相应单元测试
-修改抵押金额超过服务提供者
-
-## 20190911 version
-###### 推送数据
-一个提供者pushdata 数据不相同大于等于1/2问题
-参数合法性检查
-pushdata超时定时器优化
-
-###### 仲裁
-修复应诉超时问题
-修复解抵押问题
-修复申诉表role_type发起者不对问题
-修复仲裁员收入计算错误问题
 
 
 

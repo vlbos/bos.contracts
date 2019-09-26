@@ -172,6 +172,15 @@ class bos_oracle_tester : public tester {
       base_tester::push_action(N(dappuser.bos), N(fetchdata), N(dappuser.bos),
                                mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("update_number", update_number)("request_id", request_id));
    }
+   void consumer_transfer(name from, name to, asset quantity, string memo) {
+      base_tester::push_action(N(dappuser.bos), N(transfer), N(dappuser.bos),
+                               mutable_variant_object()("from", from)("to", to)("quantity", quantity)("memo", memo));
+   }
+
+   void consumer_rollback(name who, asset value, string memo) {
+      base_tester::push_action(N(dappuser.bos), N(dream), N(dappuser.bos),
+                               mutable_variant_object()("who", who)("value", value)("memo", memo));
+   }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
       //       push_permission_update_auth_action(N(provider.bos));

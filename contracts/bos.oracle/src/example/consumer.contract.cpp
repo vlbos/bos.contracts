@@ -25,7 +25,7 @@ void consumer_contract::receivejson(name self, name code) {
 }
 
 void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t update_number, uint64_t request_id) {
-
+    require_auth(_self);
    oracle_data oracledatatable(oracle, service_id);
    check(oracledatatable.begin() != oracledatatable.end(), " no  data found ");
 
@@ -44,6 +44,7 @@ void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t upd
 }
 
 void consumer_contract::transfer(name from, name to, asset quantity, string memo) {
+    require_auth(_self);
    if (from == _self || to != _self) {
       return;
    }
@@ -84,7 +85,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       switch (action) {
          // NB: Add custom method in bracets after (setup) to use them as
          // endpoints
-         EOSIO_DISPATCH_HELPER(consumer_contract, (fetchdata))
+         EOSIO_DISPATCH_HELPER(consumer_contract, (fetchdata)(transfer)(dream)(reality))
       }
    }
 
