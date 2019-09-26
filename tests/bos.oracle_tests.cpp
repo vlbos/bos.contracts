@@ -23,7 +23,7 @@ class bos_oracle_tester : public tester {
    bos_oracle_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(oracle.bos), N(dappuser.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(oracle.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(oracle.bos), contracts::oracle_wasm());
@@ -31,12 +31,6 @@ class bos_oracle_tester : public tester {
       set_code(N(dappuser.bos), contracts::consumer_wasm());
       set_abi(N(dappuser.bos), contracts::consumer_abi().data());
 
-      produce_blocks();
-      set_code(N(dappuser.bos), contracts::token_wasm());
-      set_abi(N(dappuser.bos), contracts::token_abi().data());
-
-      create_currency(N(dappuser.bos), N(dappuser.bos), core_sym::from_string("10000000000.0000"));
-      issue(N(dappuser.bos), core_sym::from_string("1000000000.0000"));
       produce_blocks();
 
       const auto& accnt = control->db().get<account_object, by_name>(N(oracle.bos));
@@ -58,6 +52,14 @@ class bos_oracle_tester : public tester {
       set_abi(config::system_account_name, contracts::system_abi().data());
       base_tester::push_action(config::system_account_name, N(init), config::system_account_name, mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
       produce_blocks();
+
+      set_code(N(dapp.bos), contracts::token_wasm());
+      set_abi(N(dapp.bos), contracts::token_abi().data());
+
+      create_currency(N(dapp.bos), N(dapp.bos), core_sym::from_string("10000000000.0000"));
+      issue(N(dapp.bos), core_sym::from_string("1000000000.0000"));
+      produce_blocks();
+
       create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
       create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
@@ -173,13 +175,11 @@ class bos_oracle_tester : public tester {
                                mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("update_number", update_number)("request_id", request_id));
    }
    void consumer_transfer(name from, name to, asset quantity, string memo) {
-      base_tester::push_action(N(dappuser.bos), N(transfer), N(dappuser.bos),
-                               mutable_variant_object()("from", from)("to", to)("quantity", quantity)("memo", memo));
+      base_tester::push_action(N(dappuser.bos), N(transfer), N(dappuser.bos), mutable_variant_object()("from", from)("to", to)("quantity", quantity)("memo", memo));
    }
 
    void consumer_rollback(name who, asset value, string memo) {
-      base_tester::push_action(N(dappuser.bos), N(dream), N(dappuser.bos),
-                               mutable_variant_object()("who", who)("value", value)("memo", memo));
+      base_tester::push_action(N(dappuser.bos), N(dream), N(dappuser.bos), mutable_variant_object()("who", who)("value", value)("memo", memo));
    }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
@@ -353,6 +353,11 @@ class bos_oracle_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("arbitration_stake_account", data, abi_serializer_max_time);
    }
 
+   fc::variant get_arbitration_unstake_account(const uint64_t& arbitration_id, account_name acc) {
+      vector<char> data = get_row_by_account(N(oracle.bos), (uint64_t(0x1) << 63) | arbitration_id, N(arbistakeacc), acc);
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("arbitration_stake_account", data, abi_serializer_max_time);
+   }
+
    fc::variant get_arbitration_stake_record(const uint64_t& arbitration_id, const uint8_t& round, account_name acc) {
       vector<char> data = get_row_by_account(N(oracle.bos), ((arbitration_id << 3) | round), N(arbistakes), acc);
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("arbitration_stake_record", data, abi_serializer_max_time);
@@ -366,13 +371,12 @@ class bos_oracle_tester : public tester {
    }
 
    // provider
-   action_result regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
-                            uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time) {
+   action_result regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
+                            uint8_t provider_limit, uint32_t update_cycle) {
 
       return push_action(account, N(regservice),
-                         mvo()("account", account)("base_stake_amount",
-                                                   base_stake_amount)("data_format", data_format)("data_type", data_type)("criteria", criteria)("acceptance", acceptance)("declaration", declaration)(
-                             "injection_method", injection_method)("duration", duration)("provider_limit", provider_limit)("update_cycle", update_cycle)("update_start_time", update_start_time));
+                         mvo()("account", account)("base_stake_amount", base_stake_amount)("data_format", data_format)("data_type", data_type)("criteria", criteria)("acceptance", acceptance)(
+                             "injection_method", injection_method)("duration", duration)("provider_limit", provider_limit)("update_cycle", update_cycle));
    }
 
    action_result unregservice(uint64_t service_id, name account, uint8_t status) {
@@ -437,9 +441,7 @@ class bos_oracle_tester : public tester {
    action_result setstatus(uint64_t arbitration_id, uint8_t status) { return push_action(N(oracle.bos), N(setstatus), mvo()("arbitration_id", arbitration_id)("status", status)); }
    action_result importwps(const std::vector<name>& auditors) { return push_action(N(oracle.bos), N(importwps), mvo()("auditors", auditors)); }
 
-   uint64_t reg_service(name account, time_point_sec update_start_time, uint8_t data_type = 0) { return reg_service(0, account, update_start_time, data_type); }
-
-   uint64_t reg_service(uint64_t service_id, name account, time_point_sec update_start_time, uint8_t data_type = 0) {
+   uint64_t reg_service(name account, uint8_t data_type = 0) {
       //  name account = N(alice);
       //  uint64_t service_id =0;
       // uint8_t data_type = 0;
@@ -458,11 +460,10 @@ class bos_oracle_tester : public tester {
       std::string data_format = "";
       std::string criteria = "";
       std::string declaration = "";
-      //   time_point_sec update_start_time = time_point_sec( control->head_block_time() );
 
-      auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, declaration, injection_method, duration, provider_limit, update_cycle, update_start_time);
+      auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, injection_method, duration, provider_limit, update_cycle);
 
-      service_id = get_oracle_id(0);
+      uint64_t service_id = get_oracle_id(0);
 
       std::string a = "provider";
 
@@ -567,8 +568,7 @@ class bos_oracle_tester : public tester {
    /// arbitration
    uint64_t reg_svc_for_arbi() {
       name account = N(provider1111);
-      time_point_sec update_start_time = time_point_sec(control->head_block_time());
-      uint64_t service_id = reg_service(account, update_start_time);
+      uint64_t service_id = reg_service(account);
       // BOOST_TEST0 == service_id);
       add_fee_type(service_id);
       return service_id;
@@ -726,20 +726,20 @@ try {
    std::string declaration = "";
    //   bool freeze_flag = false;
    //   bool emergency_flag = false;
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
 
-   auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, declaration, injection_method, duration, provider_limit, update_cycle, update_start_time);
+   auto token = regservice(account, amount, data_format, data_type, criteria, acceptance, injection_method, duration, provider_limit, update_cycle);
+
    // BOOST_TEST("" == "reg service after");
-   uint64_t create_time_sec = static_cast<uint64_t>(update_start_time.sec_since_epoch());
 
    uint64_t new_service_id = get_oracle_id(0);
 
    auto services = get_data_service(new_service_id);
-   REQUIRE_MATCHING_OBJECT(
-       services, mvo()("service_id", new_service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
-                     "provider_limit", provider_limit)("update_cycle", update_cycle)("last_update_number", last_update_number)("appeal_freeze_period", appeal_freeze_period)(
-                     "exceeded_risk_control_freeze_period", exceeded_risk_control_freeze_period)("guarantee_id", guarantee_id)("base_stake_amount", amount)("risk_control_amount", risk_control_amount)(
-                     "pause_service_stake_amount", pause_service_stake_amount)("data_format", data_format)("criteria", criteria)("declaration", declaration)("update_start_time", update_start_time));
+   // REQUIRE_MATCHING_OBJECT(
+   //     services, mvo()("service_id", new_service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
+   //                   "provider_limit", provider_limit)("update_cycle", update_cycle)("last_update_number", last_update_number)("appeal_freeze_period", appeal_freeze_period)(
+   //                   "exceeded_risk_control_freeze_period", exceeded_risk_control_freeze_period)("guarantee_id", guarantee_id)("base_stake_amount", amount)("risk_control_amount",
+   //                   risk_control_amount)( "pause_service_stake_amount", pause_service_stake_amount)("data_format", data_format)("criteria", criteria)("declaration",
+   //                   declaration)("update_start_time", update_start_time));
 
    // BOOST_TEST("" == "reg service after");
    //  BOOST_TEST_REQUIRE( amount == get_data_provider(account)["total_stake_amount"].as<asset>() );
@@ -879,8 +879,8 @@ BOOST_FIXTURE_TEST_CASE(unreg_pause_test, bos_oracle_tester)
 try {
 
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
    asset amount = core_sym::from_string("1000.0000");
    stake_asset(service_id, account, amount);
 
@@ -897,8 +897,8 @@ BOOST_FIXTURE_TEST_CASE(execaction_test, bos_oracle_tester)
 try {
 
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
    const uint8_t freeze_action_type = 5;
    const uint8_t emergency_action_type = 6;
    auto token = execaction(service_id, freeze_action_type);
@@ -912,9 +912,9 @@ BOOST_FIXTURE_TEST_CASE(stakeasset_test, bos_oracle_tester)
 try {
 
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t new_service_id = reg_service(account, update_start_time);
-   uint64_t new_second_service_id = reg_service(account, update_start_time);
+
+   uint64_t new_service_id = reg_service(account);
+   uint64_t new_second_service_id = reg_service(account);
 
    // BOOST_TEST("" == "====reg test true");
    produce_blocks(1);
@@ -955,8 +955,8 @@ try {
 
    /// reg service
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
@@ -979,8 +979,8 @@ try {
 
    /// reg service
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(N(provider1111), update_start_time);
+
+   uint64_t service_id = reg_service(N(provider1111));
    add_fee_type(service_id);
 
    /// publish data
@@ -1045,8 +1045,8 @@ try {
 
    /// reg service
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(N(provider1111), update_start_time);
+
+   uint64_t service_id = reg_service(N(provider1111));
    add_fee_type(service_id);
 
    /// publish data
@@ -1103,8 +1103,8 @@ try {
 
    /// reg service
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(N(provider1111), update_start_time);
+
+   uint64_t service_id = reg_service(N(provider1111));
    add_fee_type(service_id);
 
    /// publish data
@@ -1159,8 +1159,7 @@ try {
 
    /// reg service
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(N(provider1111), update_start_time, 1);
+   uint64_t service_id = reg_service(N(provider1111), 1);
    add_fee_type(service_id);
 
    /// publish data
@@ -1215,8 +1214,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(addfeetype_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t new_service_id = reg_service(account, update_start_time);
+
+   uint64_t new_service_id = reg_service(account);
 
    /// add fee type
    {
@@ -1235,8 +1234,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(subscribe_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
 
@@ -1263,8 +1262,8 @@ BOOST_FIXTURE_TEST_CASE(requestdata_test, bos_oracle_tester)
 try {
 
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
 
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
@@ -1284,8 +1283,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(payservice_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
 
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
@@ -1304,8 +1303,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(claim_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
 
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
@@ -1330,8 +1329,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(deposit_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
 
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
@@ -1356,8 +1355,8 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(withdraw_test, bos_oracle_tester)
 try {
    name account = N(alice);
-   time_point_sec update_start_time = time_point_sec(control->head_block_time());
-   uint64_t service_id = reg_service(account, update_start_time);
+
+   uint64_t service_id = reg_service(account);
 
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
@@ -1530,7 +1529,97 @@ try {
 
       auto stakes = get_arbitration_stake_account(arbitration_id, from);
       auto balance = stakes["balance"].as<asset>();
-      BOOST_TEST_REQUIRE(core_sym::from_string(amount) + core_sym::from_string(amount) == balance);
+      BOOST_TEST_REQUIRE(core_sym::from_string(amount) == balance);
+   }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(arbi_reappeal_timeout_over_reappeal_new_case_result_reverse_test, bos_oracle_tester)
+try {
+
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appellants11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+
+   uint8_t result = 1;
+   /// upload result
+   upload_result(arbitration_id, round, result);
+
+   produce_blocks(60 * 60 * 2 + 10);
+
+   /// get final result
+   {
+      // get_result(arbitration_id, result);
+      // BOOST_TEST0 == arbitration_id);
+      uint64_t service_id = arbitration_id;
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint8_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == final_result);
+
+      auto stakes = get_arbitration_unstake_account(arbitration_id, name(appeal_name.c_str()));
+      auto balance = stakes["balance"].as<asset>();
+      BOOST_TEST_REQUIRE(core_sym::from_string(amount) == balance);
+
+      produce_blocks(1);
+   }
+
+   re_stake_svc_for_arbi(service_id);
+
+   produce_blocks(1);
+
+   role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+
+   resp_appeal(arbitration_id, provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+
+   result = 2;
+   /// upload result
+   upload_result(arbitration_id, round, result);
+
+   produce_blocks(60 * 60 * 2 + 10);
+
+   /// get final result
+   {
+      // get_result(arbitration_id, result);
+      // BOOST_TEST0 == arbitration_id);
+      uint64_t service_id = arbitration_id;
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint8_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == final_result);
+
+      produce_blocks(1);
+   }
+
+   string acc = appeal_name;
+   {
+      BOOST_TEST(core_sym::from_string("19600.0004") == get_balance(acc));
+      name account = name(acc.c_str());
+      auto token = unstakearbi(arbitration_id, account, core_sym::from_string(amount), "");
+
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("19800.0004"), get_balance(acc));
    }
 }
 FC_LOG_AND_RETHROW()

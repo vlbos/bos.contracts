@@ -34,8 +34,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /// bos.provider begin
    ///
    ///
-   [[eosio::action]] void regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
-                                     uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time);
+   [[eosio::action]] void regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance,
+                                     uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle);
    [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
    [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 

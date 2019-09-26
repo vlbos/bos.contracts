@@ -5,7 +5,8 @@
 transfer 安全检查
 ###### 推送数据
 增加不确定性数据写表
-update_start_time 限制大于当前时间
+regservice action 去掉update_start_time 去掉declaration 内容合并到criteria;
+
 
 ###### 仲裁
 仲裁结束，重新开始同一服务新仲裁时 抵押处理问题修复
@@ -262,8 +263,8 @@ contract_consumer_folder=consumer.contract
 ```
 test_reg_service
  ${!cleos} push action ${contract_oracle} regservice '{ "account":"provider1111", "base_stake_amount":"1000.0000 BOS","data_format":"", "data_type":0, "criteria":"",
-                          "acceptance":3, "declaration":"", "injection_method":0, "duration":1,
-                          "provider_limit":3, "update_cycle":1, "update_start_time":"2019-07-29T15:27:33.216857+00:00"}' -p provider1111@active
+                          "acceptance":3, "injection_method":0, "duration":1,
+                          "provider_limit":3, "update_cycle":1}' -p provider1111@active
 
 ```
 
@@ -456,19 +457,17 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 | 数据类型         | Data Type                              | uint8_t data_type          | 整型     | (确定性/非确定性) type：是指数据提者提供的数据是否允许差异                                                              |
 | 准则             | criteria                               | std::string criteria       | 字符串   | （出现时评判准则）  备注类型                                                                                            |
 | 接受方式         | accept_mode                            | uint64_t  acceptance       | 整型     | 数据接受规则  比例/人数                                                                                                 |
-| 声明             | registration_instructions              | std::string declaration    |          |                                                                                                                         |
 | 数据注入方式     | Data injection method                  | uint64_t injection _method | 整型     | 数据注入方式    链上直接，链接间接（over oracle），链外                                                                 |
 | 基础抵押金额     | basic_mortgage_amount                  | uint64_t amount            | 整型     | 基础抵押金额                                                                                                            |
 | 数据收集持续时间 | Data Collection Duration               | uint32_t duration          | 整型     | 数据收集持续时间（从第一个数据提供者注入数据算起，多久后不再接受同一project_id ^update_number 的数据）duration 单位：秒 |
 | 数据提供者下限   | Data Provider Limit                    | uint8_t provider_limit     | 整型     | 数据提供者下限（大于3） data_provider_min_number                                                                        |
 | 数据更新周期     | Data Update Cycle                      | uint32_t update_cycle      | 整型     | 数据更新周期 单位：秒                                                                                                   |
-| 数据更新开始时间 | Data update start time                 | uint64_t update_start_time | 整型     | 数据更新开始时间                                                                                                        |
 
 
 ```
   ${!cleos} push action ${contract_oracle} regservice '{ "account":"provider1111", "base_stake_amount":"1000.0000 BOS",  "data_format":"", "data_type":0, "criteria":"",
-                          "acceptance":3, "declaration":"", "injection_method":0, "duration":1,
-                          "provider_limit":3, "update_cycle":1, "update_start_time":"2019-07-29T15:27:33.216857+00:00"}' -p provider1111@active
+                          "acceptance":3,  "injection_method":0, "duration":1,
+                          "provider_limit":3, "update_cycle":1}' -p provider1111@active
 ```
 
 

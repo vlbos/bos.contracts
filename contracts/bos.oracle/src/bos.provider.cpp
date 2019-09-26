@@ -24,8 +24,8 @@ using std::string;
  * @param update_cycle
  * @param update_start_time
  */
-void bos_oracle::regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, std::string declaration,
-                            uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle, time_point_sec update_start_time) {
+void bos_oracle::regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
+                            uint8_t provider_limit, uint32_t update_cycle) {
    require_auth(account);
 
    std::string checkmsg = "set base stake amount could not be less than " + std::to_string(service_stake_limit);
@@ -41,9 +41,9 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
    check(acceptance >= 3 && acceptance <= 100, "acceptance could not be less than 3 or greater than 100 ");
    check(data_format.size() <= 256, "data_format could not be greater than 256");
    check(criteria.size() <= 256, "criteria could not be greater than 256");
-   check(declaration.size() <= 256, "declaration could not be greater than 256");
-   check(update_start_time > bos_oracle::current_time_point_sec(), "update_start_time could not be earlier than current time");
-   
+   // check(declaration.size() <= 256, "declaration could not be greater than 256");
+   // check(update_start_time > bos_oracle::current_time_point_sec(), "update_start_time could not be earlier than current time");
+
    data_services svctable(_self, _self.value);
 
    uint64_t id = svctable.available_primary_key();
@@ -60,13 +60,13 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
       s.data_type = data_type;
       s.criteria = criteria;
       s.acceptance = acceptance;
-      s.declaration = declaration;
+      s.declaration = "";
       s.injection_method = injection_method;
       s.base_stake_amount = base_stake_amount;
       s.duration = duration;
       s.provider_limit = provider_limit;
       s.update_cycle = update_cycle;
-      s.update_start_time = update_start_time;
+      s.update_start_time = bos_oracle::current_time_point_sec(); // update_start_time;
       s.last_update_number = 0;
       s.appeal_freeze_period = 0;
       s.exceeded_risk_control_freeze_period = 0;
@@ -166,7 +166,9 @@ void bos_oracle::update_service_status(uint64_t service_id) {
    } else if (available_service_providers_count >= service_itr->provider_limit &&
               (service_status::service_init == service_itr->status || service_status::service_pause_insufficient_providers == service_itr->status)) {
       print("\n ======svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });");
-      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });
+      svctable.modify(service_itr, same_payer, [&](auto& p) {
+         p.status = service_status::service_in;
+      });
    }
 }
 
@@ -819,18 +821,18 @@ void bos_oracle::check_service_current_update_number(uint64_t service_id, uint64
    check(update_number == expected_update_number && now_sec >= current_duration_begin_time && now_sec <= current_duration_end_time, checkmsg.c_str());
 }
 
-void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t status, uint8_t data_type) {
+void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t data_type, uint8_t status) {
 
-   auto is_push_finish = [&]() ->bool{
+   auto is_push_finish = [&]() -> bool {
       uint64_t pc = get_provider_count(service_id);
       uint64_t ppc = get_publish_provider_count(service_id, update_number, request_id);
-      return ppc==pc;
+      return ppc == pc;
    };
 
    data_services svctable(_self, _self.value);
 
    uint128_t id = make_update_id(update_number, request_id);
-   if (0 != update_number && (data_deterministic == data_type ||  log_status::log_fail==status || is_push_finish())) {
+   if (0 != update_number && (data_deterministic == data_type || log_status::log_fail == status || is_push_finish())) {
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");
       print("\n  update_service_current_log_status last update number", update_number, "data_type=", data_type);
