@@ -1,6 +1,6 @@
 
 
-20190924 version
+## 20190924 version
 
 transfer 安全检查
 ###### 推送数据
@@ -11,7 +11,7 @@ update_start_time 限制大于当前时间
 仲裁结束，重新开始同一服务新仲裁时 抵押处理问题修复
 
 
-20190906 version
+## 20190906 version
 ###### 推送数据
 一个提供者表对多个服务存储
 update_number 检查验证
@@ -35,33 +35,35 @@ pushdata超时定时器优化
 修复申诉表role_type发起者不对问题
 修复仲裁员收入计算错误问题
 
+```
+├── include  
+│   └── bos.oracle 
+│       ├── bos.constants.hpp 
+│       ├── bos.functions.hpp  
+│       ├── bos.oracle.hpp  
+│       ├── bos.util.hpp  
+│       ├── example  
+│       │   └── consumer.contract.hpp  
+│       ├── murmurhash.hpp  
+│       └── tables  
+│           ├── arbitration.hpp 
+│           ├── consumer.hpp  
+│           ├── oracle_api.hpp 
+│           ├── provider.hpp 
+│           └── riskcontrol.hpp 
+└── src 
+    ├── bos.arbitration.cpp 
+    ├── bos.consumer.cpp 
+    ├── bos.fee.cpp 
+    ├── bos.oracle.cpp 
+    ├── bos.provider.cpp 
+    ├── bos.riskcontrol.cpp 
+    ├── bos.util.cpp 
+    └── example 
+        └── consumer.contract.cpp 
+```
 
-├── include
-│   └── bos.oracle
-│       ├── bos.constants.hpp
-│       ├── bos.functions.hpp
-│       ├── bos.oracle.hpp
-│       ├── bos.util.hpp
-│       ├── example
-│       │   └── consumer.contract.hpp
-│       ├── murmurhash.hpp
-│       └── tables
-│           ├── arbitration.hpp
-│           ├── consumer.hpp
-│           ├── oracle_api.hpp
-│           ├── provider.hpp
-│           └── riskcontrol.hpp
-└── src
-    ├── bos.arbitration.cpp
-    ├── bos.consumer.cpp
-    ├── bos.fee.cpp
-    ├── bos.oracle.cpp
-    ├── bos.provider.cpp
-    ├── bos.riskcontrol.cpp
-    ├── bos.util.cpp
-    └── example
-        └── consumer.contract.cpp
-
+```
 主要文档
 https://note.youdao.com/ynoteshare1/index.html?id=8af464f04688e9e56d4fa941523c66f6&type=note  设计说明 
 https://github.com/vlbos/bos.oracle-test/blob/master/oracle.testenv/%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84bos%20oracle%20%E4%BD%BF%E7%94%A8%E6%B5%81%E7%A8%8B.pdf 一个简单的bos oracle 使用流程.pdf
@@ -77,7 +79,7 @@ https://shimo.im/docs/JjPdChcjY9QWtpP9 部署文档
 风控https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.riskcontrol.cpp
 计费统计https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.fee.cpp
 ****
-
+```
 
 oracle1.0 问题修复列表 
 
