@@ -655,24 +655,32 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
 
    uint64_t pc = get_provider_count(service_id);
    uint64_t ppc = get_publish_provider_count(service_id, update_number, request_id);
-   if (!is_expired && (pc < service_itr->provider_limit || ppc < pc)) {
-      print("check_publish_service  if(pc<service_itr->provider_limit || ppc < pc)", service_itr->provider_limit, "ppc=", ppc, ",pc=", pc);
-      return;
-   } else if (is_expired && (pc < service_itr->provider_limit || ppc < service_itr->provider_limit)) {
-      print("\nexpired failed check_publish_service limit=", service_itr->provider_limit, "ppc=", ppc, ",pc=", pc);
+
+   if (!is_expired) {
+      if (pc < service_itr->provider_limit || ppc < pc) {
+         return;
+      }
+
+      uint128_t deferred_id = uint128_t(service_id) << 64 | (update_number | request_id);
+      cancel_deferred(deferred_id);
+   } else if (pc < service_itr->provider_limit || ppc < service_itr->provider_limit) {
       update_service_current_log_status(service_id, update_number, request_id, service_itr->data_type, log_status::log_fail);
+      return;
    }
 
    string data_json = get_publish_data(service_id, update_number, service_itr->provider_limit, request_id);
-   if (!data_json.empty()) {
-      if (injection_method::chain_indirect == service_itr->injection_method) {
-         save_publish_data(service_id, update_number, request_id, data_json);
-      } else {
-         innerpush(service_id, name{}, update_number, request_id, data_json);
+   if (data_json.empty()) {
+      if (is_expired) {
+         update_service_current_log_status(service_id, update_number, request_id, service_itr->data_type, log_status::log_fail);
       }
-   } else if (is_expired) {
-      print("\nexpired failed data_json.empty() limit=", service_itr->provider_limit, "ppc=", ppc, ",pc=", pc);
-      update_service_current_log_status(service_id, update_number, request_id, service_itr->data_type, log_status::log_fail);
+
+      return;
+   }
+
+   if (injection_method::chain_indirect == service_itr->injection_method) {
+      save_publish_data(service_id, update_number, request_id, data_json);
+   } else {
+      innerpush(service_id, name{}, update_number, request_id, data_json);
    }
 }
 

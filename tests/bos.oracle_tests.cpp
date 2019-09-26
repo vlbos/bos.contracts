@@ -1427,6 +1427,32 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(arbi_reg_malicious_arbitrator_test, bos_oracle_tester)
+try {
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   {
+      // push_permission_update_auth_action(to);
+      produce_blocks(1);
+      // for (
+      int i = 1;
+      //  i <= 5; ++i) {
+      //    for (
+      int j = 1;
+      // j <= 5; ++j) {
+      std::string memo = "4,1";
+      std::string arbi_name = "dappuser.bos"; //+ std::to_string(i) + std::to_string(j);
+      name from = name(arbi_name.c_str());
+      transferex(N(dapp.bos), from, to, "10000.0000 BOS", arbi_name.c_str(), memo);
+      produce_blocks(1);
+      auto arbitrator = get_arbitrator(from);
+      BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
+      //    }
+      // }
+   }
+}
+FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(arbi_reappeal_timeout_test, bos_oracle_tester)
 try {
 
@@ -1470,6 +1496,60 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(arbi_reappeal_timeout_resp_from_no_provider_test, bos_oracle_tester)
+try {
+
+   name to = N(oracle.bos);
+   /// reg arbitrator
+   reg_arbi();
+
+   uint64_t service_id = reg_svc_for_arbi();
+   uint64_t arbitration_id = service_id;
+   uint8_t round = 1;
+   std::string appeal_name = "appellants11";
+   string amount = "200.0000";
+   uint8_t role_type = 1; /// consumer
+   /// appeal
+   _appeal(arbitration_id, appeal_name, round, amount, role_type);
+
+   /// resp appeal
+   std::string provider_name = "provider1111";
+   std::string no_provider_name = "dapp";
+
+   resp_appeal(arbitration_id, provider_name, amount);
+   resp_appeal(arbitration_id, no_provider_name, amount);
+
+   /// accept invitation
+   accept_invitation(arbitration_id, round);
+
+   uint8_t result = 2;
+   /// upload result
+   upload_result(arbitration_id, round, result);
+
+   auto stakes = get_arbitration_stake_account(arbitration_id, name(no_provider_name.c_str()));
+   auto balance = stakes["balance"].as<asset>();
+   BOOST_TEST_REQUIRE(core_sym::from_string(amount) == balance);
+
+
+   produce_blocks(60 * 60 * 2 + 10);
+
+   /// get final result
+   {
+
+      auto stakes = get_arbitration_unstake_account(arbitration_id, name(no_provider_name.c_str()));
+      auto balance = stakes["balance"].as<asset>();
+      BOOST_TEST_REQUIRE(core_sym::from_string(amount) == balance);
+
+      // get_result(arbitration_id, result);
+      // BOOST_TEST0 == arbitration_id);
+      uint64_t service_id = arbitration_id;
+      auto arbis = get_arbitration_case(service_id, arbitration_id);
+      uint8_t final_result = arbis["final_result"].as<uint8_t>();
+      BOOST_TEST_REQUIRE(result == final_result);
+      produce_blocks(1);
+   }
+}
+FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(arbi_reappeal_timeout_over_reappeal_new_case_test, bos_oracle_tester)
 try {
 

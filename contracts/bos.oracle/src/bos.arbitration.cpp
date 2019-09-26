@@ -288,6 +288,9 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       p.last_round = current_round;
    });
 
+   uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::reappeal_timeout);
+   cancel_deferred(deferred_id);
+
    timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout, eosio::hours(arbi_resp_appeal_timeout_value).to_seconds());
 }
 
@@ -359,6 +362,9 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    if (!evidence.empty()) {
       uploadeviden(respondent, arbitration_id, evidence);
    }
+
+   uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::resp_appeal_timeout);
+   cancel_deferred(deferred_id);
 }
 
 void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string evidence) {
@@ -508,6 +514,9 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
 
    // 如果仲裁员人数满足需求, 那么开始仲裁
    if (arbiprocess_itr->arbitrators.size() >= arbiprocess_itr->required_arbitrator + arbiprocess_itr->increment_arbitrator) {
+
+      uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::accept_arbitrate_invitation_timeout);
+      cancel_deferred(deferred_id);
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbi_step = arbi_step_type::arbi_wait_for_upload_result; });
 
       // 通知仲裁结果
