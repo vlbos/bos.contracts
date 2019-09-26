@@ -56,8 +56,8 @@ class bos_oracle_tester : public tester {
       set_code(N(dapp.bos), contracts::token_wasm());
       set_abi(N(dapp.bos), contracts::token_abi().data());
 
-      create_currency(N(dapp.bos), N(dapp.bos), core_sym::from_string("10000000000.0000"));
-      issue(N(dapp.bos), core_sym::from_string("1000000000.0000"));
+      create_currency(N(dapp.bos), N(dappuser.bos), core_sym::from_string("10000000000.0000"));
+      issue(N(dappuser.bos), core_sym::from_string("1000000000.0000"));
       produce_blocks();
 
       create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);

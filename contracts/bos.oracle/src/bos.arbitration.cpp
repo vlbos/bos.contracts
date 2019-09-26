@@ -394,7 +394,7 @@ void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t 
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration case .uploadresult");
-   check(arbitration_case_itr->arbi_step == arbi_step_type::arbi_wait_for_upload_result, "arbitration step shoule  be upload result");
+   check(arbitration_case_itr->arbi_step == arbi_step_type::arbi_wait_for_upload_result, "current arbitration step is not upload result");
 
    uint8_t round = arbitration_case_itr->last_round;
    // 仲裁员上传本轮仲裁结果
@@ -483,7 +483,7 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration.acceptarbi");
 
-   check(arbitration_case_itr->arbi_step == arbi_step_type::arbi_wait_for_accept_arbitrate_invitation, "arbitration step shoule  be  arbi_wait_for_accept_arbitrate_invitation ");
+   check(arbitration_case_itr->arbi_step == arbi_step_type::arbi_wait_for_accept_arbitrate_invitation, "current arbitration step is not  arbi_wait_for_accept_arbitrate_invitation ");
 
    uint8_t round = arbitration_case_itr->last_round;
 

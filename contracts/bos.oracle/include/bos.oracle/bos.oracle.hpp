@@ -152,7 +152,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
 
    string get_publish_data(uint64_t service_id, uint64_t update_number, uint8_t provider_limit, uint64_t request_id);
-   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id);
+   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id,uint8_t data_type);
 
    /// consumer
    void pay_service(uint64_t service_id, name contract_account, asset amount);
