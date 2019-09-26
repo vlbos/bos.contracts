@@ -1,6 +1,6 @@
 
 
-## 20190924 version
+## 20190926 version
 
 transfer 安全检查
 ###### 推送数据
