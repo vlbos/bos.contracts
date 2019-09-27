@@ -44,11 +44,11 @@ void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t upd
 }
 
 void consumer_contract::transfer(name from, name to, asset quantity, string memo) {
-    require_auth(_self);
+   //  require_auth(_self);
    // if (from == _self || to != _self) {
    //    return;
    // }
-
+   print("\n consumer_contract::transfer");
    require_recipient("oracle.bos"_n);
 }
 
@@ -69,6 +69,16 @@ void consumer_contract::reality(asset data) {
    check(newBalance.amount > data.amount, "bad day");
 }
 
+
+struct transferx {
+  name from;
+  name to;
+  asset quantity;
+  string memo;
+
+  EOSLIB_SERIALIZE(transferx, (from)(to)(quantity)(memo))
+};
+
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
    name self = name(receiver);
    if (action == "onerror"_n.value) {
@@ -88,6 +98,11 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
          EOSIO_DISPATCH_HELPER(consumer_contract, (fetchdata)(transfer)(dream)(reality))
       }
    }
+
+if (code == "eosio.token"_n.value && action == "transfer"_n.value) {
+    const transferx &t = unpack_action_data<transferx>();
+    thiscontract.transfer(t.from, t.to, t.quantity, t.memo);
+  }
 
    if (code != self.value && action == "oraclepush"_n.value) {
       thiscontract.receivejson(name(receiver), name(code));

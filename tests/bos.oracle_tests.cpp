@@ -70,7 +70,7 @@ class bos_oracle_tester : public tester {
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
       transfer("eosio", "carol", ("3000.0000"), "eosio");
-      transfer("eosio", "dappuser.bos", ("3000.0000"), "eosio");
+      transfer("eosio", "dappuser.bos", ("30000.0000"), "eosio");
       transfer("eosio", "dappuser", ("3000.0000"), "eosio");
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
 
@@ -985,7 +985,7 @@ try {
    /// reg service
    name account = N(alice);
 
-   uint64_t service_id = reg_service(account,1);
+   uint64_t service_id = reg_service(account, 1);
    add_fee_type(service_id);
    stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
    subscribe_service(service_id, N(bob));
@@ -1481,9 +1481,16 @@ try {
       transferex(N(eosio.token), from, to, "10000.0000 BQS", from, memo);
       produce_blocks(1);
 
-      consumer_transfer(from, to, core_sym::from_string("10000.0000"), memo);
+      transfer(from, N(dapp), "1.0000", from, memo);
 
-      transfer(from, from, "10000.0000", from, memo);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(from));
+
+      // consumer_rollback(to, core_sym::from_string("10000.0000"), memo);
+      BOOST_REQUIRE_EXCEPTION(consumer_rollback(to, core_sym::from_string("10000.0000"), memo), eosio_assert_message_exception, eosio_assert_message_is("bad day"));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("bad day"), consumer_rollback(to, core_sym::from_string("10000.0000"), memo));
+
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(from));
+
       // auto arbitrator = get_arbitrator(from);
       // BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
       //    }
