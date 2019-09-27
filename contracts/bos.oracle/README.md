@@ -9,12 +9,12 @@ regservice action 去掉update_start_time 去掉declaration 内容合并到crite
 
 
 
-## 20190927 version
+## 20190926 version
 
 transfer 安全检查
 ###### 推送数据
 增加不确定性数据写表
-regservice action 去掉update_start_time 去掉declaration 内容合并到criteria;
+update_start_time 大于当前时间
 
 
 ###### 仲裁
@@ -324,15 +324,15 @@ transfer pay
 "mpush") test_multipush c1 "$2" ;;
   # ${!cleos}  set account permission provider1111  active '{"threshold": 1,"keys": [{"key": "'${provider1111_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_oracle}'","permission":"eosio.code"},"weight":1}]}' owner -p provider1111@owner
     # sleep .2
-    ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111",  "data_json":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
+    ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111",  "data":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
 
 "push") test_push c1 ;;
-    ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'",  "request_id":0, "data_json":"test data json"}' -p provider1111
+    ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'",  "request_id":0, "data":"test data json"}' -p provider1111
 
 "pushr") test_pushforreq c1 "$2" ;;
-    ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'",  "request_id":'"$2"', "data_json":"test data json"}' -p provider1111
+    ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'",  "request_id":'"$2"', "data":"test data json"}' -p provider1111
 
-${!cleos} push action ${contract_oracle} oraclepush '{"service_id":1, "provider":"'${p}'",  "request_id":0, "data_json":"auto publish test data json"}' -p ${p}
+${!cleos} push action ${contract_oracle} oraclepush '{"service_id":1, "provider":"'${p}'",  "request_id":0, "data":"auto publish test data json"}' -p ${p}
 
 ```
 
@@ -567,19 +567,19 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 |   中文参数名   |                             英文参数名                             | 参数定义                     | 参数类型 | 参数描述 |
 |   数据服务ID   |                          Data Service ID                           | uint64_t service _id         | 整型     |          |
 | 数据更新序列号 |                     Data Update Serial Number                      | uint64_t update_number       | 整型     |          |
-|  具体数据json  |                         Specific data json                         | uint64_t data_json           | 字符串   |          |
+|  具体数据json  |                         Specific data json                         | uint64_t data           | 字符串   |          |
 | 数据提供者签名 |                      Data Provider Signature                       | uint64_t provider _signature | 字符串   |          |
 | 数据服务请求ID |                      Data Service Request ID                       | uint64_t request_id          | 整型     |          |
 
   ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'", 
-                         "request_id":'"$2"', "data_json":"test data json"}' -p provider1111
+                         "request_id":'"$2"', "data":"test data json"}' -p provider1111
 
   # ${!cleos}  set account permission provider1111  active '{"threshold": 1,"keys": [{"key": "'${provider1111_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_oracle}'","permission":"eosio.code"},"weight":1}]}' owner -p provider1111@owner
 
 
     # sleep .2
     ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111", 
-                          "data_json":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
+                          "data":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
 
   reqflag=false && if [ "$2" != "" ]; then reqflag="$2"; fi
 
@@ -588,7 +588,7 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 
     # sleep .2
     ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111", 
-                          "data_json":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
+                          "data":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
 
 # 2.  
 8. 申诉接口

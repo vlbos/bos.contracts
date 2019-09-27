@@ -18,9 +18,9 @@ struct push_json {
    name provider;
    name contract_account;
    uint64_t request_id;
-   std::string data_json;
+   std::string data;
 
-   EOSLIB_SERIALIZE(push_json, (service_id)(provider)(contract_account)(request_id)(data_json))
+   EOSLIB_SERIALIZE(push_json, (service_id)(provider)(contract_account)(request_id)(data))
 };
 
 

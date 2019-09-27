@@ -24,7 +24,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] data_service {
   asset pause_service_stake_amount;
   std::string data_format;
   std::string criteria;
-  std::string declaration;
   time_point_sec update_start_time;
   uint64_t primary_key() const { return service_id; }
 };
@@ -74,7 +73,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] svc_provision_cancel_appl
 struct [[eosio::table, eosio::contract("bos.oracle")]] data_service_provision_log {
   uint64_t log_id;
   uint64_t service_id;
-  std::string data_json;
+  std::string data;
   name account;
   name contract_account;
   uint64_t request_id;

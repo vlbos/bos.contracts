@@ -57,7 +57,7 @@ class bos_oracle_tester : public tester {
       set_abi(N(dapp.bos), contracts::token_abi().data());
 
       create_currency(N(dapp.bos), N(dappuser.bos), core_sym::from_string("10000000000.0000"));
-      issue(N(dappuser.bos), core_sym::from_string("1000000000.0000"));
+      issuex(N(dapp.bos),N(dappuser.bos), core_sym::from_string("1000000000.0000"),N(dappuser.bos));
       produce_blocks();
 
       create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
@@ -138,6 +138,10 @@ class bos_oracle_tester : public tester {
 
       base_tester::push_action(contract, N(create), contract, act);
    }
+   void issuex(name contract,name to, const asset& amount, name manager = config::system_account_name) {
+      base_tester::push_action(contract, N(issue), manager, mutable_variant_object()("to", to)("quantity", amount)("memo", ""));
+   }
+
    void issue(name to, const asset& amount, name manager = config::system_account_name) {
       base_tester::push_action(N(eosio.token), N(issue), manager, mutable_variant_object()("to", to)("quantity", amount)("memo", ""));
    }
@@ -145,8 +149,8 @@ class bos_oracle_tester : public tester {
       base_tester::push_action(N(eosio.token), N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", core_sym::from_string(amount))("memo", memo));
    }
 
-   void transferex(name account, name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
-      base_tester::push_action(account, N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", eosio::chain::asset::from_string(amount))("memo", memo));
+   void transferex(name contract, name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
+      base_tester::push_action(contract, N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", eosio::chain::asset::from_string(amount))("memo", memo));
    }
 
    asset get_balance(const account_name& act) {
@@ -385,13 +389,13 @@ class bos_oracle_tester : public tester {
 
    action_result execaction(uint64_t service_id, uint8_t action_type) { return push_action(N(oracle.bos), N(execaction), mvo()("service_id", service_id)("action_type", action_type)); }
 
-   action_result pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, const string& data_json) {
-      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data_json", data_json));
+   action_result pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, const string& data) {
+      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data", data));
    }
 
-   action_result oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, const string& data_json, name contract_account) {
+   action_result oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, const string& data, name contract_account) {
       return push_action(N(oracle.bos), N(oraclepush),
-                         mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data_json", data_json)("contract_account", contract_account));
+                         mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data", data)("contract_account", contract_account));
    }
 
    action_result starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
@@ -526,10 +530,10 @@ class bos_oracle_tester : public tester {
       // service_id = new_service_id;
       // name provider = N(alice);
       name contract_account = N(dappuser.bos);
-      const string data_json = "test data json";
+      const string data = "test data json";
       // uint64_t request_id = 0;
 
-      auto data = pushdata(service_id, provider, 1, request_id, data_json);
+      auto rdata = pushdata(service_id, provider, 1, request_id, data);
    }
 
    /// request data
@@ -810,11 +814,11 @@ try {
       service_id = new_service_id;
       name provider = N(alice);
       name contract_account = N(dappuser.bos);
-      const string data_json = "test data json";
+      const string data = "test data json";
       uint64_t request_id = 0;
       push_permission_update_auth_action(N(oracle.bos));
       produce_blocks(1);
-      auto data = pushdata(service_id, provider, 1, request_id, data_json);
+      auto rdata = pushdata(service_id, provider, 1, request_id, data);
    }
 
    // BOOST_TEST("" == "====pushdata");
@@ -966,10 +970,10 @@ try {
    {
       name provider = N(alice);
       name contract_account = N(dappuser.bos);
-      const string data_json = "test data json";
+      const string data = "test data json";
       uint64_t request_id = 0;
 
-      auto data = pushdata(service_id, provider, 1, request_id, data_json);
+      auto rdata = pushdata(service_id, provider, 1, request_id, data);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1008,7 +1012,7 @@ try {
       current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
       current_duration_end_time = current_duration_begin_time + duration;
 
-      const string data_json = "publish test data json";
+      const string data = "publish test data json";
       uint64_t request_id = 0;
 
       // BOOST_TEST(0 == update_number);
@@ -1018,7 +1022,7 @@ try {
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data_json);
+         auto data = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
@@ -1072,20 +1076,20 @@ try {
 
       update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
-      const string data_json = "publish test data json";
+      const string data = "publish test data json";
       uint64_t request_id = 0;
 
       std::string a = "provider";
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data_json);
+         auto data = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data));
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, update_number);
@@ -1129,20 +1133,20 @@ try {
 
       update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
-      const string data_json = "publish test data json";
+      const string data = "publish test data json";
       uint64_t request_id = 0;
 
       std::string a = "provider";
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data_json);
+         auto data = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
-      const string differ_data_json = " publish test differ data json";
+      const string differ_data = " publish test differ data json";
 
-      auto data = pushdata(service_id, N(provider5555), update_number, request_id, differ_data_json);
+      auto data = pushdata(service_id, N(provider5555), update_number, request_id, differ_data);
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, update_number);
@@ -1185,20 +1189,20 @@ try {
 
       update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
-      const string data_json = "publish test data json";
+      const string data = "publish test data json";
       uint64_t request_id = 0;
 
       std::string a = "provider";
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data_json);
+         auto data = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data_json));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data));
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, update_number);
@@ -1430,7 +1434,6 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(arbi_reg_malicious_arbitrator_test, bos_oracle_tester)
 try {
    name to = N(oracle.bos);
-   /// reg arbitrator
    {
       // push_permission_update_auth_action(to);
       produce_blocks(1);
@@ -1443,10 +1446,15 @@ try {
       std::string memo = "4,1";
       std::string arbi_name = "dappuser.bos"; //+ std::to_string(i) + std::to_string(j);
       name from = name(arbi_name.c_str());
-      transferex(N(dapp.bos), from, to, "10000.0000 BOS", arbi_name.c_str(), memo);
+      transferex(N(dapp.bos), from, to, "10000.0000 BOS", from, memo);
       produce_blocks(1);
-      auto arbitrator = get_arbitrator(from);
-      BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
+
+      transferex(N(eosio.token), from, to, "10000.0000 BQS", from, memo);
+      produce_blocks(1);
+
+      consumer_transfer( from, to, "10000.0000",  memo);
+      // auto arbitrator = get_arbitrator(from);
+      // BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
       //    }
       // }
    }

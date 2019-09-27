@@ -19,7 +19,7 @@ void consumer_contract::receivejson(name self, name code) {
 
    auto payload = unpack_action_data<push_json>();
 
-   std::string p = payload.data_json;
+   std::string p = payload.data;
 
    print(p.c_str());
 }
@@ -45,9 +45,9 @@ void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t upd
 
 void consumer_contract::transfer(name from, name to, asset quantity, string memo) {
     require_auth(_self);
-   if (from == _self || to != _self) {
-      return;
-   }
+   // if (from == _self || to != _self) {
+   //    return;
+   // }
 
    require_recipient("oracle.bos"_n);
 }

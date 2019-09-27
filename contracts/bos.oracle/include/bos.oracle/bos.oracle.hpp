@@ -39,8 +39,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
    [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
-   [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
-   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json, name contract_account);
+   [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
+   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data, name contract_account);
    [[eosio::action]] void claim(name account, name receive_account);
    [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
    [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
@@ -122,8 +122,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
    void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id,uint8_t data_type=data_deterministic, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
-   void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
-   void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json);
+   void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
+   void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
    void reg_service_provider(uint64_t service_id, name account);
    void check_service_status(uint64_t service_id);
    void update_service_status(uint64_t service_id);

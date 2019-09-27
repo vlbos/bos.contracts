@@ -325,9 +325,9 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
    }
 }
 
-void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
+void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data) {
    require_auth(provider);
-   check(data_json.size() <= 256, "data_json could not be greater than 256");
+   check(data.size() <= 256, "data could not be greater than 256");
 
    check(!(0 != update_number && 0 != request_id), "both update_number and request_id could not be greater than 0");
 
@@ -344,9 +344,9 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_nu
    check(check_provider_no_push_data(service_id, provider, update_number, request_id, service_itr->data_type), "repeat push data");
 
    if (service_itr->data_type == data_type::data_deterministic) {
-      innerpublish(service_id, provider, update_number, request_id, data_json);
+      innerpublish(service_id, provider, update_number, request_id, data);
    } else {
-      innerpush(service_id, provider, update_number, request_id, data_json);
+      innerpush(service_id, provider, update_number, request_id, data);
    }
 }
 /**
@@ -355,11 +355,11 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t update_nu
  * @param service_id
  * @param provider
  * @param contract_account
- * @param data_json
+ * @param data
  * @param request_id
  */
-void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
-   check(data_json.size() <= 256, "data_json could not be greater than 256");
+void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data) {
+   check(data.size() <= 256, "data could not be greater than 256");
    data_services svctable(get_self(), get_self().value);
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "no service id in innerpush");
@@ -372,7 +372,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
       l.log_id = logtable.available_primary_key();
       l.service_id = service_id;
       l.account = provider;
-      l.data_json = data_json;
+      l.data = data;
       l.update_number = update_number;
       l.status = log_status::log_init;
       l.contract_account = name{};
@@ -381,7 +381,7 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
    });
 
    if (injection_method::chain_indirect == servic_injection_method) {
-      save_publish_data(service_id, update_number, request_id, data_json, data_non_deterministic);
+      save_publish_data(service_id, update_number, request_id, data, data_non_deterministic);
    } else {
       print("does not support  'direct push' feature");
       // /////////////////reserve  version 2.0 above
@@ -399,11 +399,11 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
       // //    }
       // // }
       // // add_times(service_id, provider, contract_account, 0 != request_id);
-      // //    push_data(service_id, provider, src, 0, data_json);
+      // //    push_data(service_id, provider, src, 0, data);
       // // }
       // // require_recipient(contract_account);
       // transaction t;
-      // t.actions.emplace_back(permission_level{_self, active_permission}, _self, "oraclepush"_n, std::make_tuple(service_id, 0, request_id, data_json));
+      // t.actions.emplace_back(permission_level{_self, active_permission}, _self, "oraclepush"_n, std::make_tuple(service_id, 0, request_id, data));
       // t.delay_sec = 0;
       // uint128_t deferred_id = (uint128_t(service_id) << 64) | (update_number + request_id);
       // cancel_deferred(deferred_id);
@@ -411,14 +411,14 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t update_n
    }
 }
 
-void bos_oracle::oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data_json, name contract_account) {
-   check(data_json.size() <= 256, "data_json could not be greater than 256");
+void bos_oracle::oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data, name contract_account) {
+   check(data.size() <= 256, "data could not be greater than 256");
    require_auth(_self);
    require_recipient(contract_account);
 }
 
-void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data_json) {
-   check(data_json.size() <= 256, "data_json could not be greater than 256");
+void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data) {
+   check(data.size() <= 256, "data could not be greater than 256");
    print(" innerpublish in");
    name contract_account = _self; // placeholder
    // require_auth(_self);
@@ -429,7 +429,7 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t updat
       l.log_id = logtable.available_primary_key();
       l.service_id = service_id;
       l.account = provider;
-      l.data_json = data_json;
+      l.data = data;
       l.update_number = update_number;
       l.status = log_status::log_init;
       l.contract_account = contract_account;
@@ -668,8 +668,8 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
       return;
    }
 
-   string data_json = get_publish_data(service_id, update_number, service_itr->provider_limit, request_id);
-   if (data_json.empty()) {
+   string data = get_publish_data(service_id, update_number, service_itr->provider_limit, request_id);
+   if (data.empty()) {
       if (is_expired) {
          update_service_current_log_status(service_id, update_number, request_id, service_itr->data_type, log_status::log_fail);
       }
@@ -678,9 +678,9 @@ void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_numb
    }
 
    if (injection_method::chain_indirect == service_itr->injection_method) {
-      save_publish_data(service_id, update_number, request_id, data_json);
+      save_publish_data(service_id, update_number, request_id, data);
    } else {
-      innerpush(service_id, name{}, update_number, request_id, data_json);
+      innerpush(service_id, name{}, update_number, request_id, data);
    }
 }
 
@@ -787,11 +787,11 @@ string bos_oracle::get_publish_data(uint64_t service_id, uint64_t update_number,
    auto update_number_itr_upper = update_number_idx.upper_bound(id);
 
    for (auto itr = update_number_itr_lower; itr != update_number_itr_upper; ++itr) {
-      auto it = data_count.find(itr->data_json);
+      auto it = data_count.find(itr->data);
       if (it != data_count.end()) {
-         data_count[itr->data_json]++;
+         data_count[itr->data]++;
       } else {
-         data_count[itr->data_json] = one_time;
+         data_count[itr->data] = one_time;
       }
 
       provider_count++;
