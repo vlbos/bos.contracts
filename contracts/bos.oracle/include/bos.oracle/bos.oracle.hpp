@@ -24,7 +24,6 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    static constexpr eosio::name active_permission{"active"_n};
    static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
 
-
    static time_point_sec current_time_point_sec();
 
    using contract::contract;
@@ -34,8 +33,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /// bos.provider begin
    ///
    ///
-   [[eosio::action]] void regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance,
-                                     uint8_t injection_method, uint32_t duration, uint8_t provider_limit, uint32_t update_cycle);
+   [[eosio::action]] void regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method,
+                                     uint32_t duration, uint8_t provider_limit, uint32_t update_cycle);
    [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
    [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
@@ -45,6 +44,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
    [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
    [[eosio::action]] void starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
+   [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
 
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
    using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
@@ -55,6 +55,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    using execaction_action = eosio::action_wrapper<"execaction"_n, &bos_oracle::execaction>;
    using unregister_action = eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
    using starttimer_action = eosio::action_wrapper<"starttimer"_n, &bos_oracle::starttimer>;
+   using cleardata_action = eosio::action_wrapper<"cleardata"_n, &bos_oracle::cleardata>;
 
    ///
    ///
@@ -117,10 +118,10 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
  private:
    void save_id(uint8_t id_type, uint64_t id);
-   uint128_t make_update_id(uint64_t update_number,uint64_t request_id);
+   uint128_t make_update_id(uint64_t update_number, uint64_t request_id);
    // provider
    void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
-   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id,uint8_t data_type=data_deterministic, uint8_t status = log_status::log_sent);
+   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t data_type = data_deterministic, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
    void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
    void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
@@ -143,16 +144,16 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
    void freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id = 0);
    uint64_t freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount, uint64_t arbitration_id = 0);
-
+   void clear_data(uint64_t service_id, uint32_t time_length);
    void start_timer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
    void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired = false);
-   void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data,uint8_t data_type=data_deterministic);
+   void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data, uint8_t data_type = data_deterministic);
    uint64_t get_provider_count(uint64_t service_id);
 
    uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
 
    string get_publish_data(uint64_t service_id, uint64_t update_number, uint8_t provider_limit, uint64_t request_id);
-   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id,uint8_t data_type);
+   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, uint8_t data_type);
 
    /// consumer
    void pay_service(uint64_t service_id, name contract_account, asset amount);
@@ -192,7 +193,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    std::tuple<std::vector<name>, asset, std::vector<name>> get_stake_accounts_and_asset(uint64_t arbitration_id, uint8_t role_type);
    std::tuple<std::vector<name>, asset> get_provider_service_stakes(uint64_t service_id);
    void slash_service_stake(uint64_t service_id, const std::vector<name>& slash_accounts, const asset& amount);
-   void slash_arbitration_stake(uint64_t arbitration_id,uint8_t role_type);
+   void slash_arbitration_stake(uint64_t arbitration_id, uint8_t role_type);
    void sub_balance(name owner, asset value, uint64_t arbitration_id);
    void add_balance(name owner, asset value, uint64_t arbitration_id, uint8_t role_type);
    void stake_arbitration(uint64_t id, name account, asset amount, uint8_t round, uint8_t role_type, string memo);

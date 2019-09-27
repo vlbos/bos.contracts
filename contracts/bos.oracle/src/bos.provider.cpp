@@ -706,7 +706,30 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t update_number, 
       d.update_number = update_number;
       d.data = data;
       d.timestamp = bos_oracle::current_time_point_sec().sec_since_epoch();
+      print("\n insert record_id=",d.record_id);
    });
+
+   clear_data(service_id, clear_data_time_length);
+}
+void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
+   require_auth(_self);
+   clear_data(service_id, time_length);
+}
+
+void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
+   print("\n clear_data in =");
+   auto begin_time = bos_oracle::current_time_point_sec().sec_since_epoch();
+   oracle_data oracledatatable(_self, service_id);
+   const uint8_t run_time = 10; // seconds
+
+   for (auto itr = oracledatatable.begin(); itr != oracledatatable.end();) {
+      print("\n traverse record_id=", itr->record_id,",c=",bos_oracle::current_time_point_sec().sec_since_epoch(),",t=",itr->timestamp);
+      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->timestamp < time_length || bos_oracle::current_time_point_sec().sec_since_epoch() - begin_time > run_time) {
+         break;
+      }
+      print("\n removed record_id=", itr->record_id);
+      itr = oracledatatable.erase(itr);
+   }
 }
 
 uint64_t bos_oracle::get_provider_count(uint64_t service_id) {

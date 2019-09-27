@@ -57,7 +57,7 @@ class bos_oracle_tester : public tester {
       set_abi(N(dapp.bos), contracts::token_abi().data());
 
       create_currency(N(dapp.bos), N(dappuser.bos), core_sym::from_string("10000000000.0000"));
-      issuex(N(dapp.bos),N(dappuser.bos), core_sym::from_string("1000000000.0000"),N(dappuser.bos));
+      issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
       create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
@@ -138,7 +138,7 @@ class bos_oracle_tester : public tester {
 
       base_tester::push_action(contract, N(create), contract, act);
    }
-   void issuex(name contract,name to, const asset& amount, name manager = config::system_account_name) {
+   void issuex(name contract, name to, const asset& amount, name manager = config::system_account_name) {
       base_tester::push_action(contract, N(issue), manager, mutable_variant_object()("to", to)("quantity", amount)("memo", ""));
    }
 
@@ -394,13 +394,14 @@ class bos_oracle_tester : public tester {
    }
 
    action_result oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, const string& data, name contract_account) {
-      return push_action(N(oracle.bos), N(oraclepush),
-                         mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data", data)("contract_account", contract_account));
+      return push_action(N(oracle.bos), N(oraclepush), mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data", data)("contract_account", contract_account));
    }
 
    action_result starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
       return push_action(N(oracle.bos), N(starttimer), mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id));
    }
+
+   action_result cleardata(uint64_t service_id, uint32_t time_length) { return push_action(N(oracle.bos), N(cleardata), mvo()("service_id", service_id)("time_length", time_length)); }
 
    action_result addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
@@ -978,6 +979,34 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(cleardata_test, bos_oracle_tester)
+try {
+
+   /// reg service
+   name account = N(alice);
+
+   uint64_t service_id = reg_service(account,1);
+   add_fee_type(service_id);
+   stake_asset(service_id, N(alice), core_sym::from_string("1000.0000"));
+   subscribe_service(service_id, N(bob));
+   pay_service(service_id, N(bob), core_sym::from_string("10.0000"));
+
+   /// push data
+   {
+      name provider = N(alice);
+      name contract_account = N(dappuser.bos);
+      const string data = "test data json";
+      uint64_t request_id = 0;
+
+      auto rdata = pushdata(service_id, provider, 1, request_id, data);
+
+      produce_block(fc::days(3));
+      produce_blocks(10);
+      auto cdata = cleardata(service_id, 10800);
+   }
+}
+FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(push_deterministic_data_to_table_timeout_test, bos_oracle_tester)
 try {
 
@@ -1452,7 +1481,9 @@ try {
       transferex(N(eosio.token), from, to, "10000.0000 BQS", from, memo);
       produce_blocks(1);
 
-      consumer_transfer( from, to, core_sym::from_string("10000.0000"),  memo);
+      consumer_transfer(from, to, core_sym::from_string("10000.0000"), memo);
+
+      transfer(from, from, "10000.0000", from, memo);
       // auto arbitrator = get_arbitrator(from);
       // BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
       //    }
@@ -1537,7 +1568,6 @@ try {
    auto stakes = get_arbitration_stake_account(arbitration_id, name(no_provider_name.c_str()));
    auto balance = stakes["balance"].as<asset>();
    BOOST_TEST_REQUIRE(core_sym::from_string(amount) == balance);
-
 
    produce_blocks(60 * 60 * 2 + 10);
 

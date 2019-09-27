@@ -47,7 +47,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       EOSIO_DISPATCH_HELPER(
           bos_oracle,
          (regservice)(unregservice)(execaction)(unstakeasset)(pushdata)(oraclepush)(
-              addfeetypes)(claim)(subscribe)(requestdata)(starttimer)
+              addfeetypes)(claim)(subscribe)(requestdata)(starttimer)(cleardata)
               (uploadeviden)(uploadresult)(acceptarbi)(unstakearbi)(claimarbi)(timertimeout)
               (deposit)(withdraw)
               (importwps)(setstatus)
