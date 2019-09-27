@@ -1022,7 +1022,7 @@ try {
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
@@ -1083,7 +1083,7 @@ try {
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
@@ -1140,13 +1140,13 @@ try {
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
       const string differ_data = " publish test differ data json";
 
-      auto data = pushdata(service_id, N(provider5555), update_number, request_id, differ_data);
+      auto rdata = pushdata(service_id, N(provider5555), update_number, request_id, differ_data);
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, update_number);
@@ -1196,7 +1196,7 @@ try {
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto data = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
          produce_blocks(2);
       }
 
@@ -1452,7 +1452,7 @@ try {
       transferex(N(eosio.token), from, to, "10000.0000 BQS", from, memo);
       produce_blocks(1);
 
-      consumer_transfer( from, to, "10000.0000",  memo);
+      consumer_transfer( from, to, core_sym::from_string("10000.0000"),  memo);
       // auto arbitrator = get_arbitrator(from);
       // BOOST_TEST_REQUIRE(from == arbitrator["account"].as<name>());
       //    }

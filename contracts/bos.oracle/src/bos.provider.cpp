@@ -60,7 +60,6 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
       s.data_type = data_type;
       s.criteria = criteria;
       s.acceptance = acceptance;
-      s.declaration = "";
       s.injection_method = injection_method;
       s.base_stake_amount = base_stake_amount;
       s.duration = duration;
