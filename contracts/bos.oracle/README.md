@@ -1,6 +1,15 @@
 
 
-## 20190926 version
+## 20190927 version
+
+###### 推送数据
+修复不确定性数据写表问题
+regservice action 去掉update_start_time 去掉declaration 内容合并到criteria;
+
+
+
+
+## 20190927 version
 
 transfer 安全检查
 ###### 推送数据
