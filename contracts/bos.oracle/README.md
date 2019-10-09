@@ -107,7 +107,7 @@ get_update_number() {
 
 ### transfer memo format type
 
-格式： ','隔开类型,参数列表  
+格式： ','隔开   类型,参数列表  
 具体类型如下
 
 索引号以0开始  tc_service_stake = 0 ,以次递增
