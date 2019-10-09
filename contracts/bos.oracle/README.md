@@ -3,8 +3,8 @@
 ### 文档
 
 * [使用文档](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_readme.md)
-* [部署文档](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_deployment.md)
-* [一个简单的bos oracle 使用流程](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_using_process.pdf)
+* [部署文档](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_deployment.md)
+* [一个简单的bos oracle 使用流程](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_using_process.pdf)
 
 ### 模块
 
