@@ -51,18 +51,10 @@ void bos_oracle::add_times(uint64_t service_id, name account, name contract_acco
       pushtable.emplace(_self, [&](auto& p) {
         p.service_id = service_id;
          add_time(p.times, p.month_times, true);
-         // print(p.times);
-         // print("==new==times");
-         // print(p.month_times);
-         // print("====month times");
       });
    } else {
       pushtable.modify(push_itr, same_payer, [&](auto& p) {
          add_time(p.times, p.month_times);
-         // print(p.times);
-         // print("====times=====");
-         // print(p.month_times);
-         // print("====month times=====");
       });
    }
 
@@ -171,11 +163,8 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account, uint8_t
    } else {
       consumptionstable.modify(consumptions_itr, same_payer, [&](auto& c) {
          if (fee_type::fee_times == fee_type) {
-            print("%%%%%%%%%%consumption");
             c.consumption.print();
             price_by_times.print();
-            print("%%%%%%%00000%%%consumption");
-
             c.consumption += price_by_times;
          } else {
             c.month_consumption += price_by_times;
@@ -282,11 +271,6 @@ std::vector<std::tuple<name, asset>> bos_oracle::get_provider_list(uint64_t serv
    std::vector<std::tuple<name, asset>> providers;
 
    for (const auto& p : provisionstable) {
-
-      // print("p.amount.amount");
-      // print(p.amount.amount);
-      // print("p.freeze_amount.amount");
-      // print(p.freeze_amount.amount);
       if (p.status == provision_status::provision_reg && p.amount.amount - p.freeze_amount.amount > 0) {
          providers.push_back(std::make_tuple(p.account, p.amount - p.freeze_amount));
       }

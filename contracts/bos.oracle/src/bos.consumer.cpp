@@ -37,7 +37,6 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
 
    auto subs_itr = substable.find(account.value);
    check(subs_itr == substable.end(), "account exist");
-   print("==========subscribe============");
    substable.emplace(_self, [&](auto& subs) {
       subs.service_id = service_id;
       subs.account = account;
@@ -62,8 +61,6 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
  */
 void bos_oracle::requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content) {
    check(request_content.size() <= 256, "request_content could not be greater than 256");
-
-   // print("======requestdata");
    require_auth(requester);
 
    /// check service available subscription status subscribe

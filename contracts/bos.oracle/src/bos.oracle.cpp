@@ -32,7 +32,6 @@ struct transferx {
 };
 
 extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-  // print("&&&&&&&&&&&&&&&&&&&");
   if (action == "onerror"_n.value) {
     /* onerror is only valid if it is for the "eosio" code account and
      * authorized by "eosio"'s "active permission */
@@ -54,7 +53,6 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
               )
     }
   }
-  // print("&&&&&&&&&&&&&&&&&&&");
   if (code == "eosio.token"_n.value && action == "transfer"_n.value) {
 
     datastream<const char *> ds = datastream<const char *>(nullptr, 0);

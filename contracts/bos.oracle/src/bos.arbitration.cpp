@@ -87,9 +87,7 @@ void bos_oracle::_regarbitrat(name account, uint8_t type, asset amount, std::str
 
 void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std::string reason, std::string evidence, uint8_t role_type) {
    check(evidence.size() <= 256, "evidence could not be greater than 256");
-
    check(consumer == role_type || provider == role_type, "role type only support consume(1) and provider(2)");
-
    print("appeal >>>>>>role_type", role_type);
    // check(arbi_method == arbi_method_type::public_arbitration ||
    //           arbi_method_type::multiple_rounds,
@@ -99,14 +97,12 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    data_services svctable(get_self(), get_self().value);
    auto svc_itr = svctable.find(service_id);
    check(svc_itr != svctable.end(), "service does not exist");
-   check(svc_itr->status == service_status::service_in, "service status shoule be service_in");
+   check(svc_itr->status == service_status::service_in, "service status should be service_in");
 
    uint64_t arbitration_id = service_id;
-   print("\nif (arbitration_role_type::consumer == role_type) ");
    if (arbitration_role_type::consumer == role_type) {
       // add_freeze
       const uint32_t duration = eosio::days(arbi_freeze_stake_duration).to_seconds();
-      print("\nif (arbitration_role_type::consumer == role_type) in");
       add_freeze(service_id, appellant, bos_oracle::current_time_point_sec(), duration, amount, arbitration_id);
    }
 
@@ -176,7 +172,6 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
 
    uint8_t arbitrator_type = arbitrator_type::fulltime;
    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
-      print("arbitrator_type::crowd;_appeal");
       arbitrator_type = arbitrator_type::crowd;
    }
 
@@ -233,7 +228,6 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    uint64_t stake_amount_limit_asset_value = stake_amount_limit * pow(10, core_symbol().precision());
    std::string checkmsg = "appeal stake amount could not be less than " + std::to_string(stake_amount_limit);
    check(amount.amount >= stake_amount_limit_asset_value, checkmsg.c_str());
-   print("appeal 2 >>>>>>role_type", role_type);
    stake_arbitration(arbitration_id, appellant, amount, current_round, role_type, "");
 
    if (!evidence.empty()) {
@@ -320,7 +314,7 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    auto arbitration_case_tb = arbitration_cases(get_self(), service_id);
    auto arbitration_case_itr = arbitration_case_tb.find(arbitration_id);
    check(arbitration_case_itr != arbitration_case_tb.end(), "Can not find such arbitration case . _respcase");
-   check(arbitration_case_itr->arbi_step < arbi_step_type::arbi_wait_for_upload_result, "arbitration setp shoule not be arbi_started");
+   check(arbitration_case_itr->arbi_step < arbi_step_type::arbi_wait_for_upload_result, "arbitration step should not be arbi_started");
 
    uint8_t current_round = arbitration_case_itr->last_round;
 
@@ -467,7 +461,6 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
          p.arbi_step = arbi_step_type::arbi_public_end;
          p.final_result = p.arbitration_result;
-         print("\n448", p.final_result);
       });
 
       handle_arbitration_result(arbitration_id);
@@ -638,14 +631,12 @@ vector<name> bos_oracle::random_arbitrator(uint64_t arbitration_id, uint8_t roun
 
    uint8_t arbitrator_type = arbitrator_type::fulltime;
    if (arbiprocess_itr->arbi_method != arbi_method_type::multiple_rounds) {
-      print("arbitrator_type::crowd;random_arbitrator");
       arbitrator_type = arbitrator_type::crowd;
    }
 
    std::vector<name> chosen_from_arbitrators = get_arbitrators(arbitrator_type); // 需要从哪里选择出来仲裁员的地方
 
    if (chosen_from_arbitrators.size() < required_arbitrator_count) {
-      print(" if (chosen_from_arbitrators.size() < required_arbitrator_count) ");
       return std::vector<name>{};
    }
 
@@ -1094,6 +1085,7 @@ void bos_oracle::slash_service_stake(uint64_t service_id, const std::vector<name
       auto provision_itr = provisionstable.find(account.value);
       check(provision_itr != provisionstable.end(), "account does not subscribe services");
       check(provider_itr->total_stake_amount >= provision_itr->amount, "account does not subscribe services");
+      check(provider_itr->total_freeze_amount >= provision_itr->freeze_amount, "account does not subscribe services");
 
       providertable.modify(provider_itr, same_payer, [&](auto& p) {
          p.total_stake_amount -= provision_itr->amount;

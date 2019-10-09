@@ -142,7 +142,6 @@ void bos_oracle::check_service_status(uint64_t service_id) {
 }
 
 void bos_oracle::update_service_status(uint64_t service_id) {
-   print("update_service_status in");
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "no service id in update_service_status");
@@ -156,23 +155,18 @@ void bos_oracle::update_service_status(uint64_t service_id) {
       }
    }
 
-   print("\navailable_service_providers_count=", available_service_providers_count, "status", service_itr->status);
    if (available_service_providers_count < service_itr->provider_limit && service_status::service_in == service_itr->status) {
       svctable.modify(service_itr, same_payer, [&](auto& p) {
          p.status = service_status::service_pause_insufficient_providers;
-         print("\navailable_service_providers_count=", available_service_providers_count, "status", service_itr->status);
       });
    } else if (available_service_providers_count >= service_itr->provider_limit &&
               (service_status::service_init == service_itr->status || service_status::service_pause_insufficient_providers == service_itr->status)) {
-      print("\n ======svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });");
       svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });
    }
 }
 
 void bos_oracle::check_service_provider_status(uint64_t service_id, name account) {
    check_service_status(service_id);
-   // print("===service_id==");
-   // print(service_id);
    data_service_provisions provisionstable(_self, service_id);
 
    auto provision_itr = provisionstable.find(account.value);
@@ -191,10 +185,8 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
    check(provision_itr != provisionstable.end(), "the account has not provided service");
 
    if (provision_itr->amount <= asset(0, core_symbol())) {
-      print("========================zero================");
       provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.status = provision_status::provision_suspend; });
    } else if (provision_itr->amount - provision_itr->freeze_amount <= asset(0, core_symbol())) {
-      print("========================freeze================");
       provisionstable.modify(provision_itr, same_payer, [&](auto& p) { p.status = provision_status::provision_freeze_suspend; });
    } else if (provision_itr->amount >= service_itr->base_stake_amount &&
               (provision_status::provision_freeze_suspend == provision_itr->status || provision_status::provision_suspend == provision_itr->status)) {
@@ -418,7 +410,6 @@ void bos_oracle::oraclepush(uint64_t service_id, uint64_t update_number, uint64_
 
 void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data) {
    check(data.size() <= 256, "data could not be greater than 256");
-   print(" innerpublish in");
    name contract_account = _self; // placeholder
    // require_auth(_self);
    check(service_status::service_in == get_service_status(service_id), "service and subscription must be available");
@@ -646,8 +637,6 @@ void bos_oracle::start_timer(uint64_t service_id, uint64_t update_number, uint64
 }
 
 void bos_oracle::check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired) {
-   print("check_publish_service");
-
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "service does not exist");
@@ -717,7 +706,6 @@ void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
 }
 
 void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
-   print("\n clear_data in =");
    auto begin_time = bos_oracle::current_time_point_sec().sec_since_epoch();
    oracle_data oracledatatable(_self, service_id);
    const uint8_t run_time = 10; // seconds
