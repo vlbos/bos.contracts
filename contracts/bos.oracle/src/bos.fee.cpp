@@ -129,14 +129,14 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account, uint8_t
 
    check(price_by_times.amount > 0, " get price by times cound not be greater than zero");
 
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
-   auto subs_itr = substable.find(contract_account.value);
-   check(subs_itr != substable.end(), "contract_account does not exist");
+   auto subscriptions_itr = subscriptionstable.find(contract_account.value);
+   check(subscriptions_itr != subscriptionstable.end(), "contract_account does not exist");
 
-   check(subs_itr->balance >= price_by_times, "balance cound not be  greater than price by times");
+   check(subscriptions_itr->balance >= price_by_times, "balance cound not be  greater than price by times");
 
-   substable.modify(subs_itr, _self, [&](auto& subs) {
+   subscriptionstable.modify(subscriptions_itr, _self, [&](auto& subs) {
       if (fee_type::fee_times == fee_type) {
          subs.consumption += price_by_times;
       } else {
@@ -183,12 +183,12 @@ void bos_oracle::fee_service(uint64_t service_id, name contract_account, uint8_t
  */
 uint8_t bos_oracle::get_subscription_status(uint64_t service_id, name contract_account) {
 
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
-   auto subs_itr = substable.find(contract_account.value);
-   check(subs_itr != substable.end(), "contract_account does not exist");
+   auto subscriptions_itr = subscriptionstable.find(contract_account.value);
+   check(subscriptions_itr != subscriptionstable.end(), "contract_account does not exist");
 
-   return subs_itr->status;
+   return subscriptions_itr->status;
 }
 
 /**
@@ -200,12 +200,12 @@ uint8_t bos_oracle::get_subscription_status(uint64_t service_id, name contract_a
  */
 time_point_sec bos_oracle::get_payment_time(uint64_t service_id, name contract_account) {
 
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
-   auto subs_itr = substable.find(contract_account.value);
-   check(subs_itr != substable.end(), "contract_account does not exist");
+   auto subscriptions_itr = subscriptionstable.find(contract_account.value);
+   check(subscriptions_itr != subscriptionstable.end(), "contract_account does not exist");
 
-   return subs_itr->last_payment_time;
+   return subscriptions_itr->last_payment_time;
 }
 
 /**
@@ -216,8 +216,8 @@ time_point_sec bos_oracle::get_payment_time(uint64_t service_id, name contract_a
  */
 std::vector<name> bos_oracle::get_subscription_list(uint64_t service_id) {
 
-   data_service_subscriptions substable(_self, service_id);
-   auto subscription_time_idx = substable.get_index<"bytime"_n>();
+   data_service_subscriptions subscriptionstable(_self, service_id);
+   auto subscription_time_idx = subscriptionstable.get_index<"bytime"_n>();
    std::vector<name> receive_contracts;
 
    for (const auto& s : subscription_time_idx) {
@@ -238,7 +238,7 @@ std::vector<name> bos_oracle::get_subscription_list(uint64_t service_id) {
  */
 std::tuple<uint64_t, uint64_t> bos_oracle::get_consumption(uint64_t service_id) {
 
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
    service_consumptions consumptionstable(_self, service_id);
    auto service_itr = consumptionstable.find(service_id);
@@ -249,7 +249,7 @@ std::tuple<uint64_t, uint64_t> bos_oracle::get_consumption(uint64_t service_id) 
    if (service_itr->update_time - bos_oracle::current_time_point_sec() > eosio::days(update_time_deadline)) {
       consumptions = 0;
       month_consumptions = 0;
-      for (const auto& s : substable) {
+      for (const auto& s : subscriptionstable) {
          consumptions += s.consumption.amount;
          month_consumptions += s.month_consumption.amount;
       }

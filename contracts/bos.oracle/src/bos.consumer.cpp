@@ -33,11 +33,11 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
    require_auth(account);
 
    // add consumer service subscription relation
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
-   auto subs_itr = substable.find(account.value);
-   check(subs_itr == substable.end(), "account exist");
-   substable.emplace(_self, [&](auto& subs) {
+   auto subscriptions_itr = subscriptionstable.find(account.value);
+   check(subscriptions_itr == subscriptionstable.end(), "account exist");
+   subscriptionstable.emplace(_self, [&](auto& subs) {
       subs.service_id = service_id;
       subs.account = account;
       subs.contract_account = contract_account;
@@ -95,12 +95,12 @@ void bos_oracle::requestdata(uint64_t service_id, name contract_account, name re
  * @param memo
  */
 void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset amount) {
-   data_service_subscriptions substable(_self, service_id);
+   data_service_subscriptions subscriptionstable(_self, service_id);
 
-   auto subs_itr = substable.find(contract_account.value);
-   check(subs_itr != substable.end(), "contract_account does not exist");
+   auto subscriptions_itr = subscriptionstable.find(contract_account.value);
+   check(subscriptions_itr != subscriptionstable.end(), "contract_account does not exist");
 
-   substable.modify(subs_itr, _self, [&](auto& subs) {
+   subscriptionstable.modify(subscriptions_itr, _self, [&](auto& subs) {
       subs.payment += amount;
       subs.balance = subs.payment - subs.consumption - subs.month_consumption;
    });
