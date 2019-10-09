@@ -1,49 +1,4 @@
-
-
-## 20190927 version
-
-###### 推送数据
-修复不确定性数据写表问题
-regservice action 去掉update_start_time 去掉declaration 内容合并到criteria;
-
-
-
-
-## 20190926 version
-
-transfer 安全检查
-###### 推送数据
-增加不确定性数据写表
-update_start_time 大于当前时间
-
-
-###### 仲裁
-仲裁结束，重新开始同一服务新仲裁时 抵押处理问题修复
-
-
-## 20190906 version
-###### 推送数据
-一个提供者表对多个服务存储
-update_number 检查验证
-push_data超时验证 单元测试 
-
-###### 仲裁
-修复多人申诉问题
-修复多人应诉问题
-修复接受邀请超时，上传结果超时问题，增加相应单元测试
-修改抵押金额超过服务提供者
-
-## 20190911 version
-###### 推送数据
-一个提供者pushdata 数据不相同大于等于1/2问题
-参数合法性检查
-pushdata超时定时器优化
-
-###### 仲裁
-修复应诉超时问题
-修复解抵押问题
-修复申诉表role_type发起者不对问题
-修复仲裁员收入计算错误问题
+### 目录结构
 
 ```
 ├── include  
@@ -73,56 +28,28 @@ pushdata超时定时器优化
         └── consumer.contract.cpp 
 ```
 
+### 主要文档
+
+* [一个简单的bos oracle 使用流程](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_using_process.pdf)
+* [使用文档](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_readme.md)
+* [部署文档](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_deployment.md)
+
+
+### 主要源文件
+
+
+* [数据提供者bos.provider.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.provider.cpp)
+* [数据使用者bos.consumer.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.consumer.cpp)
+* [仲裁bos.arbitration.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.arbitration.cpp)
+* [风控bos.riskcontrol.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.riskcontrol.cpp)
+* [计费统计bos.fee.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.fee.cpp)
+
+
+### update_number计算公式
+
+#### C++ 代码示例
 ```
-主要文档
-https://note.youdao.com/ynoteshare1/index.html?id=8af464f04688e9e56d4fa941523c66f6&type=note  设计说明 
-https://github.com/vlbos/bos.oracle-test/blob/master/oracle.testenv/%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84bos%20oracle%20%E4%BD%BF%E7%94%A8%E6%B5%81%E7%A8%8B.pdf 一个简单的bos oracle 使用流程.pdf
-https://shimo.im/folder/uuKYMwTgDGcH5e7m    其中初始设计 早期文档
-https://shimo.im/docs/9hRgkXqrtqg3QGdc 使用文档
-https://shimo.im/docs/JjPdChcjY9QWtpP9 部署文档
-
-主要源文件
-
-数据提供者https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.provider.cpp
-数据使用者https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.consumer.cpp
-仲裁https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.arbitration.cpp
-风控https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.riskcontrol.cpp
-计费统计https://github.com/boscore/bos.contracts/tree/bos.oracle/contracts/bos.oracle/src/bos.fee.cpp
-****
-```
-
-oracle1.0 问题修复列表 
-
-###### 推送数据
-
-1. 恢复注册服务基础抵押金额参数, 注册服务实现创建服务功能, 提供者抵押金额成为相应服务提供者
-2. 增加限制在系统里限制注册服务, 基础抵押金额不低于1000, 该服务提供者抵押不低于基础抵押金额
-3. 推送数据验证 服务是否可用, 提供者是否注册
-4. 修复问题
-   
-###### 仲裁
-
-1. 申诉或再申诉修改参数is_provider为role_type 值: consumer(1),provider(2)
-2. 申诉, 应诉, 接受邀请, 上传结果, 检查重复提交
-3. 检查接受邀请是否受邀账户, 上传结果是否是接受邀请账户
-4. 修复计算仲裁正确率问题
-5. 修复计算仲裁结果, 罚没计算问题
-
-
-arbistakeacc
-arbiincomes
-
-appealreq    scope  service_id*4+round
-arbiresults  scope  arbitration_id*4+round
-
-
-
-
-update_number 计算公式
-
-c++ code
-```
-  uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
+   uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
    uint32_t update_start_time = service_itr->update_start_time.sec_since_epoch();
    uint32_t update_cycle = service_itr->update_cycle;
    uint32_t duration = service_itr->duration;
@@ -178,12 +105,14 @@ get_update_number() {
 
 ```
 
-transfer memo format type
+### transfer memo format type
 
 格式： ','隔开 
-第一元素 类型  
+类型,参数列表  
 具体类型如下
+
 索引号以0开始  tc_service_stake = 0 ,以次递增
+
 ```
 enum transfer_category : 
 tc_service_stake  , 
@@ -244,8 +173,8 @@ tc_risk_guarantee};
    check(declaration.size() <= 256, "declaration could not be greater than 256");
 
 ```
-
-###### 1. 部署合约
+### 功能列表 
+#### 1. 部署合约
 
 ```
 ./boracle_test.sh set
@@ -267,7 +196,7 @@ contract_consumer_folder=consumer.contract
   
 ```
 
-##### 2. 注册服务
+#### 2. 注册服务
 
 ```
 test_reg_service
@@ -277,7 +206,7 @@ test_reg_service
 
 ```
 
-##### 3. 初始化服务如费用
+#### 3. 初始化服务如费用
 
 ```
 test_fee
@@ -286,7 +215,7 @@ test_fee
 
 ```
 
-##### 4.抵押
+#### 4.抵押
 
 ```
 transfer stake
@@ -295,7 +224,7 @@ stake unstake  eosio.code
 
 ```
 
-##### 5. 订阅/请求
+#### 5. 订阅/请求
 
 ```
 test_subs
@@ -310,7 +239,7 @@ test_req
 
 ```
 
-##### 6. 支付服务费用
+#### 6. 支付服务费用
 
 ```
 transfer pay
@@ -318,7 +247,7 @@ transfer pay
 
 ```
 
-##### 7.推送
+#### 7.推送
 
 ```
 "mpush") test_multipush c1 "$2" ;;
@@ -336,7 +265,7 @@ ${!cleos} push action ${contract_oracle} oraclepush '{"service_id":1, "provider"
 
 ```
 
-#### 风控
+#### 8.风控
 
 ##### 1. 存入金额
 
@@ -358,11 +287,11 @@ ${!cleos} push action ${contract_oracle} oraclepush '{"service_id":1, "provider"
 ```
 
 
-#### 仲裁
+#### 9.仲裁
 ##### 前提条件  
 注册服务
 
- #####  注册仲裁员（抵押）
+#####  注册仲裁员（抵押）
 专业，大众
 
 ```
@@ -382,7 +311,7 @@ ${!cleos} get table ${contract_oracle} ${contract_oracle} arbitrators
 
 ```
 
- #####  申诉（抵押）仲裁开始
+#####  申诉（抵押）仲裁开始
 
 ```
 
@@ -392,13 +321,13 @@ ${!cleos} get table ${contract_oracle} ${contract_oracle} arbitrators
 
 ```
 
- ##### 上传证据
+##### 上传证据
 
 ```  
 cleos push action $EOS_ORACLE uploadeviden '["appellant1", 0, "evidence"]' - p appellant1 @active
 ```
 
- #####  应诉（抵押）
+#####  应诉（抵押）
 
 ```
     #resp_case
@@ -407,7 +336,7 @@ cleos push action $EOS_ORACLE uploadeviden '["appellant1", 0, "evidence"]' - p a
 
 ```
 
- #####  接受仲裁邀请
+#####  接受仲裁邀请
 
 ```
   ${!cleos} push action ${contract_oracle} acceptarbi '["'$account'", 1]' -p $account@active 
@@ -445,13 +374,8 @@ cleos push action $EOS_ORACLE unstakearbi '[1,"appellant1",  "400.0000 BOS",'']'
 cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appellant1 @active
 ```
 
-# 1. 部署合约 
 
-
-    ${!cleos} set contract ${contract_oracle} ${CONTRACTS_DIR}/${contract_oracle_folder} -x 1000 -p ${contract_oracle}
-   
-    ${!cleos} set contract ${contract_consumer} ${CONTRACTS_DIR}/${contract_consumer_folder} -x 1000 -p ${contract_consumer}@active
-
+### 接口列表
 
 1. 注册预言机数据服务接口
 
@@ -571,26 +495,7 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 | 数据提供者签名 |                      Data Provider Signature                       | uint64_t provider _signature | 字符串   |          |
 | 数据服务请求ID |                      Data Service Request ID                       | uint64_t request_id          | 整型     |          |
 
-  ${!cleos} push action ${contract_oracle} pushdata '{"service_id":0, "provider":"provider1111", "contract_account":"'${contract_consumer}'", 
-                         "request_id":'"$2"', "data":"test data json"}' -p provider1111
 
-  # ${!cleos}  set account permission provider1111  active '{"threshold": 1,"keys": [{"key": "'${provider1111_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_oracle}'","permission":"eosio.code"},"weight":1}]}' owner -p provider1111@owner
-
-
-    # sleep .2
-    ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111", 
-                          "data":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
-
-  reqflag=false && if [ "$2" != "" ]; then reqflag="$2"; fi
-
-    echo ===multipush
-    # ${!cleos}  set account permission provider1111  active '{"threshold": 1,"keys": [{"key": "'${provider1111_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_oracle}'","permission":"eosio.code"},"weight":1}]}' owner -p provider1111@owner
-
-    # sleep .2
-    ${!cleos} push action ${contract_oracle} multipush '{"service_id":0, "provider":"provider1111", 
-                          "data":"test multipush data json","is_request":'${reqflag}'}' -p provider1111
-
-# 2.  
 8. 申诉接口
 
 |    中文接口名    | 申诉接口                                       |                         |          |                              |
@@ -606,7 +511,6 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 | ~~申诉者发起人~~ | ~~Sponsors~~                                   | ~~bool is_~~~~sponsor~~ | ~~布尔~~ |                              |
 |     仲裁方式     | Arbitration                                    | uint8_t arbi_method     | 整型     | 仲裁方式  大众仲裁，多轮仲裁 |
 
-# 3.  
 9. 应诉接口  
 
 | 中文接口名   | 应诉接口                          |                         |          |          |
@@ -657,7 +561,7 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 |   仲裁结果   | Arbitration Results                  | uint8_t result          | 整型     |          |
 | 仲裁员评述  |         Arbitrator comment           | std::string comment | 字符串   |    
 
-# 4.  
+
 13. 上传证据接口
 
 |  中文接口名  | 上传证据接口              |                         |          |                           |
@@ -721,17 +625,5 @@ cleos push action $EOS_ORACLE claimarbi '["appellant1","appellant1"]' - p appell
 |   数据提供者签名    |                                     Data User Signature                                      | uint64_t user _signature | 字符串   |          |
 |     数据服务ID      |                                   Data Service Request ID                                    | uint64_t request_id      | 整型     |          |
 |      数据 hash      |                                          data hash                                           | uint64_t data_hash       | 字符串   |          |
-
-
-# 5. 疑问
-### 5.0.1. 申诉接口: appeal
-初次申诉时, `arbitratcase`表, `update_number` 更新逻辑
-答：`arbitratcase`表, `update_number` 更新逻辑，暂时没有了。表设计时申诉考虑具体到哪条数据。上次讨论具体到服务ID。
-### 5.0.2. 应诉接口: acceptarbi
-应诉接口签名参数有什么用？签名验证的内容是什么? 应诉逻辑? 修改arbitratcase哪几个字段?
-答：签名为出现争议使用，链就行了，action验证有效格式就行了。应诉，转账抵押金额。更新arbitratcase，arbi_step为应诉状态，触发仲裁启动。判断仲裁方式，执行仲裁流程逻辑。
-### 5.0.3. 上传证据: uploadeviden
-签名参数有什么用? 签名验证什么内容? 
-答：现在实现到验证签名是有效格式就行了，设计考虑如果有争议，发生抵赖或冒名等问题，保存证据。
 
 
