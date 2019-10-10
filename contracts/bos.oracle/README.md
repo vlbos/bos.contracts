@@ -27,7 +27,7 @@ And the introduction of credit system to achieve the stability and credibility o
 
 ### Documents
 
-* [Use Documentation](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_readme.md)
+* [Usage Documentation](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_readme.md)
 * [Deployment Documentation](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_deployment.md)
 * [A simple bos oracle usage process](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_using_process.pdf)
 
