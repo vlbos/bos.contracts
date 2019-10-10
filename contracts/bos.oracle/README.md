@@ -19,9 +19,9 @@ And the introduction of credit system to achieve the stability and credibility o
 
 
 * [Data Provider--bos.provider.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.provider.cpp)
-* [Data User--bos.consumer.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.consumer.cpp)
+* [Data consumer--bos.consumer.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.consumer.cpp)
 * [Arbitration--bos.arbitration.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.arbitration.cpp)
-* [Wind Control--bos.riskcontrol.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.riskcontrol.cpp)
+* [Risk Control--bos.riskcontrol.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.riskcontrol.cpp)
 * [Billing Statistics--bos.fee.cpp](https://github.com/boscore/bos.contracts/tree/oracle.bos/contracts/bos.oracle/src/bos.fee.cpp)
 
 
@@ -29,7 +29,7 @@ And the introduction of credit system to achieve the stability and credibility o
 
 * [Use Documentation](https://github.com/vlbos/Documentation-1/blob/master/Oracle/bos_oracle_readme.md)
 * [Deployment Documentation](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_deployment.md)
-* [A simple boss oracle usage process](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_using_process.pdf)
+* [A simple bos oracle usage process](https://github.com/vlbos/bos.oracle-test/blob/master/docs/bos_oracle_using_process.pdf)
 
 
 
