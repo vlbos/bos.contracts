@@ -402,8 +402,8 @@ void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t 
    auto arbiprocess_itr = arbiprocess_tb.find(round);
    check(arbiprocess_itr != arbiprocess_tb.end(), "Can not find such process.");
 
-   auto invited = std::find(arbiprocess_itr->arbitrators.begin(), arbiprocess_itr->arbitrators.end(), arbitrator);
-   check(invited != arbiprocess_itr->arbitrators.end(), "could not find such an arbitrator in current invited arbitrators.");
+   auto invited = std::find(arbiprocess_itr->answer_arbitrators.begin(), arbiprocess_itr->answer_arbitrators.end(), arbitrator);
+   check(invited != arbiprocess_itr->answer_arbitrators.end(), "could not find such an arbitrator in current invited arbitrators.");
 
    arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) { p.arbitrator_arbitration_results.push_back(result); });
 
@@ -496,17 +496,17 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
    auto chosen = std::find(arbitration_case_itr->chosen_arbitrators.begin(), arbitration_case_itr->chosen_arbitrators.end(), arbitrator);
    check(chosen != arbitration_case_itr->chosen_arbitrators.end(), "could not find such an arbitrator in current chosen arbitration.");
 
-   auto accepted = std::find(arbitration_case_itr->arbitrators.begin(), arbitration_case_itr->arbitrators.end(), arbitrator);
-   check(accepted == arbitration_case_itr->arbitrators.end(), "the arbitrator has accepted invitation");
+   auto accepted = std::find(arbitration_case_itr->answer_arbitrators.begin(), arbitration_case_itr->answer_arbitrators.end(), arbitrator);
+   check(accepted == arbitration_case_itr->answer_arbitrators.end(), "the arbitrator has accepted invitation");
 
    bool public_arbi = arbiprocess_itr->arbi_method == arbi_method_type::public_arbitration; // 是否为大众仲裁
 
-   arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) { p.arbitrators.push_back(arbitrator); });
+   arbiprocess_tb.modify(arbiprocess_itr, get_self(), [&](auto& p) { p.answer_arbitrators.push_back(arbitrator); });
 
-   arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbitrators.push_back(arbitrator); });
+   arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.answer_arbitrators.push_back(arbitrator); });
 
    // 如果仲裁员人数满足需求, 那么开始仲裁
-   if (arbiprocess_itr->arbitrators.size() >= arbiprocess_itr->required_arbitrator + arbiprocess_itr->increment_arbitrator) {
+   if (arbiprocess_itr->answer_arbitrators.size() >= arbiprocess_itr->required_arbitrator + arbiprocess_itr->increment_arbitrator) {
 
       uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::accept_arbitrate_invitation_timeout);
       cancel_deferred(deferred_id);
@@ -515,7 +515,7 @@ void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
       // 通知仲裁结果
       // Transfer to appellant
       auto memo = "wait upload result>arbitration_id: " + std::to_string(arbitration_id);
-      send_notify(arbiprocess_itr->arbitrators, memo, "no arbitrators in the round ");
+      send_notify(arbiprocess_itr->answer_arbitrators, memo, "no arbitrators in the round ");
 
       uint32_t timeout_sec = eosio::hours(arbi_upload_result_timeout_value).to_seconds();
       // 等待仲裁员上传结果
@@ -758,18 +758,18 @@ std::vector<name> bos_oracle::get_arbitrators_of_uploading_arbitration_result(ui
 
    (void)make_scope_value(arbitration_id, arbitration_case_itr->last_round);
 
-   std::vector<name> arbitrators;
+   std::vector<name> upload_result_arbitrators;
    for (uint8_t round = 1; round <= arbitration_case_itr->last_round; ++round) {
       auto arbiresults_tb = arbitration_results(get_self(), make_scope_value(arbitration_id, round, false));
       auto arbiresults_itr = arbiresults_tb.begin();
       while (arbiresults_itr != arbiresults_tb.end()) {
-         arbitrators.push_back(arbiresults_itr->arbitrator);
+         upload_result_arbitrators.push_back(arbiresults_itr->arbitrator);
          arbiresults_tb.erase(arbiresults_itr);
          arbiresults_itr = arbiresults_tb.begin();
       }
    }
 
-   return arbitrators;
+   return upload_result_arbitrators;
 }
 
 /**
@@ -881,7 +881,7 @@ void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t ti
    }
    case arbitration_timer_type::accept_arbitrate_invitation_timeout: {
       // 如果状态为还在选择仲裁员, 那么继续选择仲裁员
-      uint8_t inc_arbitrator_count = arbiprocess_itr->required_arbitrator - arbiprocess_itr->arbitrators.size();
+      uint8_t inc_arbitrator_count = arbiprocess_itr->required_arbitrator - arbiprocess_itr->answer_arbitrators.size();
       if (arbitration_case_itr->arbi_step == arbi_step_type::arbi_wait_for_accept_arbitrate_invitation && inc_arbitrator_count > 0) {
          print(">>>===timer_type=arbitration_timer_type::accept_arbitrate_invitation_timeout");
          random_chose_arbitrator(arbitration_id, round, arbitration_id, inc_arbitrator_count);
@@ -961,9 +961,9 @@ void bos_oracle::handle_arbitration_result(uint64_t arbitration_id) {
    // award stake accounts
    pay_arbitration(std::get<2>(stake_accounts), slash_service_stake_amount);
 
-   std::vector<name> arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
+   std::vector<name> upload_result_arbitrators = get_arbitrators_of_uploading_arbitration_result(arbitration_id);
    // pay all arbitrators' arbitration fee
-   pay_arbitration(arbitrators, slash_arbitration_stake_amount);
+   pay_arbitration(upload_result_arbitrators, slash_arbitration_stake_amount);
 
    if (arbitration_case_itr->final_result == arbitration_role_type::provider) {
       unfreeze_asset(service_id, arbitration_id);

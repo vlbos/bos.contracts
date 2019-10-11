@@ -38,12 +38,12 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
    [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
-   [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
-   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data, name contract_account);
+   [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data);
+   [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, string data, name contract_account);
    [[eosio::action]] void claim(name account, name receive_account);
    [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
    [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
-   [[eosio::action]] void starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
+   [[eosio::action]] void starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
    [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
 
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
@@ -118,13 +118,13 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
 
  private:
    void save_id(uint8_t id_type, uint64_t id);
-   uint128_t make_update_id(uint64_t update_number, uint64_t request_id);
+   uint128_t make_update_id(uint64_t cycle_number, uint64_t request_id);
    // provider
-   void check_service_current_update_number(uint64_t service_id, uint64_t update_number);
-   void update_service_current_log_status(uint64_t service_id, uint64_t update_number, uint64_t request_id, uint8_t data_type = data_deterministic, uint8_t status = log_status::log_sent);
+   void check_service_current_update_number(uint64_t service_id, uint64_t cycle_number);
+   void update_service_current_log_status(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, uint8_t data_type = data_deterministic, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
-   void innerpush(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
-   void innerpublish(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, string data);
+   void innerpush(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data);
+   void innerpublish(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data);
    void reg_service_provider(uint64_t service_id, name account);
    void check_service_status(uint64_t service_id);
    void update_service_status(uint64_t service_id);
@@ -145,15 +145,15 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void freeze_asset(uint64_t service_id, name account, asset amount, uint64_t arbitration_id = 0);
    uint64_t freeze_providers_amount(uint64_t service_id, const std::set<name>& available_providers, asset freeze_amount, uint64_t arbitration_id = 0);
    void clear_data(uint64_t service_id, uint32_t time_length);
-   void start_timer(uint64_t service_id, uint64_t update_number, uint64_t request_id);
-   void check_publish_service(uint64_t service_id, uint64_t update_number, uint64_t request_id, bool is_expired = false);
-   void save_publish_data(uint64_t service_id, uint64_t update_number, uint64_t request_id, string data, uint8_t data_type = data_deterministic);
+   void start_timer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
+   void check_publish_service(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, bool is_expired = false);
+   void save_publish_data(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, string data, uint8_t data_type = data_deterministic);
    uint64_t get_provider_count(uint64_t service_id);
 
-   uint64_t get_publish_provider_count(uint64_t service_id, uint64_t update_number, uint64_t request_id);
+   uint64_t get_publish_provider_count(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
 
-   string get_publish_data(uint64_t service_id, uint64_t update_number, uint8_t provider_limit, uint64_t request_id);
-   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, uint8_t data_type);
+   string get_publish_data(uint64_t service_id, uint64_t cycle_number, uint8_t provider_limit, uint64_t request_id);
+   bool check_provider_no_push_data(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, uint8_t data_type);
 
    /// consumer
    void pay_service(uint64_t service_id, name contract_account, asset amount);

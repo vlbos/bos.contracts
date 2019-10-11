@@ -12,7 +12,7 @@ class [[eosio::contract("consumer.contract")]] consumer_contract : public eosio:
 
    void receivejson(eosio::name self, eosio::name code);
 
-   [[eosio::action]] void fetchdata(eosio::name oracle, uint64_t service_id, uint64_t update_number, uint64_t request_id);
+   [[eosio::action]] void fetchdata(eosio::name oracle, uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
    [[eosio::on_notify("eosio.token::transfer")]]
    void transfer(eosio::name from, eosio::name to, asset quantity, std::string memo);
    [[eosio::action]] void dream(eosio::name who, asset value, std::string memo);

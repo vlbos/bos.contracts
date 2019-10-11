@@ -56,7 +56,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_case {
    uint8_t arbitration_result;
    uint8_t last_round;
    uint8_t final_result;
-   std::vector<name> arbitrators;
+   std::vector<name> answer_arbitrators;
    std::vector<name> chosen_arbitrators;
    uint64_t primary_key() const { return arbitration_id; }
 };
@@ -67,7 +67,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitration_process {
    uint8_t increment_arbitrator;
    std::vector<name> appellants;
    std::vector<name> respondents;
-   std::vector<name> arbitrators;
+   std::vector<name> answer_arbitrators;
    std::vector<name> invited_arbitrators;
    uint8_t role_type;
    std::vector<uint8_t> arbitrator_arbitration_results;

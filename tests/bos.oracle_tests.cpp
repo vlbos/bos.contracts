@@ -174,9 +174,9 @@ class bos_oracle_tester : public tester {
    }
 
    /// dappuser.bos
-   void fetchdata(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
+   void fetchdata(uint64_t service_id, uint64_t cycle_number, uint64_t request_id) {
       base_tester::push_action(N(dappuser.bos), N(fetchdata), N(dappuser.bos),
-                               mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("update_number", update_number)("request_id", request_id));
+                               mutable_variant_object()("oracle", "oracle.bos")("service_id", service_id)("cycle_number", cycle_number)("request_id", request_id));
    }
    void consumer_transfer(name from, name to, asset quantity, string memo) {
       base_tester::push_action(N(dappuser.bos), N(transfer), N(dappuser.bos), mutable_variant_object()("from", from)("to", to)("quantity", quantity)("memo", memo));
@@ -312,8 +312,8 @@ class bos_oracle_tester : public tester {
    }
 
    /// api
-   fc::variant get_oracle_data(const uint64_t& service_id, const uint64_t& update_number) {
-      vector<char> data = get_row_by_account(N(oracle.bos), service_id, N(oracledata), update_number);
+   fc::variant get_oracle_data(const uint64_t& service_id, const uint64_t& cycle_number) {
+      vector<char> data = get_row_by_account(N(oracle.bos), service_id, N(oracledata), cycle_number);
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_data_record", data, abi_serializer_max_time);
    }
    // arbitration
@@ -389,16 +389,16 @@ class bos_oracle_tester : public tester {
 
    action_result execaction(uint64_t service_id, uint8_t action_type) { return push_action(N(oracle.bos), N(execaction), mvo()("service_id", service_id)("action_type", action_type)); }
 
-   action_result pushdata(uint64_t service_id, name provider, uint64_t update_number, uint64_t request_id, const string& data) {
-      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("update_number", update_number)("request_id", request_id)("data", data));
+   action_result pushdata(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, const string& data) {
+      return push_action(provider, N(pushdata), mvo()("service_id", service_id)("provider", provider)("cycle_number", cycle_number)("request_id", request_id)("data", data));
    }
 
-   action_result oraclepush(uint64_t service_id, uint64_t update_number, uint64_t request_id, const string& data, name contract_account) {
-      return push_action(N(oracle.bos), N(oraclepush), mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id)("data", data)("contract_account", contract_account));
+   action_result oraclepush(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, const string& data, name contract_account) {
+      return push_action(N(oracle.bos), N(oraclepush), mvo()("service_id", service_id)("cycle_number", cycle_number)("request_id", request_id)("data", data)("contract_account", contract_account));
    }
 
-   action_result starttimer(uint64_t service_id, uint64_t update_number, uint64_t request_id) {
-      return push_action(N(oracle.bos), N(starttimer), mvo()("service_id", service_id)("update_number", update_number)("request_id", request_id));
+   action_result starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id) {
+      return push_action(N(oracle.bos), N(starttimer), mvo()("service_id", service_id)("cycle_number", cycle_number)("request_id", request_id));
    }
 
    action_result cleardata(uint64_t service_id, uint32_t time_length) { return push_action(N(oracle.bos), N(cleardata), mvo()("service_id", service_id)("time_length", time_length)); }
@@ -682,7 +682,7 @@ class bos_oracle_tester : public tester {
    void upload_result(uint64_t arbitration_id, uint8_t round, uint8_t result) {
       uint8_t arbi_count = pow(2, round) + 1;
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
       for (auto& arbi : arbivec) {
          uploadresult(arbi, arbitration_id, result, "");
@@ -1028,8 +1028,8 @@ try {
       BOOST_REQUIRE(duration > 0);
       time_point_sec current_time = time_point_sec(control->head_block_time());
 
-      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
-      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint64_t cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (cycle_number - 1) * update_cycle).sec_since_epoch();
       uint32_t current_duration_end_time = current_duration_begin_time + duration;
       if (current_time.sec_since_epoch() > current_duration_end_time) {
          produce_block(fc::seconds(current_duration_begin_time + update_cycle - current_time.sec_since_epoch()));
@@ -1037,21 +1037,21 @@ try {
 
       current_time = time_point_sec(control->head_block_time());
 
-      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
-      current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      current_duration_begin_time = time_point_sec(update_start_time + (cycle_number - 1) * update_cycle).sec_since_epoch();
       current_duration_end_time = current_duration_begin_time + duration;
 
       const string data = "publish test data json";
       uint64_t request_id = 0;
 
-      // BOOST_TEST(0 == update_number);
+      // BOOST_TEST(0 == cycle_number);
       // BOOST_TEST(0 == current_duration_end_time);
       // BOOST_TEST(0 == current_time.sec_since_epoch());
       std::string a = "provider";
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, cycle_number, request_id, data);
          produce_blocks(2);
       }
 
@@ -1064,11 +1064,11 @@ try {
 
       // current_time = time_point_sec(control->head_block_time());
       // BOOST_TEST(0 == current_time.sec_since_epoch());
-      // auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
-      fetchdata(service_id, update_number, 0);
+      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      fetchdata(service_id, cycle_number, 0);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1094,8 +1094,8 @@ try {
       BOOST_REQUIRE(duration > 0);
       time_point_sec current_time = time_point_sec(control->head_block_time());
 
-      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
-      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint64_t cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (cycle_number - 1) * update_cycle).sec_since_epoch();
       uint32_t current_duration_end_time = current_duration_begin_time + duration;
       if (current_time.sec_since_epoch() > current_duration_end_time) {
          produce_block(fc::seconds(duration));
@@ -1103,7 +1103,7 @@ try {
 
       current_time = time_point_sec(control->head_block_time());
 
-      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
       const string data = "publish test data json";
       uint64_t request_id = 0;
@@ -1112,21 +1112,21 @@ try {
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, cycle_number, request_id, data);
          produce_blocks(2);
       }
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data));
+      BOOST_REQUIRE_EQUAL(wasm_assert_msg("cycle_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), cycle_number, request_id, data));
 
       // BOOST_TEST0 == 8);
-      // auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
-      // BOOST_TEST0 == update_number);
-      fetchdata(service_id, update_number, 0);
+      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // BOOST_TEST0 == cycle_number);
+      fetchdata(service_id, cycle_number, 0);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1151,8 +1151,8 @@ try {
       BOOST_REQUIRE(duration > 0);
       time_point_sec current_time = time_point_sec(control->head_block_time());
 
-      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
-      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint64_t cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (cycle_number - 1) * update_cycle).sec_since_epoch();
       uint32_t current_duration_end_time = current_duration_begin_time + duration;
       if (current_time.sec_since_epoch() > current_duration_end_time) {
          produce_block(fc::seconds(duration));
@@ -1160,7 +1160,7 @@ try {
 
       current_time = time_point_sec(control->head_block_time());
 
-      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
       const string data = "publish test data json";
       uint64_t request_id = 0;
@@ -1169,20 +1169,20 @@ try {
       for (int j = 1; j <= 4; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, cycle_number, request_id, data);
          produce_blocks(2);
       }
 
       const string differ_data = " publish test differ data json";
 
-      auto rdata = pushdata(service_id, N(provider5555), update_number, request_id, differ_data);
+      auto rdata = pushdata(service_id, N(provider5555), cycle_number, request_id, differ_data);
 
       // BOOST_TEST0 == 8);
-      // auto oracledata = get_oracle_data(service_id, update_number);
-      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
-      // BOOST_TEST0 == update_number);
-      fetchdata(service_id, update_number, 0);
+      // auto oracledata = get_oracle_data(service_id, cycle_number);
+      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // BOOST_TEST0 == cycle_number);
+      fetchdata(service_id, cycle_number, 0);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1207,8 +1207,8 @@ try {
       BOOST_REQUIRE(duration > 0);
       time_point_sec current_time = time_point_sec(control->head_block_time());
 
-      uint64_t update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
-      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (update_number - 1) * update_cycle).sec_since_epoch();
+      uint64_t cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      uint32_t current_duration_begin_time = time_point_sec(update_start_time + (cycle_number - 1) * update_cycle).sec_since_epoch();
       uint32_t current_duration_end_time = current_duration_begin_time + duration;
       if (current_time.sec_since_epoch() > current_duration_end_time) {
          produce_block(fc::seconds(duration));
@@ -1216,7 +1216,7 @@ try {
 
       current_time = time_point_sec(control->head_block_time());
 
-      update_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
+      cycle_number = (current_time.sec_since_epoch() - update_start_time.sec_since_epoch()) / update_cycle + 1;
 
       const string data = "publish test data json";
       uint64_t request_id = 0;
@@ -1225,21 +1225,21 @@ try {
       for (int j = 1; j <= 5; ++j) {
          std::string acc_name = a + std::string(12 - a.size(), std::to_string(j)[0]);
          name acc = name(acc_name.c_str());
-         auto rdata = pushdata(service_id, acc, update_number, request_id, data);
+         auto rdata = pushdata(service_id, acc, cycle_number, request_id, data);
          produce_blocks(2);
       }
 
       //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
-      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("update_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), update_number, request_id, data));
+      // BOOST_REQUIRE_EQUAL(wasm_assert_msg("cycle_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), cycle_number, request_id, data));
 
       // BOOST_TEST0 == 8);
-      // auto oracledata = get_oracle_data(service_id, update_number);
+      // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["update_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == update_number);
-      // BOOST_TEST0 == update_number);
-      fetchdata(service_id, update_number, 0);
+      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // BOOST_TEST0 == cycle_number);
+      fetchdata(service_id, cycle_number, 0);
    }
 }
 FC_LOG_AND_RETHROW()
@@ -1987,7 +1987,7 @@ try {
    /// reupload result
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(5 == arbivec.size());
       for (auto& arbi : arbivec) {
          uploadresult(arbi, arbitration_id, result, "");
@@ -2039,7 +2039,7 @@ try {
    /// reupload result
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(9 == arbivec.size());
       for (auto& arbi : arbivec) {
          uploadresult(arbi, arbitration_id, result, "");
@@ -2156,7 +2156,7 @@ try {
    // upload_result(arbitration_id, round, result);
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(3 == arbivec.size());
 
       for (uint8_t i = 0; i < arbivec.size() - 1; i++) {
@@ -2178,7 +2178,7 @@ try {
 
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       for (uint8_t i = 3; i < arbivec.size(); i++) {
          uploadresult(arbivec[i], arbitration_id, result, "");
          produce_blocks(1);
@@ -2235,7 +2235,7 @@ try {
    // upload_result(arbitration_id, round, result);
    {
       auto arbis = get_arbitration_process(arbitration_id, round);
-      vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+      vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
       BOOST_TEST_REQUIRE(3 == arbivec.size());
 
       for (uint8_t i = 0; i < arbivec.size() - 1; i++) {
@@ -2356,7 +2356,7 @@ try {
 
    uint8_t arbi_count = pow(2, round) + 1;
    auto arbis = get_arbitration_process(arbitration_id, round);
-   vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+   vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
    BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
 
    string acc = (*arbivec.begin()).to_string();
@@ -2415,7 +2415,7 @@ try {
 
    uint8_t arbi_count = pow(2, round) + 1;
    auto arbis = get_arbitration_process(arbitration_id, round);
-   vector<name> arbivec = arbis["arbitrators"].as<vector<name>>();
+   vector<name> arbivec = arbis["answer_arbitrators"].as<vector<name>>();
    BOOST_TEST_REQUIRE(arbi_count == arbivec.size());
 
    string acc = (*arbivec.begin()).to_string();

@@ -24,12 +24,12 @@ void consumer_contract::receivejson(name self, name code) {
    print(p.c_str());
 }
 
-void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t update_number, uint64_t request_id) {
+void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t cycle_number, uint64_t request_id) {
     require_auth(_self);
    oracle_data oracledatatable(oracle, service_id);
    check(oracledatatable.begin() != oracledatatable.end(), " no  data found ");
 
-   uint128_t id = (uint128_t(request_id) << 64) | update_number;
+   uint128_t id = (uint128_t(request_id) << 64) | cycle_number;
 
    auto update_id_idx = oracledatatable.get_index<"bynumber"_n>();
    // auto update_number_itr_lower = update_number_idx.lower_bound(id);
