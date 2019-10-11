@@ -833,7 +833,7 @@ void bos_oracle::check_service_current_update_number(uint64_t service_id, uint64
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "service does not exist");
    check(service_itr->update_cycle > 0, "update_cycle should be greater than 0");
-   check(update_number > service_itr->last_update_number, "update_number should be greater than last_number of the service");
+   // check(update_number > service_itr->last_update_number, "update_number should be greater than last_number of the service");
 
    uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
    uint32_t update_start_time = service_itr->update_start_time.sec_since_epoch();
@@ -864,7 +864,7 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
    data_services svctable(_self, _self.value);
 
    uint128_t id = make_update_id(update_number, request_id);
-   if (0 != update_number && (data_deterministic == data_type || log_status::log_fail == status || is_push_finish())) {
+   if (0 != update_number && ((data_deterministic == data_type && is_push_finish())|| log_status::log_fail == status )) {
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");
       print("\n  update_service_current_log_status last update number", update_number, "data_type=", data_type);
