@@ -28,7 +28,7 @@ BOS 预言机的博弈模型可以构建数据提供者间的囚徒困境，提�
 
 ## 构成
 
-![系统组成](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_structure.jpg)
+![系统组成](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_structure.png)
 
 ### 抵押模型
 
