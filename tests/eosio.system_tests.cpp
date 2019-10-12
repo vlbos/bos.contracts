@@ -5708,7 +5708,7 @@ BOOST_FIXTURE_TEST_CASE( set_rex, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
+/*BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
 
    cross_15_percent_threshold();
 
@@ -5787,6 +5787,7 @@ BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), push_action( b1, N(refund), mvo()("owner", b1) ) );
 
 } FC_LOG_AND_RETHROW()
+*/
 
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
