@@ -22,11 +22,14 @@ BOS.Oracle：见证与变革
 
 BOS 预言机的博弈模型可以构建数据提供者间的囚徒困境，提供受害者的上诉动力来源，保证仲裁员的公正判决。总之系统的规则对于理性的参与者来说是静态的可预见的，因而诚实公正地进行参与才是其优势策略，对于非理性的参与者系统也能够以极大概率予以惩罚，从而使得整个预言机服务将会正向、健康、高效的运行。
 
-### 全场景覆盖
+### 场景覆盖广
 
 在 BOS 预言机的构建过程中，我们充分的认识到了现实世界数据的复杂性、不规整性、零散性以及隐私性。从公开可方便获取的数据（比如天气）到有限制的数据（比如个人征信）都可以成为 BOS 的预言机服务。 任何可以被描述并在一定意义上可以被鉴别的数据服务都可通过 BOS 预言机的来提供服务，数据的提供方式可以通过链上合约、链上回调、链下回调等多种方式来实现数据提供。
 
 ## 构成
+
+![系统组成](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_structure.png)
+
 ### 抵押模型
 
 抵押模型是整个 BOS 预言机系统的核心，正是依托于抵押模型采用问责触发机制将系统构建起来。在系统中数据提供者、仲裁员、申诉人均需要抵押 Token。**抵押作为惩罚和奖赏的锚点是系统正向激励的基础**，当参与者被系统裁定为作恶时，相应的举报人、公正的仲裁员将得到相应的抵押款作为奖励。
@@ -37,8 +40,8 @@ BOS 预言机的博弈模型可以构建数据提供者间的囚徒困境，提�
 
 BOS 预言机的仲裁模型中会分成两个阶段：  
 
-- “全职仲裁员”阶段，该阶段的仲裁员共 21 名，他们必须对仲裁案件进行及时的响应；这一阶段总共可以进行3轮仲裁，每一轮人数为3、5、9，并且每轮人数不重复；
-- “大众仲裁员”阶段，该阶段会让整个预言机系统的参与者加入，将会分多轮，每轮数量翻倍的方式来进行；
+- “全职仲裁员”阶段，该阶段的仲裁员共 21 名，他们必须对仲裁案件进行及时的响应；这一阶段总共可以进行3轮仲裁，每一轮人数为3、5、9，并且每轮人员不重复；
+- “大众仲裁员”阶段，该阶段会让整个预言机系统的参与者加入，大范围进行仲裁，随机选择抽样，以多数为准；“大众仲裁员”的数量会有一定规则，防止女巫攻击。
 
 ### 智能风控
 
@@ -46,28 +49,28 @@ BOS 预言机的仲裁模型中会分成两个阶段：
 
 “智能风控”是一个可选项，取决于 DApp 项目方是否采用。但从市场竞争的角度来看，为用户提供更多保障的 DApp 将会获得更多的青睐。
 
-![智能风控](res/bosoracle_risk_control.png)  
+![智能风控](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_risk_control.png)  
 
 
-### 数据形态
+### 数据协议
 考虑到数据多样、复杂的特点，系统将提供多种数据的交互方式以方便使用。总体上将数据的使用方式归纳为以下四种：
 
 #### 1. 数据提者先行写入数据到链上，使用者读取
 
-![数据提供1](res/bosoracle_df_table.jpg)  
+![数据提供1](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_df_table.jpg)  
 
 #### 2. 数据提供者监听调用事件，链上主动推送数据到使用者
 
-![数据提供2](res/bosoracle_df_listen_table.jpg)  
+![数据提供2](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_df_listen_table.jpg)  
 
 #### 3. 数据提供者监听调用事件，链下主动推送数据到使用者
 
-![数据提供3](res/bosoracle_df_listen_offchain.png)  
+![数据提供3](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_df_listen_offchain.png)  
 
 #### 4. 链下完成数据交互，签名保证数据可靠
 
-![数据提供4](res/bosoracle_df_offchain1.jpg)  
+![数据提供4](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_df_offchain1.jpg)  
 
 ##### 4.1 链下数据交互流程
 
-![数据提供5](res/bosoracle_df_offchain_detail.png)  
+![数据提供5](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_df_offchain_detail.png)  
