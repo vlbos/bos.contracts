@@ -43,3 +43,5 @@ cmake-build-debug
 
 .vscode
 
+.clang-format
+.history

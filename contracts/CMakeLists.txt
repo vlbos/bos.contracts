@@ -13,4 +13,4 @@ add_subdirectory(eosio.wrap)
 add_subdirectory(bos.pegtoken)
 add_subdirectory(redpacket)
 add_subdirectory(personal.bos)
-
+add_subdirectory(bos.oracle)
