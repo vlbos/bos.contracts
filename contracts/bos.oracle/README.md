@@ -24,7 +24,7 @@ When using a data service provided by an Oracle, anyone has the right to prosecu
 
 ### Positive Incentive
 
-The game model of BOS Oracle may construct the “Prisoner's Dilemma” between the data providers, provide the victim with the power to appeal, and make the fair judgment of arbitrators warranty. Anyway, for the rational participants system rules are static and foreseeable, thus being honest and fair to participate is its superior strategy, while for the irrational ones, who may be punished with great probability, thereby he whole prophecy service will run positively, healthily and efficiently.
+The game model of BOS Oracle may construct the “Prisoner's Dilemma” between the data providers, provide the victim with the power to appeal, and make the fair judgment of arbitrators order. Anyway, for the rational participants system rules are static and foreseeable, thus being honest and fair to participate is its superior strategy, while for the irrational ones, who may be punished with great probability, thereby the whole prophecy service will run positively, healthily and efficiently.
 
 ### Full scene coverage
 
@@ -34,24 +34,24 @@ During the construction of BOS Oracle, we fully realized the complexity, irregul
 
 ![Structures](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_structure.png)
 
-### Staking-based Model
+### Staking Model
 
-Staking-based model is the core of the BOS Oracle System. It adopts the accountability trigger mechanism to build the system. The system, was built relying on the use of accountability trigger mechanism by the Staking-based model, in which the data provider, arbitrator and complainant all need mortgage Token. **As the anchor of punishment and reward, mortgage is the basis of positive incentive of the system.** When the participant is judged by the system as doing unfair things, the corresponding informant and impartial arbitrator will get the corresponding mortgage as reward.
+Staking model is the core of the BOS Oracle System. It adopts the accountability trigger mechanism to build the system. The system, was built relying on the use of accountability trigger mechanism by the Staking model, in which the data provider, arbitrator and complainant all need mortgage Token. **As the anchor of punishment and reward, mortgage is the basis of positive incentive of the system.** When the participant is judged by the system as doing unfair things, the corresponding informant and impartial arbitrator will get the corresponding mortgage as reward.
 
-### Arbitrary Model
+### Arbitration Model
 
-Arbitrary is the source of system fairness. To avoid the achievement of bribery, the system applies a plan for multiple rounds of arbitration, in which the number of arbitrators in each round increases step by step. With the expansion of arbitrators, it will become more and more difficult to pay bribes, and the cost will increase sharply, which will eventually lead to the failure of bribery. 
+Arbitration is the source of system fairness. To avoid the achievement of bribery, the system applies a plan for multiple rounds of arbitration, in which the number of arbitrators in each round increases step by step. With the expansion of arbitrators, it will become more and more difficult to pay bribes, and the cost will increase sharply, which will eventually lead to the failure of bribery. 
 
-The arbitrary model of BOS Oracle will be divided into two phases:
+The arbitration model of BOS Oracle will be divided into two phases:
 
-- “Full-time arbitrators” stage, 21 arbitrators in total who must be timely response to the arbitration cases; in this stage, a total of 3 rounds of arbitration can be conducted, with 3, 5 and 9 persons in each round and no repetition in each round;
-- The “public arbitrator” phase, participants in the entire prophecy system involved in, will be conducted in multiple rounds, doubling the number of rounds.
+- The "Fulltime Arbitrators" phase, 21 arbitrators in total who must be timely response to the arbitration cases; in this stage, a total of 3 rounds of arbitration can be conducted, with 3, 5 and 9 persons in each round and no repetition in each round;
+- The "Mass Arbitrators” phase, the participants in the entire Oracle service will be involved in. Extensive arbitration and random sampling will be conducted, subject to the majority; The number of "Mass Arbitrators" will be well regulated, in case of "Sybil Attack".
 
 ### Intelligent Risk Control
 
 In order to ensure maximum security, “intelligent risk control” can always assure that the data provider has enough mortgage Token to be locked for punishment. Its main logic is used that players based on Oracle service DApp transfer Token directly to the “intelligent risk control” account rather than DApp project accounts, when someone on the Oracle service initiated arbitration, “intelligent risk control” will base on the information (such as history of the data provider behavior and the current expenditure information) to intelligently calculate capital of freezing and thawing cycle time. If there is no exception in the whole process, the DApp project party can normally extract Token from the “intelligent risk control” account.
 
-“Intelligent risk control” is an option, depending on whether the DApp’s clients adopt it. However, from the perspective of market competition, DApp which provides more guarantee for users will be preferred.
+“Intelligent risk control” is an option, depending one the DApp's clients application. However, from the perspective of market competition, DApp which provides more guarantee for users will be preferred.
 
 ![Intelligentriskcontrol](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_risk_control.png)  
 
