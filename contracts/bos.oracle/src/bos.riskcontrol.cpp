@@ -18,7 +18,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
    }
    check(quantity.is_valid(), "invalid quantity");
    check(quantity.amount > 0, "must transfer positive quantity");
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    //  check(quantity.amount>100, "amount could not be less than 100");
    //
@@ -126,7 +126,7 @@ void bos_oracle::on_transfer(name from, name to, asset quantity, string memo) {
 void bos_oracle::transfer(name from, name to, asset quantity, string memo) { oracle_transfer(from, to, quantity, memo, true); }
 
 void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo, bool is_deferred) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    check(from != to, "cannot transfer to self");
    //  require_auth( from );
@@ -168,7 +168,7 @@ void bos_oracle::oracle_transfer(name from, name to, asset quantity, string memo
 
 /// from dapp user to dapp
 void bos_oracle::deposit(name from, name to, asset quantity, string memo, bool is_notify) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    require_auth(_self);
    call_deposit(from, to, quantity, is_notify);
@@ -195,7 +195,7 @@ void bos_oracle::call_deposit(name from, name to, asset quantity, bool is_notify
  * @param memo
  */
 void bos_oracle::withdraw(uint64_t service_id, name from, name to, asset quantity, string memo) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    require_auth(_self);
    sub_balance(from, quantity);

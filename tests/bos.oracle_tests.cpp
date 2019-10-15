@@ -719,7 +719,7 @@ try {
    uint32_t duration = 30;
    uint8_t provider_limit = 3;
    uint32_t update_cycle = 600;
-   uint64_t last_update_number = 0;
+   uint64_t last_cycle_number = 0;
    uint64_t appeal_freeze_period = 0;
    uint64_t exceeded_risk_control_freeze_period = 0;
    uint64_t guarantee_id = 0;
@@ -741,7 +741,7 @@ try {
    auto services = get_data_service(new_service_id);
    // REQUIRE_MATCHING_OBJECT(
    //     services, mvo()("service_id", new_service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
-   //                   "provider_limit", provider_limit)("update_cycle", update_cycle)("last_update_number", last_update_number)("appeal_freeze_period", appeal_freeze_period)(
+   //                   "provider_limit", provider_limit)("update_cycle", update_cycle)("last_cycle_number", last_cycle_number)("appeal_freeze_period", appeal_freeze_period)(
    //                   "exceeded_risk_control_freeze_period", exceeded_risk_control_freeze_period)("guarantee_id", guarantee_id)("base_stake_amount", amount)("risk_control_amount",
    //                   risk_control_amount)( "pause_service_stake_amount", pause_service_stake_amount)("data_format", data_format)("criteria", criteria)("declaration",
    //                   declaration)("update_start_time", update_start_time));
@@ -1066,8 +1066,8 @@ try {
       // BOOST_TEST(0 == current_time.sec_since_epoch());
       // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
 }
@@ -1123,8 +1123,8 @@ try {
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST0 == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
@@ -1179,8 +1179,8 @@ try {
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST0 == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
@@ -1234,8 +1234,8 @@ try {
       // BOOST_REQUIRE_EQUAL(wasm_assert_msg("cycle_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), cycle_number, request_id, data));
       // BOOST_TEST(0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uin64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uin64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST(0 == cycle_number);
 
       fetchdata(service_id, cycle_number, 0);

@@ -59,22 +59,31 @@ enum arbi_step_type : uint8_t {
 
 enum arbitration_role_type : uint8_t { pending = 0, consumer = 1, provider = 2, sponsor = 4, respodent = 8 };
 
-static int default_arbitration_correct_rate = 6000;
-static int arbitration_correct_rate_base = 100;
-static int percent_100 = 10000;
 
-static const uint64_t arbi_process_time_limit = 3600;
-static const uint8_t round_limit = 3;
-static const uint8_t arbi_resp_appeal_timeout_value = 1;    // hours
-static const uint8_t arbi_upload_result_timeout_value = 1;  // hours
-static const uint8_t arbi_reappeal_timeout_value = 1;       /// hours
-static const uint8_t arbi_resp_arbitrate_timeout_value = 1; // hours
-static const uint8_t arbi_freeze_stake_duration = 1;        // days
-static const uint8_t arbi_case_deadline = 1;                // hours
-static const int8_t request_time_deadline = 1;          // 1 hours
-static const uint8_t update_time_deadline = 1;          // 1 hours
-static const uint32_t service_stake_limit = 1000;
 static const uint64_t one_time = 1;
 static const uint8_t first_round = 1;
 static const uint8_t first_respondent = 1;
-static const uint32_t clear_data_time_length = 10800;        // seconds 3 hours
+static const std::string default_core_symbol =  "BOS";
+static const uint8_t default_precision =  4;
+static const uint64_t default_min_service_stake_limit = 1000;
+static const uint64_t default_min_appeal_stake_limit = 100;
+static const uint64_t default_min_reg_arbitrator_stake_limit = 10000;
+static const uint16_t default_arbitration_correct_rate = 60;
+static const uint16_t arbitration_correct_rate_base = 100;
+static const uint16_t percent_100 = 10000;
+static const uint16_t default_round_limit = 3;
+static const uint32_t default_arbi_timeout_value = 3600;    // seconds
+static const uint32_t default_arbi_freeze_stake_duration = 3600*24;        // seconds
+static const uint32_t default_time_deadline = 3600*24;          // seconds
+static const uint32_t default_clear_data_time_length = 10800;        // seconds  default 3 hours
+static const uint16_t default_max_data_size = 256;
+static const uint16_t default_min_provider_limit= 1;
+static const uint16_t default_max_provider_limit= 100;
+static const uint32_t default_min_update_cycle= 1;
+static constexpr uint32_t default_max_update_cycle= 3600 * 24 * uint32_t(100);
+static const uint32_t default_min_duration= 1;
+static const uint32_t default_max_duration= 100000;
+static const uint16_t default_min_acceptance= 1;
+static const uint16_t default_max_acceptance= 100;
+static const uint16_t  current_oracle_version= 1;
+
