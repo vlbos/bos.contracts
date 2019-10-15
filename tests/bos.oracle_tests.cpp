@@ -1229,16 +1229,15 @@ try {
          produce_blocks(2);
       }
 
-      //  BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
+      // BOOST_REQUIRE_EXCEPTION( acceptarbi(N(alice), arbitration_id),
       //                    eosio_assert_message_exception, eosio_assert_message_is("could not find such an arbitrator in current chosen arbitration." ) );
       // BOOST_REQUIRE_EQUAL(wasm_assert_msg("cycle_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), cycle_number, request_id, data));
-
-      // BOOST_TEST0 == 8);
+      // BOOST_TEST(0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
-
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uin64_t>();
       // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
-      // BOOST_TEST0 == cycle_number);
+      // BOOST_TEST(0 == cycle_number);
+
       fetchdata(service_id, cycle_number, 0);
    }
 }

@@ -77,4 +77,4 @@ static const uint32_t service_stake_limit = 1000;
 static const uint64_t one_time = 1;
 static const uint8_t first_round = 1;
 static const uint8_t first_respondent = 1;
-static const uint32_t clear_data_time_length = 10800;        // seconds
+static const uint32_t clear_data_time_length = 10800;        // seconds 3 hours
