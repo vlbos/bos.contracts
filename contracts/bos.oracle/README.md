@@ -20,7 +20,11 @@ In this way, we are able to not only get the credibility of the input data of bl
 
 The whole Oracle system is constructed on Game Theory. We abstract the roles involved in the Oracle, and call the roles providing data or services as data providers and the roles consuming data as data consumers. In the meanwhile, we also introduce the role of arbitrator to complete the construction of the whole game model.
 
-When using a data service provided by an Oracle, anyone has the right to prosecute and lodge an appeal. If he/she refuses to accept the verdict, there will be several rounds of arbitration, and the system will punish the perpetrator of the final judgment. The whole system will form the game balance of "data providers", "data user" and "arbitrator", and the whole game process and rule making can guarantee justice is an event with great probability.
+When using a data service provided by an Oracle, anyone has the right to prosecute and lodge an appeal. If he/she refuses to accept the verdict, there will be several rounds of arbitration, and the system will punish the perpetrator of the final judgment. The whole system will form the game balance of "data providers", "data user" and "arbitrator", and the whole game process and rule making can guarantee justice is an event with great probability.  
+
+
+![bosoraclegamemodel](https://raw.githubusercontent.com/boscore/Documentation/master/imgs/oralce/bosoracle_game_model.png)  
+
 
 ### Positive Incentive
 
