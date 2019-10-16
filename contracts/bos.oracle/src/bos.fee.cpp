@@ -246,7 +246,7 @@ std::tuple<uint64_t, uint64_t> bos_oracle::get_consumption(uint64_t service_id) 
    uint64_t consumptions = service_itr->consumption.amount;
    uint64_t month_consumptions = service_itr->month_consumption.amount;
 
-   if (service_itr->update_time - bos_oracle::current_time_point_sec() > eosio::days(update_time_deadline)) {
+   if (service_itr->update_time+unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).time_deadline < bos_oracle::current_time_point_sec() ) {
       consumptions = 0;
       month_consumptions = 0;
       for (const auto& s : subscriptionstable) {

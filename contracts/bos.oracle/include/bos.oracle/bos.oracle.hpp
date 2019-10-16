@@ -19,16 +19,33 @@ using namespace eosio;
 using namespace std;
 
 class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
+ private:
+   oracle_meta_parameters_singleton _oracle_meta_parameters_singleton;
+   oracle_meta_parameters _oracle_meta_parameters;
+
  public:
    static constexpr eosio::name token_account{"eosio.token"_n};
    static constexpr eosio::name active_permission{"active"_n};
-   static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
+   //  static constexpr symbol _core_symbol = symbol(symbol_code("BOS"), 4);
 
    static time_point_sec current_time_point_sec();
+   void check_data(const std::string& data, const std::string& data_name) {
+      check(_oracle_meta_parameters.version == current_oracle_version, "config parameters must first be initialized ");
+      uint16_t data_size = unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).max_data_size;
+      std::string checkmsg = data_name + " declaration could not be greater than  " + std::to_string(data_size);
+      check(data.size() <= data_size, checkmsg.c_str());
+   }
+
+   void check_stake(const asset& amount, const std::string& data_name, uint64_t limit_value) {
+      std::string checkmsg = data_name + " could not be less than " + std::to_string(limit_value);
+      check(amount >= asset(limit_value, core_symbol()), checkmsg.c_str());
+   }
 
    using contract::contract;
-   bos_oracle(name receiver, name code, datastream<const char*> ds) : contract(receiver, code, ds) {}
-   ~bos_oracle() {}
+   bos_oracle(name receiver, name code, datastream<const char*> ds) : contract(receiver, code, ds), _oracle_meta_parameters_singleton(_self, _self.value) {
+      _oracle_meta_parameters = _oracle_meta_parameters_singleton.exists() ? _oracle_meta_parameters_singleton.get() : oracle_meta_parameters{};
+   }
+   ~bos_oracle() { _oracle_meta_parameters_singleton.set(_oracle_meta_parameters, _self); }
 
    /// bos.provider begin
    ///
@@ -46,6 +63,8 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
    [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
 
+   [[eosio::action]] void setparameter(ignore<uint8_t> version,ignore<oracle_parameters> parameters);
+
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
    using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
    using addfeetypes_action = eosio::action_wrapper<"addfeetypes"_n, &bos_oracle::addfeetypes>;
@@ -56,6 +75,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    using unregister_action = eosio::action_wrapper<"unregservice"_n, &bos_oracle::unregservice>;
    using starttimer_action = eosio::action_wrapper<"starttimer"_n, &bos_oracle::starttimer>;
    using cleardata_action = eosio::action_wrapper<"cleardata"_n, &bos_oracle::cleardata>;
+   using setparameter_action = eosio::action_wrapper<"setparameter"_n, &bos_oracle::setparameter>;
 
    ///
    ///
@@ -120,7 +140,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void save_id(uint8_t id_type, uint64_t id);
    uint128_t make_update_id(uint64_t cycle_number, uint64_t request_id);
    // provider
-   void check_service_current_update_number(uint64_t service_id, uint64_t cycle_number);
+   void check_service_current_cycle_number(uint64_t service_id, uint64_t cycle_number);
    void update_service_current_log_status(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, uint8_t data_type = data_deterministic, uint8_t status = log_status::log_sent);
    void addfeetype(uint64_t service_id, uint8_t fee_type, asset service_price);
    void innerpush(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data);
@@ -207,5 +227,10 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    void send_notify(const vector<name>& accounts, const vector<name>& resp_accounts, const std::string& memo);
 
    /// common
-   symbol core_symbol() const { return _core_symbol; };
+   symbol core_symbol() const {
+      check(_oracle_meta_parameters.version == current_oracle_version, "config parameters must first be initialized ");
+      auto paras = unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data);
+      symbol _core_symbol = symbol(symbol_code(paras.core_symbol), paras.precision);
+      return _core_symbol;
+   };
 };

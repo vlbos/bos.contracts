@@ -32,9 +32,9 @@ void consumer_contract::fetchdata(name oracle, uint64_t service_id, uint64_t cyc
    uint128_t id = (uint128_t(request_id) << 64) | cycle_number;
 
    auto update_id_idx = oracledatatable.get_index<"bynumber"_n>();
-   // auto update_number_itr_lower = update_number_idx.lower_bound(id);
-   // auto update_number_itr_upper = update_number_idx.upper_bound(id);
-   // for (auto itr = update_number_itr_lower; itr != update_number_idx.end() && itr != update_number_itr_upper; ++itr) {
+   // auto cycle_number_itr_lower = cycle_number_idx.lower_bound(id);
+   // auto cycle_number_itr_upper = cycle_number_idx.upper_bound(id);
+   // for (auto itr = cycle_number_itr_lower; itr != cycle_number_idx.end() && itr != cycle_number_itr_upper; ++itr) {
    //    print(itr->value.c_str());
    // }
 

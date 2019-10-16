@@ -45,8 +45,8 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] arbitrator {
    std::string public_info;
 
    uint64_t primary_key() const { return account.value; }
-   bool check_correct_rate() const {
-      return (arbitration_correct_times + 1) * arbitration_correct_rate_base >= (arbitration_times + 1) * arbitration_correct_rate_base * default_arbitration_correct_rate / percent_100;
+   bool check_correct_rate(uint16_t correct_rate) const {
+      return (arbitration_correct_times + 1) * arbitration_correct_rate_base >= (arbitration_times + 1) * arbitration_correct_rate_base * correct_rate*arbitration_correct_rate_base / percent_100;
    }
 };
 

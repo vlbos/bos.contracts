@@ -27,22 +27,20 @@ using std::string;
 void bos_oracle::regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
                             uint8_t provider_limit, uint32_t update_cycle) {
    require_auth(account);
+   check(_oracle_meta_parameters.version == current_oracle_version, "config parameters must first be initialized ");
+   auto paras = unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data);
+   check_stake(base_stake_amount, "base_stake_amount", paras.min_service_stake_limit);
 
-   std::string checkmsg = "set base stake amount could not be less than " + std::to_string(service_stake_limit);
-   check(base_stake_amount.amount >= uint64_t(service_stake_limit) * pow(10, core_symbol().precision()), checkmsg);
-
-   check(provider_limit >= 1 && provider_limit <= 100, "provider_limit could not be less than 1 or greater than 100");
-   check(update_cycle >= 3 && update_cycle <= 3600 * 24 * uint32_t(100), "update_cycle could not be less than 3 seconds or greater than 100 days");
-   check(duration >= 1 && duration <= 3600, "duration could not be less than 1 or greater than 3600 seconds");
-   check(duration < update_cycle, "duration could not be  greater than update_cycle seconds");
+   check(provider_limit >= paras.min_provider_limit && provider_limit <= paras.max_provider_limit, "provider_limit could not be less than 1 or greater than 100");
+   check(update_cycle >= paras.min_update_cycle && update_cycle <= paras.max_update_cycle, "update_cycle could not be less than 3 seconds or greater than 100 days");
+   check(duration >= paras.min_duration && duration <= paras.max_duration, "duration could not be less than 1 or greater than 3600 seconds");
+   check(duration < update_cycle, "duration could not be  greater than update_cycle ");
    check(injection_method == chain_indirect || injection_method == chain_direct || injection_method == chain_outside,
          "injection_method only set chain_indirect(0) or chain_direct(1)or chain_outside(2)");
    check(data_type == data_deterministic || data_type == data_non_deterministic, "data_type only set value data_deterministic(0) or data_non_deterministic(1)1");
-   check(acceptance >= 3 && acceptance <= 100, "acceptance could not be less than 3 or greater than 100 ");
-   check(data_format.size() <= 256, "data_format could not be greater than 256");
-   check(criteria.size() <= 256, "criteria could not be greater than 256");
-   // check(declaration.size() <= 256, "declaration could not be greater than 256");
-   // check(update_start_time > bos_oracle::current_time_point_sec(), "update_start_time could not be earlier than current time");
+   check(acceptance >= paras.min_acceptance && acceptance <= paras.max_acceptance, "acceptance could not be less than 3 or greater than 100 ");
+   check_data(data_format, "data_format");
+   check_data(criteria, "criteria");
 
    data_services svctable(_self, _self.value);
 
@@ -66,7 +64,7 @@ void bos_oracle::regservice(name account, asset base_stake_amount, std::string d
       s.provider_limit = provider_limit;
       s.update_cycle = update_cycle;
       s.update_start_time = bos_oracle::current_time_point_sec(); // update_start_time;
-      s.last_update_number = 0;
+      s.last_cycle_number = 0;
       s.appeal_freeze_period = 0;
       s.exceeded_risk_control_freeze_period = 0;
       s.guarantee_id = 0;
@@ -156,9 +154,7 @@ void bos_oracle::update_service_status(uint64_t service_id) {
    }
 
    if (available_service_providers_count < service_itr->provider_limit && service_status::service_in == service_itr->status) {
-      svctable.modify(service_itr, same_payer, [&](auto& p) {
-         p.status = service_status::service_pause_insufficient_providers;
-      });
+      svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_pause_insufficient_providers; });
    } else if (available_service_providers_count >= service_itr->provider_limit &&
               (service_status::service_init == service_itr->status || service_status::service_pause_insufficient_providers == service_itr->status)) {
       svctable.modify(service_itr, same_payer, [&](auto& p) { p.status = service_status::service_in; });
@@ -197,14 +193,14 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
 }
 
 void bos_oracle::unstakeasset(uint64_t service_id, name account, asset amount, std::string memo) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    require_auth(account);
    update_stake_asset(service_id, account, -amount);
 }
 
 void bos_oracle::stake_asset(uint64_t service_id, name account, asset amount, std::string memo) {
-   check(memo.size() <= 256, "memo could not be greater than 256");
+   check_data(memo, "memo");
 
    require_auth(account);
    reg_service_provider(service_id, account);
@@ -318,12 +314,12 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
 
 void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data) {
    require_auth(provider);
-   check(data.size() <= 256, "data could not be greater than 256");
+   check_data(data, "data");
 
    check(!(0 != cycle_number && 0 != request_id), "both cycle_number and request_id could not be greater than 0");
 
    if (0 == request_id) {
-      check_service_current_update_number(service_id, cycle_number);
+      check_service_current_cycle_number(service_id, cycle_number);
    }
 
    check_service_provider_status(service_id, provider);
@@ -350,7 +346,7 @@ void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t cycle_num
  * @param request_id
  */
 void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data) {
-   check(data.size() <= 256, "data could not be greater than 256");
+   check_data(data, "data");
    data_services svctable(get_self(), get_self().value);
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "no service id in innerpush");
@@ -403,13 +399,13 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t cycle_nu
 }
 
 void bos_oracle::oraclepush(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, string data, name contract_account) {
-   check(data.size() <= 256, "data could not be greater than 256");
+   check_data(data, "data");
    require_auth(_self);
    require_recipient(contract_account);
 }
 
 void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data) {
-   check(data.size() <= 256, "data could not be greater than 256");
+   check_data(data, "data");
    name contract_account = _self; // placeholder
    // require_auth(_self);
    check(service_status::service_in == get_service_status(service_id), "service and subscription must be available");
@@ -593,7 +589,7 @@ void bos_oracle::start_timer(uint64_t service_id, uint64_t cycle_number, uint64_
          return 0;
       }
 
-      uint32_t end_time_sec = (req_itr->request_time + eosio::hours(request_time_deadline)).sec_since_epoch();
+      uint32_t end_time_sec = req_itr->request_time.sec_since_epoch() + unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).time_deadline;
       uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
       if (end_time_sec > now_sec) {
          return end_time_sec - now_sec;
@@ -602,7 +598,7 @@ void bos_oracle::start_timer(uint64_t service_id, uint64_t cycle_number, uint64_
       return 0;
    };
 
-   auto get_update_number_time = [&](uint64_t service_id, uint64_t cycle_number) -> uint32_t {
+   auto get_cycle_number_time = [&](uint64_t service_id, uint64_t cycle_number) -> uint32_t {
       data_services svctable(_self, _self.value);
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");
@@ -621,7 +617,7 @@ void bos_oracle::start_timer(uint64_t service_id, uint64_t cycle_number, uint64_
    if (0 != request_id) {
       delay_sec = get_time(service_id, request_id);
    } else {
-      delay_sec = get_update_number_time(service_id, cycle_number);
+      delay_sec = get_cycle_number_time(service_id, cycle_number);
    }
 
    if (0 == delay_sec) {
@@ -695,10 +691,10 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t cycle_number, u
       d.cycle_number = cycle_number;
       d.data = data;
       d.timestamp = bos_oracle::current_time_point_sec().sec_since_epoch();
-      print("\n insert record_id=",d.record_id);
+      print("\n insert record_id=", d.record_id);
    });
 
-   clear_data(service_id, clear_data_time_length);
+   clear_data(service_id, unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).clear_data_time_length);
 }
 void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
    require_auth(_self);
@@ -711,7 +707,7 @@ void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
    const uint8_t run_time = 10; // seconds
 
    for (auto itr = oracledatatable.begin(); itr != oracledatatable.end();) {
-      print("\n traverse record_id=", itr->record_id,",c=",bos_oracle::current_time_point_sec().sec_since_epoch(),",t=",itr->timestamp);
+      print("\n traverse record_id=", itr->record_id, ",c=", bos_oracle::current_time_point_sec().sec_since_epoch(), ",t=", itr->timestamp);
       if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->timestamp < time_length || bos_oracle::current_time_point_sec().sec_since_epoch() - begin_time > run_time) {
          break;
       }
@@ -738,16 +734,16 @@ uint64_t bos_oracle::get_provider_count(uint64_t service_id) {
 uint64_t bos_oracle::get_publish_provider_count(uint64_t service_id, uint64_t cycle_number, uint64_t request_id) {
 
    data_service_provision_logs logtable(_self, service_id);
-   auto update_number_idx = logtable.get_index<"bynumber"_n>(); //
+   auto cycle_number_idx = logtable.get_index<"bynumber"_n>(); //
 
    uint128_t id = make_update_id(cycle_number, request_id);
 
-   auto update_number_itr_lower = update_number_idx.lower_bound(id);
-   auto update_number_itr_upper = update_number_idx.upper_bound(id);
+   auto cycle_number_itr_lower = cycle_number_idx.lower_bound(id);
+   auto cycle_number_itr_upper = cycle_number_idx.upper_bound(id);
 
    uint64_t provider_count = 0;
 
-   for (auto itr = update_number_itr_lower; itr != update_number_idx.end() && itr != update_number_itr_upper; ++itr) {
+   for (auto itr = cycle_number_itr_lower; itr != cycle_number_idx.end() && itr != cycle_number_itr_upper; ++itr) {
       provider_count++;
    }
 
@@ -757,18 +753,18 @@ uint64_t bos_oracle::get_publish_provider_count(uint64_t service_id, uint64_t cy
 bool bos_oracle::check_provider_no_push_data(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, uint8_t data_type) {
 
    data_service_provision_logs logtable(_self, service_id);
-   auto update_number_idx = logtable.get_index<"bynumber"_n>();
+   auto cycle_number_idx = logtable.get_index<"bynumber"_n>();
 
    uint128_t id = make_update_id(cycle_number, request_id);
 
-   if (data_deterministic == data_type && update_number_idx.find(id) == update_number_idx.end()) {
+   if (data_deterministic == data_type && cycle_number_idx.find(id) == cycle_number_idx.end()) {
       start_timer(service_id, cycle_number, request_id);
    }
 
-   auto update_number_itr_lower = update_number_idx.lower_bound(id);
-   auto update_number_itr_upper = update_number_idx.upper_bound(id);
+   auto cycle_number_itr_lower = cycle_number_idx.lower_bound(id);
+   auto cycle_number_itr_upper = cycle_number_idx.upper_bound(id);
 
-   for (auto itr = update_number_itr_lower; itr != update_number_itr_upper; ++itr) {
+   for (auto itr = cycle_number_itr_lower; itr != cycle_number_itr_upper; ++itr) {
       if (itr->account == provider) {
          print("check_provider_no_push_data u=", cycle_number, "r=", request_id, "id=", id, "p=", provider.to_string());
          return false;
@@ -786,17 +782,17 @@ string bos_oracle::get_publish_data(uint64_t service_id, uint64_t cycle_number, 
    }
 
    data_service_provision_logs logtable(_self, service_id);
-   auto update_number_idx = logtable.get_index<"bynumber"_n>(); //
+   auto cycle_number_idx = logtable.get_index<"bynumber"_n>(); //
 
    std::map<string, int64_t> data_count;
    uint64_t provider_count = 0;
 
    uint128_t id = make_update_id(cycle_number, request_id);
 
-   auto update_number_itr_lower = update_number_idx.lower_bound(id);
-   auto update_number_itr_upper = update_number_idx.upper_bound(id);
+   auto cycle_number_itr_lower = cycle_number_idx.lower_bound(id);
+   auto cycle_number_itr_upper = cycle_number_idx.upper_bound(id);
 
-   for (auto itr = update_number_itr_lower; itr != update_number_itr_upper; ++itr) {
+   for (auto itr = cycle_number_itr_lower; itr != cycle_number_itr_upper; ++itr) {
       auto it = data_count.find(itr->data);
       if (it != data_count.end()) {
          data_count[itr->data]++;
@@ -827,28 +823,28 @@ string bos_oracle::get_publish_data(uint64_t service_id, uint64_t cycle_number, 
    return result;
 }
 
-void bos_oracle::check_service_current_update_number(uint64_t service_id, uint64_t cycle_number) {
+void bos_oracle::check_service_current_cycle_number(uint64_t service_id, uint64_t cycle_number) {
 
    data_services svctable(_self, _self.value);
    auto service_itr = svctable.find(service_id);
    check(service_itr != svctable.end(), "service does not exist");
    check(service_itr->update_cycle > 0, "update_cycle should be greater than 0");
-   // check(cycle_number > service_itr->last_update_number, "cycle_number should be greater than last_number of the service");
+   // check(cycle_number > service_itr->last_cycle_number, "cycle_number should be greater than last_number of the service");
 
    uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
    uint32_t update_start_time = service_itr->update_start_time.sec_since_epoch();
    check(now_sec >= update_start_time, "current time  should be greater than update_start_time");
    uint32_t update_cycle = service_itr->update_cycle;
    uint32_t duration = service_itr->duration;
-   uint32_t expected_update_number = (now_sec - update_start_time) / update_cycle + 1;
-   uint32_t current_duration_begin_time = time_point_sec(update_start_time + (expected_update_number - 1) * update_cycle).sec_since_epoch();
+   uint32_t expected_cycle_number = (now_sec - update_start_time) / update_cycle + 1;
+   uint32_t current_duration_begin_time = time_point_sec(update_start_time + (expected_cycle_number - 1) * update_cycle).sec_since_epoch();
    uint32_t current_duration_end_time = current_duration_begin_time + duration;
 
-   std::string checkmsg = "wrong update number,expected_update_number=" + std::to_string(expected_update_number) +
+   std::string checkmsg = "wrong update number,expected_cycle_number=" + std::to_string(expected_cycle_number) +
                           " or current time is not in timespan of data collection,begin_time=" + std::to_string(current_duration_begin_time) +
                           ",end_time=" + std::to_string(current_duration_end_time) + ",now=" + std::to_string(now_sec) + ",start=" + std::to_string(update_start_time);
 
-   check(cycle_number == expected_update_number && now_sec >= current_duration_begin_time && now_sec <= current_duration_end_time, checkmsg.c_str());
+   check(cycle_number == expected_cycle_number && now_sec >= current_duration_begin_time && now_sec <= current_duration_end_time, checkmsg.c_str());
 }
 
 void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, uint8_t data_type, uint8_t status) {
@@ -864,21 +860,21 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
    data_services svctable(_self, _self.value);
 
    uint128_t id = make_update_id(cycle_number, request_id);
-   if (0 != cycle_number && ((data_deterministic == data_type && is_push_finish())|| log_status::log_fail == status )) {
+   if (0 != cycle_number && ((data_deterministic == data_type && is_push_finish()) || log_status::log_fail == status)) {
       auto service_itr = svctable.find(service_id);
       check(service_itr != svctable.end(), "service does not exist");
       print("\n  update_service_current_log_status last update number", cycle_number, "data_type=", data_type);
-      svctable.modify(service_itr, _self, [&](auto& ss) { ss.last_update_number = cycle_number; });
+      svctable.modify(service_itr, _self, [&](auto& ss) { ss.last_cycle_number = cycle_number; });
    }
 
    data_service_provision_logs logtable(_self, service_id);
 
-   auto update_number_idx = logtable.get_index<"bynumber"_n>(); //
-   auto update_number_itr_lower = update_number_idx.lower_bound(id);
-   auto update_number_itr_upper = update_number_idx.upper_bound(id);
+   auto cycle_number_idx = logtable.get_index<"bynumber"_n>(); //
+   auto cycle_number_itr_lower = cycle_number_idx.lower_bound(id);
+   auto cycle_number_itr_upper = cycle_number_idx.upper_bound(id);
 
    std::vector<uint64_t> ids;
-   for (auto itr = update_number_itr_lower; itr != update_number_itr_upper; ++itr) {
+   for (auto itr = cycle_number_itr_lower; itr != cycle_number_itr_upper; ++itr) {
       ids.push_back(itr->log_id);
    }
 
@@ -893,3 +889,36 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
 }
 
 // } // namespace bosoracle
+
+void bos_oracle::setparameter(ignore<uint8_t> version, ignore<oracle_parameters> parameters) {
+   require_auth(_self);
+   uint8_t _version;
+   oracle_parameters _parameters;
+   _ds >> _version >> _parameters;
+   //  print(_version, _parameters.core_symbol, _parameters.precision);
+   check(!_parameters.core_symbol.empty(), "core_symbol could not be empty");
+   check(_parameters.precision > 0, "precision must be greater than 0");
+   check(_parameters.min_service_stake_limit > 0, "min_service_stake_limit must be greater than 0");
+   check(_parameters.min_appeal_stake_limit > 0, "min_appeal_stake_limit must be greater than 0");
+   check(_parameters.min_reg_arbitrator_stake_limit > 0, "min_reg_arbitrator_stake_limit must be greater than 0");
+   check(_parameters.arbitration_correct_rate > 0, "arbitration_correct_rate must be greater than 0");
+   check(_parameters.round_limit > 0, "round_limit must be greater than 0");
+   check(_parameters.arbi_timeout_value > 0, "arbi_timeout_value must be greater than 0");
+   check(_parameters.arbi_freeze_stake_duration > 0, "arbi_freeze_stake_duration must be greater than 0");
+   check(_parameters.time_deadline > 0, "time_deadline must be greater than 0");
+   check(_parameters.clear_data_time_length > 0, "clear_data_time_length must be greater than 0");
+   check(_parameters.max_data_size > 0, "max_data_size must be greater than 0");
+   check(_parameters.min_provider_limit > 0, "min_provider_limit must be greater than 0");
+   check(_parameters.max_provider_limit > 0, "max_provider_limit must be greater than 0");
+   check(_parameters.min_update_cycle > 0, "min_update_cycle must be greater than 0");
+   check(_parameters.max_update_cycle > 0, "max_update_cycle must be greater than 0");
+   check(_parameters.min_duration > 0, "min_duration must be greater than 0");
+   check(_parameters.max_duration > 0, "max_duration must be greater than 0");
+   check(_parameters.min_acceptance > 0, "min_acceptance must be greater than 0");
+   check(_parameters.max_acceptance > 0, "max_acceptance must be greater than 0");
+
+   std::string checkmsg = "unsupported version for setparameter action,current_oracle_version=" + std::to_string(current_oracle_version);
+   check(_version == current_oracle_version, checkmsg.c_str());
+   _oracle_meta_parameters.version = _version;
+   _oracle_meta_parameters.parameters_data = pack(_parameters);
+}
