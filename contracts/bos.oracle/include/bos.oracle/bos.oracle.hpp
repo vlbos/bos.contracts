@@ -63,7 +63,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    [[eosio::action]] void starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
    [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
 
-   [[eosio::action]] void setparameter(ignore<uint8_t>,ignore<oracle_parameters> parameters);
+   [[eosio::action]] void setparameter(ignore<uint8_t> version,ignore<oracle_parameters> parameters);
 
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
    using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;

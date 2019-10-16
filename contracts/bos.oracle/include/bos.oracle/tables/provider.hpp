@@ -164,13 +164,13 @@ struct oracle_parameters {
                                            arbi_timeout_value)(arbi_freeze_stake_duration)(time_deadline)(clear_data_time_length)(max_data_size)(min_provider_limit)(max_provider_limit)(
                                            min_update_cycle)(max_update_cycle)(min_duration)(max_duration)(min_acceptance)(max_acceptance))
 };
-
+//parameters_data = pack(oracle_parameters{});
 struct [[eosio::table("metaparams"), eosio::contract("bos.oracle")]] oracle_meta_parameters {
-   oracle_meta_parameters() { parameters_data = pack(oracle_parameters{}); }
+   oracle_meta_parameters() {  }
    uint8_t version;
    std::vector<char> parameters_data;
 
-   EOSLIB_SERIALIZE(oracle_meta_parameters, (parameters_data))
+   EOSLIB_SERIALIZE(oracle_meta_parameters, (version)(parameters_data))
 };
 
 typedef eosio::singleton<"metaparams"_n, oracle_meta_parameters> oracle_meta_parameters_singleton;
