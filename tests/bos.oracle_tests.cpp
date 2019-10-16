@@ -407,6 +407,14 @@ class bos_oracle_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_meta_parameters", data, abi_serializer_max_time);
    }
 
+   fc::variant get_oracle_parameters(const vector<char>& data) {
+      // vector<char> data = get_row_by_account(N(oracle.bos), N(oracle.bos), N(metaparams), N(metaparams));
+      if (data.empty())
+         std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_parameters", data, abi_serializer_max_time);
+   }
+
+
    // provider
    action_result regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
                             uint8_t provider_limit, uint32_t update_cycle) {
@@ -1319,18 +1327,14 @@ try {
       auto token = setparameter(current_oracle_version, _parameters);
 
       auto paras = get_parameters();
-
-      oracle_parameters temp_parameters;
-      auto params = paras["parameters_data"].as<std::vector<char>>();
-      // fc::raw::unpack( params.data(),
-      //                            params.size(),
-      //                           temp_parameters );
-      // auto params = paras["parameters_data"].as<oracle_parameters>();
-      BOOST_TEST(4 == params.size());
       BOOST_TEST(current_oracle_version == paras["version"].as<uint8_t>());
+      auto params = paras["parameters_data"].as<std::vector<char>>();
+      BOOST_TEST(4 == params.size());
+      auto oparams = get_oracle_parameters(params);
+      BOOST_TEST(4 == oparams["precision"].as<uint8_t>());
+      
       // REQUIRE_MATCHING_OBJECT(paras, mvo());
 
-      
       // REQUIRE_MATCHING_OBJECT(fee, mvo()("service_id", service_id)("fee_type", fee_types[fee_type])("service_price", service_prices[fee_type]));
    }
 }
