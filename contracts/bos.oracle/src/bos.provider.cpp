@@ -589,7 +589,7 @@ void bos_oracle::start_timer(uint64_t service_id, uint64_t cycle_number, uint64_
          return 0;
       }
 
-      uint32_t end_time_sec = req_itr->request_time.sec_since_epoch()+unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).time_deadline;
+      uint32_t end_time_sec = req_itr->request_time.sec_since_epoch() + unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).time_deadline;
       uint32_t now_sec = bos_oracle::current_time_point_sec().sec_since_epoch();
       if (end_time_sec > now_sec) {
          return end_time_sec - now_sec;
@@ -890,11 +890,32 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
 
 // } // namespace bosoracle
 
-void bos_oracle::setparameter(uint8_t version,ignore<oracle_parameters> parameters) {
+void bos_oracle::setparameter(uint8_t version, ignore<oracle_parameters> parameters) {
    require_auth(_self);
    oracle_parameters _parameters;
    _ds >> _parameters;
-   std::string checkmsg = "unsupported version for setparameter action,current_oracle_version="+std::to_string(current_oracle_version);
+   check(!_parameters.core_symbol.empty(), "core_symbol could not be empty");
+   check(_parameters.precision > 0, "precision must be greater than 0");
+   check(_parameters.min_service_stake_limit > 0, "min_service_stake_limit must be greater than 0");
+   check(_parameters.min_appeal_stake_limit > 0, "min_appeal_stake_limit must be greater than 0");
+   check(_parameters.min_reg_arbitrator_stake_limit > 0, "min_reg_arbitrator_stake_limit must be greater than 0");
+   check(_parameters.arbitration_correct_rate > 0, "arbitration_correct_rate must be greater than 0");
+   check(_parameters.round_limit > 0, "round_limit must be greater than 0");
+   check(_parameters.arbi_timeout_value > 0, "arbi_timeout_value must be greater than 0");
+   check(_parameters.arbi_freeze_stake_duration > 0, "arbi_freeze_stake_duration must be greater than 0");
+   check(_parameters.time_deadline > 0, "time_deadline must be greater than 0");
+   check(_parameters.clear_data_time_length > 0, "clear_data_time_length must be greater than 0");
+   check(_parameters.max_data_size > 0, "max_data_size must be greater than 0");
+   check(_parameters.min_provider_limit > 0, "min_provider_limit must be greater than 0");
+   check(_parameters.max_provider_limit > 0, "max_provider_limit must be greater than 0");
+   check(_parameters.min_update_cycle > 0, "min_update_cycle must be greater than 0");
+   check(_parameters.max_update_cycle > 0, "max_update_cycle must be greater than 0");
+   check(_parameters.min_duration > 0, "min_duration must be greater than 0");
+   check(_parameters.max_duration > 0, "max_duration must be greater than 0");
+   check(_parameters.min_acceptance > 0, "min_acceptance must be greater than 0");
+   check(_parameters.max_acceptance > 0, "max_acceptance must be greater than 0");
+
+   std::string checkmsg = "unsupported version for setparameter action,current_oracle_version=" + std::to_string(current_oracle_version);
    check(version == current_oracle_version, checkmsg.c_str());
    _oracle_meta_parameters.version = version;
    _oracle_meta_parameters.parameters_data = pack(_parameters);
