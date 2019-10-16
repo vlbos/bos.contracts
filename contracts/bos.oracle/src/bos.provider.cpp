@@ -890,10 +890,11 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
 
 // } // namespace bosoracle
 
-void bos_oracle::setparameter(uint8_t version, ignore<oracle_parameters> parameters) {
+void bos_oracle::setparameter(ignore<uint8_t> version, ignore<oracle_parameters> parameters) {
    require_auth(_self);
+   uint8_t _version;
    oracle_parameters _parameters;
-   _ds >> _parameters;
+   _ds >> _version >> _parameters;
    check(!_parameters.core_symbol.empty(), "core_symbol could not be empty");
    check(_parameters.precision > 0, "precision must be greater than 0");
    check(_parameters.min_service_stake_limit > 0, "min_service_stake_limit must be greater than 0");
@@ -916,8 +917,8 @@ void bos_oracle::setparameter(uint8_t version, ignore<oracle_parameters> paramet
    check(_parameters.max_acceptance > 0, "max_acceptance must be greater than 0");
 
    std::string checkmsg = "unsupported version for setparameter action,current_oracle_version=" + std::to_string(current_oracle_version);
-   check(version == current_oracle_version, checkmsg.c_str());
-   _oracle_meta_parameters.version = version;
+   check(_version == current_oracle_version, checkmsg.c_str());
+   _oracle_meta_parameters.version = _version;
    _oracle_meta_parameters.parameters_data = pack(_parameters);
    // print(_parameters.min_sec, _parameters.max_sec, _parameters.min_stake);
 }

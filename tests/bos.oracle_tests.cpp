@@ -400,10 +400,11 @@ class bos_oracle_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("arbitration_income_account", data, abi_serializer_max_time);
    }
 
-  fc::variant get_parameters() {
-      vector<char> data = get_row_by_account( N(oracle.bos), N(oracle.bos), N(metaparams), N(metaparams) );
-      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "oracle_meta_parameters", data, abi_serializer_max_time );
+   fc::variant get_parameters() {
+      vector<char> data = get_row_by_account(N(oracle.bos), N(oracle.bos), N(metaparams), N(metaparams));
+      if (data.empty())
+         std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_meta_parameters", data, abi_serializer_max_time);
    }
 
    // provider
@@ -439,16 +440,17 @@ class bos_oracle_tester : public tester {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
    }
 
-   action_result setparameter(uint8_t version,const oracle_parameters& parameters) {
+   action_result setparameter(uint8_t version, const oracle_parameters& parameters) {
       return push_action(N(oracle.bos), N(setparameter),
-                         mvo()("version",version)("parameters", mvo()("core_symbol", parameters.core_symbol)("precision", parameters.precision)("min_service_stake_limit", parameters.min_service_stake_limit)(
-                                                 "min_appeal_stake_limit", parameters.min_appeal_stake_limit)("min_reg_arbitrator_stake_limit", parameters.min_reg_arbitrator_stake_limit)(
-                                                 "arbitration_correct_rate", parameters.arbitration_correct_rate)("round_limit", parameters.round_limit)(
-                                                 "arbi_timeout_value", parameters.arbi_timeout_value)("arbi_freeze_stake_duration", parameters.arbi_freeze_stake_duration)(
-                                                 "time_deadline", parameters.time_deadline)("clear_data_time_length", parameters.clear_data_time_length)("max_data_size", parameters.max_data_size)(
-                                                 "min_provider_limit", parameters.min_provider_limit)("max_provider_limit", parameters.max_provider_limit)(
-                                                 "min_update_cycle", parameters.min_update_cycle)("max_update_cycle", parameters.max_update_cycle)("min_duration", parameters.min_duration)(
-                                                 "max_duration", parameters.max_duration)("min_acceptance", parameters.min_acceptance)("max_acceptance", parameters.max_acceptance)));
+                         mvo()("version", version)(
+                             "parameters", mvo()("core_symbol", parameters.core_symbol)("precision", parameters.precision)("min_service_stake_limit", parameters.min_service_stake_limit)(
+                                               "min_appeal_stake_limit", parameters.min_appeal_stake_limit)("min_reg_arbitrator_stake_limit", parameters.min_reg_arbitrator_stake_limit)(
+                                               "arbitration_correct_rate", parameters.arbitration_correct_rate)("round_limit", parameters.round_limit)(
+                                               "arbi_timeout_value", parameters.arbi_timeout_value)("arbi_freeze_stake_duration", parameters.arbi_freeze_stake_duration)(
+                                               "time_deadline", parameters.time_deadline)("clear_data_time_length", parameters.clear_data_time_length)("max_data_size", parameters.max_data_size)(
+                                               "min_provider_limit", parameters.min_provider_limit)("max_provider_limit", parameters.max_provider_limit)(
+                                               "min_update_cycle", parameters.min_update_cycle)("max_update_cycle", parameters.max_update_cycle)("min_duration", parameters.min_duration)(
+                                               "max_duration", parameters.max_duration)("min_acceptance", parameters.min_acceptance)("max_acceptance", parameters.max_acceptance)));
    }
 
    action_result claim(name account, name receive_account) { return push_action(account, N(claim), mvo()("account", account)("receive_account", receive_account)); }
@@ -1315,11 +1317,20 @@ try {
       _parameters.max_acceptance = 100;
       static const uint16_t current_oracle_version = 1;
       auto token = setparameter(current_oracle_version, _parameters);
-   
-      auto paras = get_parameters();
-      BOOST_TEST_REQUIRE(current_oracle_version == paras["version"].as<uint8_t>());
-      auto params =  paras["version"].as<oracle_parameters>();
 
+      auto paras = get_parameters();
+
+      oracle_parameters temp_parameters;
+      auto params = paras["parameters_data"].as<std::vector<char>>();
+      // fc::raw::unpack( params.data(),
+      //                            params.size(),
+      //                           temp_parameters );
+      // auto params = paras["parameters_data"].as<oracle_parameters>();
+      BOOST_TEST(4 == params.size());
+      BOOST_TEST(current_oracle_version == paras["version"].as<uint8_t>());
+      // REQUIRE_MATCHING_OBJECT(paras, mvo());
+
+      
       // REQUIRE_MATCHING_OBJECT(fee, mvo()("service_id", service_id)("fee_type", fee_types[fee_type])("service_price", service_prices[fee_type]));
    }
 }
