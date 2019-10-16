@@ -5,24 +5,20 @@
 #include <eosio/transaction.hpp>
 using namespace eosio;
 using std::string;
+
 /**
- * @brief
+ * @brief  Registers oracle service information
  *
- * @param service_id
- * @param account
- * @param amount
- * @param service_price
- * @param fee_type
- * @param data_format
- * @param data_type
- * @param criteria
- * @param acceptance
- * @param declaration
- * @param injection_method
- * @param duration
- * @param provider_limit
- * @param update_cycle
- * @param update_start_time
+ * @param account    operator account of performing the action
+ * @param base_stake_amount   base stake amount for registering  as a provider of the oracle service data
+ * @param data_format    formulate format of providing  data by provider
+ * @param data_type     data type such as  deterministic(0) non_deterministic(1)
+ * @param criteria      judgment criteria when ambiguity occurs
+ * @param acceptance     accept data method such as  Number of provider / proportion (1-100)
+ * @param injection_method   injection method for provider send data to consumer
+ * @param duration    data collection time range
+ * @param provider_limit   available provider count for available oracle service
+ * @param update_cycle    cycle of updating data
  */
 void bos_oracle::regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
                             uint8_t provider_limit, uint32_t update_cycle) {
@@ -192,6 +188,14 @@ void bos_oracle::update_service_provider_status(uint64_t service_id, name accoun
    update_service_status(service_id);
 }
 
+/**
+ * @brief  Unstakes asset by provider
+ *
+ * @param service_id   oracle service id
+ * @param account   provider account
+ * @param amount    unstake amount
+ * @param memo       comment
+ */
 void bos_oracle::unstakeasset(uint64_t service_id, name account, asset amount, std::string memo) {
    check_data(memo, "memo");
 
@@ -269,11 +273,11 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
 }
 
 /**
- * @brief
+ * @brief  Adds fee types
  *
- * @param service_id
- * @param fee_types
- * @param service_prices
+ * @param service_id  oracle service id
+ * @param fee_types   list of fee types
+ * @param service_prices    list of service prices
  */
 void bos_oracle::addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
    require_auth(_self);
@@ -312,6 +316,15 @@ void bos_oracle::addfeetype(uint64_t service_id, uint8_t fee_type, asset service
    }
 }
 
+/**
+ * @brief Pushs data by provider
+ *
+ * @param service_id  oracle service id
+ * @param provider  provider account
+ * @param cycle_number   cycle number of updating data
+ * @param request_id    request id  by a consumer initiates    optional
+ * @param data     push data
+ */
 void bos_oracle::pushdata(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data) {
    require_auth(provider);
    check_data(data, "data");
@@ -398,6 +411,15 @@ void bos_oracle::innerpush(uint64_t service_id, name provider, uint64_t cycle_nu
    }
 }
 
+/**
+ * @brief  Performs inner push data action
+ *
+ * @param service_id  oracle service id
+ * @param cycle_number  cycle number of updating data
+ * @param request_id  request id  by a consumer initiates    optional
+ * @param data  push data
+ * @param contract_account  consumer contract account for receiving data
+ */
 void bos_oracle::oraclepush(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, string data, name contract_account) {
    check_data(data, "data");
    require_auth(_self);
@@ -431,10 +453,10 @@ void bos_oracle::innerpublish(uint64_t service_id, name provider, uint64_t cycle
 }
 
 /**
- * @brief
+ * @brief  claim  income for providing data
  *
- * @param account
- * @param receive_account
+ * @param account   provider account
+ * @param receive_account   account for receiving income amount
  */
 void bos_oracle::claim(name account, name receive_account) {
    require_auth(account);
@@ -495,10 +517,10 @@ void bos_oracle::claim(name account, name receive_account) {
 }
 
 /**
- * @brief
+ * @brief   Performs oracle service special action
  *
- * @param service_id
- * @param action_type
+ * @param service_id  oracle service id
+ * @param action_type   action type such as freeze(5),emergency(6)
  */
 void bos_oracle::execaction(uint64_t service_id, uint8_t action_type) {
    require_auth(_self);
@@ -510,12 +532,11 @@ void bos_oracle::execaction(uint64_t service_id, uint8_t action_type) {
 }
 
 /**
- * @brief
+ * @brief  Unregister oracle service by provider
  *
- * @param service_id
- * @param signature
- * @param account
- * @param status
+ * @param service_id  oracle service id
+ * @param account  provider acount
+ * @param status  status such as service_pause(3)
  */
 void bos_oracle::unregservice(uint64_t service_id, name account, uint8_t status) {
    require_auth(account);
@@ -556,11 +577,11 @@ void bos_oracle::unregservice(uint64_t service_id, name account, uint8_t status)
 }
 
 /**
- * @brief
+ * @brief  Starts timer for handling timeout of updating data
  *
- * @param service_id
- * @param contract_account
- * @param amount
+ * @param service_id  oracle service id
+ * @param cycle_number   cycle number of updating data
+ * @param request_id request id  by a consumer initiates    optional
  */
 void bos_oracle::starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id) {
    require_auth(_self);
@@ -696,6 +717,13 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t cycle_number, u
 
    clear_data(service_id, unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).clear_data_time_length);
 }
+
+/**
+ * @brief  Clears data when oracle data's accessable time is timeout
+ *
+ * @param service_id  oracle service id
+ * @param time_length  time length
+ */
 void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
    require_auth(_self);
    clear_data(service_id, time_length);
@@ -890,6 +918,12 @@ void bos_oracle::update_service_current_log_status(uint64_t service_id, uint64_t
 
 // } // namespace bosoracle
 
+/**
+ * @brief  Sets config parameters
+ *
+ * @param version   parameters version  changed when paramters changes
+ * @param parameters  config paramters such as core symbol,precision etc
+ */
 void bos_oracle::setparameter(ignore<uint8_t> version, ignore<oracle_parameters> parameters) {
    require_auth(_self);
    uint8_t _version;

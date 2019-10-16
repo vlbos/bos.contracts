@@ -50,20 +50,62 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /// bos.provider begin
    ///
    ///
+
+   /**
+    * @brief  Registers oracle service information
+    */
    [[eosio::action]] void regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method,
                                      uint32_t duration, uint8_t provider_limit, uint32_t update_cycle);
+
+   /**
+    * @brief  Unstakes asset by provider
+    */
    [[eosio::action]] void unstakeasset(uint64_t service_id, name account, asset amount, std::string memo);
+
+   /**
+    * @brief  Adds fee types
+    */
    [[eosio::action]] void addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices);
 
+   /**
+    * @brief Pushs data by provider
+    */
    [[eosio::action]] void pushdata(uint64_t service_id, name provider, uint64_t cycle_number, uint64_t request_id, string data);
+
+   /**
+    * @brief  Performs inner push data action
+    */
    [[eosio::action]] void oraclepush(uint64_t service_id, uint64_t cycle_number, uint64_t request_id, string data, name contract_account);
+
+   /**
+    * @brief  claim  income for providing data
+    */
    [[eosio::action]] void claim(name account, name receive_account);
+
+   /**
+    * @brief   Performs oracle service special action
+    */
    [[eosio::action]] void execaction(uint64_t service_id, uint8_t action_type);
+
+   /**
+    * @brief  Unregister oracle service by provider
+    */
    [[eosio::action]] void unregservice(uint64_t service_id, name account, uint8_t status);
+
+   /**
+    * @brief  Starts timer for handling timeout of updating data
+    */
    [[eosio::action]] void starttimer(uint64_t service_id, uint64_t cycle_number, uint64_t request_id);
+
+   /**
+    * @brief  Clears data when oracle data's accessable time is timeout
+    */
    [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
 
-   [[eosio::action]] void setparameter(ignore<uint8_t> version,ignore<oracle_parameters> parameters);
+   /**
+    * @brief  Sets config parameters
+    */
+   [[eosio::action]] void setparameter(ignore<uint8_t> version, ignore<oracle_parameters> parameters);
 
    using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_oracle::regservice>;
    using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_oracle::unstakeasset>;
@@ -83,7 +125,15 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /// bos.consumer begin
    ///
    ///
+
+   /**
+    * @brief   Subscribes oracle service by consumer
+    */
    [[eosio::action]] void subscribe(uint64_t service_id, name contract_account, name account, std::string memo);
+
+   /**
+    * @brief   Requests data  by a consumer
+    */
    [[eosio::action]] void requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content);
    using subscribe_action = eosio::action_wrapper<"subscribe"_n, &bos_oracle::subscribe>;
    using requestdata_action = eosio::action_wrapper<"requestdata"_n, &bos_oracle::requestdata>;
@@ -96,15 +146,13 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    ///
 
    /**
-    * @brief
-    *
-    * @param from
-    * @param to
-    * @param quantity
-    * @param memo
-    * @param is_notify
+    * @brief  Deposits core tokens to oracle risk control fund
     */
    [[eosio::action]] void deposit(name from, name to, asset quantity, string memo, bool is_notify);
+
+   /**
+    * @brief  Withdraws core tokens from oracle risk control fund
+    */
    [[eosio::action]] void withdraw(uint64_t service_id, name from, name to, asset quantity, string memo);
 
    using deposit_action = eosio::action_wrapper<"deposit"_n, &bos_oracle::deposit>;
@@ -120,16 +168,44 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    ///
    ///
 
+   /**
+    * @brief Accepts invitation  for arbitrating case by a arbitrator
+    */
    [[eosio::action]] void acceptarbi(name arbitrator, uint64_t arbitration_id);
+
+   /**
+    * @brief   Uploads evidence by both parties from arbitration case
+    */
    [[eosio::action]] void uploadeviden(name account, uint64_t arbitration_id, std::string evidence);
+
+   /**
+    * @brief Uploads result by arbitrator
+    */
    [[eosio::action]] void uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t result, std::string comment);
 
+   /**
+    * @brief Unstake core tokens from arbitration stake fund
+    */
    [[eosio::action]] void unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo);
+
+   /**
+    * @brief  Claims income from arbitration stake fund
+    */
    [[eosio::action]] void claimarbi(name account, name receive_account);
 
+   /**
+    * @brief   Starts timer for handling  timeout wher arbitration operation's waiting time is expired
+    */
    [[eosio::action]] void timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type);
 
+   /**
+    * @brief  Sets status for arbitration case  process
+    */
    [[eosio::action]] void setstatus(uint64_t arbitration_id, uint8_t status);
+
+   /**
+    * @brief Imports wps auditors as fulltime arbitrators
+    */
    [[eosio::action]] void importwps(vector<name> auditors);
 
    ///

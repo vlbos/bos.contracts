@@ -20,6 +20,12 @@ using eosio::asset;
 using eosio::public_key;
 using std::string;
 
+/**
+ * @brief  Sets status for arbitration case  process
+ *
+ * @param arbitration_id   arbitration case id
+ * @param status   process status   such as    arbi_wait_for_resp_appeal=3,   arbi_wait_for_accept_arbitrate_invitation=4,   arbi_wait_for_upload_result=5,   arbi_wait_for_reappeal=6,
+ */
 void bos_oracle::setstatus(uint64_t arbitration_id, uint8_t status) {
    require_auth(_self);
    uint64_t service_id = arbitration_id;
@@ -29,6 +35,11 @@ void bos_oracle::setstatus(uint64_t arbitration_id, uint8_t status) {
    arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbi_step = status; });
 }
 
+/**
+ * @brief Imports wps auditors as fulltime arbitrators
+ *
+ * @param auditors  list of auditors
+ */
 void bos_oracle::importwps(vector<name> auditors) {
    require_auth(_self);
 
@@ -103,7 +114,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    uint64_t arbitration_id = service_id;
    if (arbitration_role_type::consumer == role_type) {
       // add_freeze
-      uint32_t para_duration =unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_freeze_stake_duration;
+      uint32_t para_duration = unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_freeze_stake_duration;
       add_freeze(service_id, appellant, bos_oracle::current_time_point_sec(), para_duration, amount, arbitration_id);
    }
 
@@ -284,8 +295,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    uint128_t deferred_id = make_deferred_id(arbitration_id, arbitration_timer_type::reappeal_timeout);
    cancel_deferred(deferred_id);
 
-   timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout,
-                    unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_timeout_value);
+   timeout_deferred(arbitration_id, current_round, arbitration_timer_type::resp_appeal_timeout, unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_timeout_value);
 }
 
 void bos_oracle::send_notify(const vector<name>& accounts, const std::string& memo, std::string checkmsg) {
@@ -359,6 +369,13 @@ void bos_oracle::_respcase(name respondent, uint64_t arbitration_id, asset amoun
    cancel_deferred(deferred_id);
 }
 
+/**
+ * @brief   Uploads evidence by both parties from arbitration case
+ *
+ * @param account   account of uploading evidence
+ * @param arbitration_id   arbitration case id
+ * @param evidence   evidence  ipfs hash link
+ */
 void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string evidence) {
    check_data(evidence, "evidence");
 
@@ -381,7 +398,12 @@ void bos_oracle::uploadeviden(name account, uint64_t arbitration_id, std::string
 }
 
 /**
- * 仲裁员上传仲裁结果
+ * @brief Uploads result by arbitrator
+ *
+ * @param arbitrator  arbitrator account
+ * @param arbitration_id    arbitration case id
+ * @param result    arbitration result
+ * @param comment  comment
  */
 void bos_oracle::uploadresult(name arbitrator, uint64_t arbitration_id, uint8_t result, std::string comment) {
    check_data(comment, "comment");
@@ -454,8 +476,7 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
    // 看是否有人再次申诉, 大众仲裁不允许再申诉    version 1.0 limits <=3
    if (arbiprocess_itr->arbi_method == arbi_method_type::multiple_rounds && round < 3) {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) { p.arbi_step = arbi_step_type::arbi_wait_for_reappeal; });
-      timeout_deferred(arbitration_id, round, arbitration_timer_type::reappeal_timeout,
-                       unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_timeout_value);
+      timeout_deferred(arbitration_id, round, arbitration_timer_type::reappeal_timeout, unpack<oracle_parameters>(_oracle_meta_parameters.parameters_data).arbi_timeout_value);
    } else {
       arbitration_case_tb.modify(arbitration_case_itr, get_self(), [&](auto& p) {
          p.arbi_step = arbi_step_type::arbi_public_end;
@@ -470,7 +491,10 @@ void bos_oracle::handle_upload_result(uint64_t arbitration_id, uint8_t round) {
 }
 
 /**
- * 仲裁员应邀
+ * @brief Accepts invitation  for arbitrating case by a arbitrator
+ *
+ * @param arbitrator   arbitrator account
+ * @param arbitration_id    arbitration case id
  */
 void bos_oracle::acceptarbi(name arbitrator, uint64_t arbitration_id) {
    require_auth(arbitrator);
@@ -825,6 +849,13 @@ void bos_oracle::timeout_deferred(uint64_t arbitration_id, uint8_t round, uint8_
    t.send(deferred_id, get_self(), true);
 }
 
+/**
+ * @brief   Starts timer for handling  timeout wher arbitration operation's waiting time is expired
+ *
+ * @param arbitration_id  arbitration case id
+ * @param round    arbitration case  arbitrat times
+ * @param timer_type  timer type such as   reappeal_timeout = 1, resp_appeal_timeout=2, accept_arbitrate_invitation_timeout=3, upload_result_timeout =4
+ */
 void bos_oracle::timertimeout(uint64_t arbitration_id, uint8_t round, uint8_t timer_type) {
    require_auth(_self);
    uint64_t service_id = arbitration_id;
@@ -1192,6 +1223,14 @@ void bos_oracle::check_stake_arbitration(uint64_t id, name account, uint8_t roun
    check(stake_itr != staketable.end(), "no stake");
 }
 
+/**
+ * @brief Unstake core tokens from arbitration stake fund
+ *
+ * @param arbitration_id   arbitration case id
+ * @param account  unstake account
+ * @param amount  amount of tokens to be unstaked
+ * @param memo  comment
+ */
 void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount, std::string memo) {
    check_data(memo, "memo");
 
@@ -1225,6 +1264,12 @@ void bos_oracle::unstakearbi(uint64_t arbitration_id, name account, asset amount
    transfer(_self, account, amount, "");
 }
 
+/**
+ * @brief  Claims income from arbitration stake fund
+ *
+ * @param account  claim account  name
+ * @param receive_account   account name of receiving tokens
+ */
 void bos_oracle::claimarbi(name account, name receive_account) {
    require_auth(account);
    arbitration_income_accounts incometable(_self, account.value);

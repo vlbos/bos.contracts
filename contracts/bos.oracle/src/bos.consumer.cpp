@@ -19,14 +19,12 @@ using eosio::public_key;
 using std::string;
 
 /**
- * @brief
+ * @brief   Subscribes oracle service by consumer
  *
- * @param service_id
- * @param contract_account
- * @param publickey
- * @param account
- * @param amount
- * @param memo
+ * @param service_id  oracle service id
+ * @param contract_account  contract account for receiving data
+ * @param account   consumer account
+ * @param memo   comment
  */
 void bos_oracle::subscribe(uint64_t service_id, name contract_account, name account, std::string memo) {
    check_data(memo, "memo");
@@ -52,12 +50,12 @@ void bos_oracle::subscribe(uint64_t service_id, name contract_account, name acco
 }
 
 /**
- * @brief
+ * @brief   Requests data  by a consumer
  *
- * @param service_id
- * @param contract_account
- * @param requester
- * @param request_content
+ * @param service_id oracle service id
+ * @param contract_account contract account for receiving data
+ * @param requester  consumer account
+ * @param request_content  request content
  */
 void bos_oracle::requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content) {
    check_data(request_content, "request_content");
