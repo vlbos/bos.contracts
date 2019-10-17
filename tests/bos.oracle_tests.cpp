@@ -17,6 +17,32 @@ using namespace fc;
 using namespace std;
 
 using mvo = fc::mutable_variant_object;
+struct oracle_parameters {
+   std::string core_symbol;
+   uint8_t precision;
+   uint64_t min_service_stake_limit;
+   uint64_t min_appeal_stake_limit;
+   uint64_t min_reg_arbitrator_stake_limit;
+   uint16_t arbitration_correct_rate;
+   uint8_t round_limit;
+   uint32_t arbi_timeout_value;
+   uint32_t arbi_freeze_stake_duration;
+   uint32_t time_deadline;
+   uint32_t clear_data_time_length;
+   uint16_t max_data_size;
+   uint16_t min_provider_limit;
+   uint16_t max_provider_limit;
+   uint32_t min_update_cycle;
+   uint32_t max_update_cycle;
+   uint32_t min_duration;
+   uint32_t max_duration;
+   uint16_t min_acceptance;
+   uint16_t max_acceptance;
+};
+
+FC_REFLECT(oracle_parameters, (core_symbol)(precision)(min_service_stake_limit)(min_appeal_stake_limit)(min_reg_arbitrator_stake_limit)(arbitration_correct_rate)(round_limit)(arbi_timeout_value)(
+                                  arbi_freeze_stake_duration)(time_deadline)(clear_data_time_length)(max_data_size)(min_provider_limit)(max_provider_limit)(min_update_cycle)(max_update_cycle)(
+                                  min_duration)(max_duration)(min_acceptance)(max_acceptance));
 
 class bos_oracle_tester : public tester {
  public:
@@ -106,7 +132,10 @@ class bos_oracle_tester : public tester {
          set_abi(consumer, contracts::consumer_abi().data());
          produce_blocks(1);
       }
+
+      set_parameters();
    }
+
 
    transaction_trace_ptr create_account_with_resources(account_name a, account_name creator, asset ramfunds, bool multisig, asset net = core_sym::from_string("10.0000"),
                                                        asset cpu = core_sym::from_string("10.0000")) {
@@ -374,6 +403,21 @@ class bos_oracle_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("arbitration_income_account", data, abi_serializer_max_time);
    }
 
+   fc::variant get_parameters() {
+      vector<char> data = get_row_by_account(N(oracle.bos), N(oracle.bos), N(metaparams), N(metaparams));
+      if (data.empty())
+         std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_meta_parameters", data, abi_serializer_max_time);
+   }
+
+   fc::variant get_oracle_parameters(const vector<char>& data) {
+      // vector<char> data = get_row_by_account(N(oracle.bos), N(oracle.bos), N(metaparams), N(metaparams));
+      if (data.empty())
+         std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("oracle_parameters", data, abi_serializer_max_time);
+   }
+
+
    // provider
    action_result regservice(name account, asset base_stake_amount, std::string data_format, uint8_t data_type, std::string criteria, uint8_t acceptance, uint8_t injection_method, uint32_t duration,
                             uint8_t provider_limit, uint32_t update_cycle) {
@@ -405,6 +449,19 @@ class bos_oracle_tester : public tester {
 
    action_result addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
+   }
+
+   action_result setparameter(uint8_t version, const oracle_parameters& parameters) {
+      return push_action(N(oracle.bos), N(setparameter),
+                         mvo()("version", version)(
+                             "parameters", mvo()("core_symbol", parameters.core_symbol)("precision", parameters.precision)("min_service_stake_limit", parameters.min_service_stake_limit)(
+                                               "min_appeal_stake_limit", parameters.min_appeal_stake_limit)("min_reg_arbitrator_stake_limit", parameters.min_reg_arbitrator_stake_limit)(
+                                               "arbitration_correct_rate", parameters.arbitration_correct_rate)("round_limit", parameters.round_limit)(
+                                               "arbi_timeout_value", parameters.arbi_timeout_value)("arbi_freeze_stake_duration", parameters.arbi_freeze_stake_duration)(
+                                               "time_deadline", parameters.time_deadline)("clear_data_time_length", parameters.clear_data_time_length)("max_data_size", parameters.max_data_size)(
+                                               "min_provider_limit", parameters.min_provider_limit)("max_provider_limit", parameters.max_provider_limit)(
+                                               "min_update_cycle", parameters.min_update_cycle)("max_update_cycle", parameters.max_update_cycle)("min_duration", parameters.min_duration)(
+                                               "max_duration", parameters.max_duration)("min_acceptance", parameters.min_acceptance)("max_acceptance", parameters.max_acceptance)));
    }
 
    action_result claim(name account, name receive_account) { return push_action(account, N(claim), mvo()("account", account)("receive_account", receive_account)); }
@@ -445,6 +502,36 @@ class bos_oracle_tester : public tester {
 
    action_result setstatus(uint64_t arbitration_id, uint8_t status) { return push_action(N(oracle.bos), N(setstatus), mvo()("arbitration_id", arbitration_id)("status", status)); }
    action_result importwps(const std::vector<name>& auditors) { return push_action(N(oracle.bos), N(importwps), mvo()("auditors", auditors)); }
+
+
+   /// add  parameter
+   void set_parameters()
+   {
+      oracle_parameters _parameters;
+      _parameters.core_symbol = "BOS";
+      _parameters.precision = 4;
+      _parameters.min_service_stake_limit = 1000;
+      _parameters.min_appeal_stake_limit = 100;
+      _parameters.min_reg_arbitrator_stake_limit = 10000;
+      _parameters.arbitration_correct_rate = 60;
+      _parameters.round_limit = 3;
+      _parameters.arbi_timeout_value = 3600;              // seconds
+      _parameters.arbi_freeze_stake_duration = 3600 * 24; // seconds
+      _parameters.time_deadline = 3600 * 24;              // seconds
+      _parameters.clear_data_time_length = 10800;         // seconds  default 3 hours
+      _parameters.max_data_size = 256;
+      _parameters.min_provider_limit = 1;
+      _parameters.max_provider_limit = 100;
+      _parameters.min_update_cycle = 1;
+      _parameters.max_update_cycle = 3600 * 24 * uint32_t(100);
+      _parameters.min_duration = 1;
+      _parameters.max_duration = 100000;
+      _parameters.min_acceptance = 1;
+      _parameters.max_acceptance = 100;
+      static const uint16_t current_oracle_version = 1;
+      auto token = setparameter(current_oracle_version, _parameters);
+
+  }
 
    uint64_t reg_service(name account, uint8_t data_type = 0) {
       //  name account = N(alice);
@@ -719,7 +806,7 @@ try {
    uint32_t duration = 30;
    uint8_t provider_limit = 3;
    uint32_t update_cycle = 600;
-   uint64_t last_update_number = 0;
+   uint64_t last_cycle_number = 0;
    uint64_t appeal_freeze_period = 0;
    uint64_t exceeded_risk_control_freeze_period = 0;
    uint64_t guarantee_id = 0;
@@ -741,7 +828,7 @@ try {
    auto services = get_data_service(new_service_id);
    // REQUIRE_MATCHING_OBJECT(
    //     services, mvo()("service_id", new_service_id)("data_type", data_type)("status", status)("injection_method", injection_method)("acceptance", acceptance)("duration", duration)(
-   //                   "provider_limit", provider_limit)("update_cycle", update_cycle)("last_update_number", last_update_number)("appeal_freeze_period", appeal_freeze_period)(
+   //                   "provider_limit", provider_limit)("update_cycle", update_cycle)("last_cycle_number", last_cycle_number)("appeal_freeze_period", appeal_freeze_period)(
    //                   "exceeded_risk_control_freeze_period", exceeded_risk_control_freeze_period)("guarantee_id", guarantee_id)("base_stake_amount", amount)("risk_control_amount",
    //                   risk_control_amount)( "pause_service_stake_amount", pause_service_stake_amount)("data_format", data_format)("criteria", criteria)("declaration",
    //                   declaration)("update_start_time", update_start_time));
@@ -1066,8 +1153,8 @@ try {
       // BOOST_TEST(0 == current_time.sec_since_epoch());
       // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
 }
@@ -1123,8 +1210,8 @@ try {
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
 
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST0 == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
@@ -1179,8 +1266,8 @@ try {
 
       // BOOST_TEST0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uint64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uint64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST0 == cycle_number);
       fetchdata(service_id, cycle_number, 0);
    }
@@ -1234,11 +1321,54 @@ try {
       // BOOST_REQUIRE_EQUAL(wasm_assert_msg("cycle_number should be greater than last_number of the service"), pushdata(service_id, N(provider1111), cycle_number, request_id, data));
       // BOOST_TEST(0 == 8);
       // auto oracledata = get_oracle_data(service_id, cycle_number);
-      // uint64_t update_number_from_api = oracledata["cycle_number"].as<uin64_t>();
-      // BOOST_TEST_REQUIRE(update_number_from_api == cycle_number);
+      // uint64_t cycle_number_from_api = oracledata["cycle_number"].as<uin64_t>();
+      // BOOST_TEST_REQUIRE(cycle_number_from_api == cycle_number);
       // BOOST_TEST(0 == cycle_number);
 
       fetchdata(service_id, cycle_number, 0);
+   }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(setparameter_test, bos_oracle_tester)
+try {
+
+   /// add  parameter
+   {
+      oracle_parameters _parameters;
+      _parameters.core_symbol = "BOS";
+      _parameters.precision = 4;
+      _parameters.min_service_stake_limit = 1000;
+      _parameters.min_appeal_stake_limit = 100;
+      _parameters.min_reg_arbitrator_stake_limit = 10000;
+      _parameters.arbitration_correct_rate = 60;
+      _parameters.round_limit = 3;
+      _parameters.arbi_timeout_value = 3600;              // seconds
+      _parameters.arbi_freeze_stake_duration = 3600 * 24; // seconds
+      _parameters.time_deadline = 3600 * 24;              // seconds
+      _parameters.clear_data_time_length = 10800;         // seconds  default 3 hours
+      _parameters.max_data_size = 256;
+      _parameters.min_provider_limit = 1;
+      _parameters.max_provider_limit = 100;
+      _parameters.min_update_cycle = 1;
+      _parameters.max_update_cycle = 3600 * 24 * uint32_t(100);
+      _parameters.min_duration = 1;
+      _parameters.max_duration = 100000;
+      _parameters.min_acceptance = 1;
+      _parameters.max_acceptance = 100;
+      static const uint16_t current_oracle_version = 1;
+      auto token = setparameter(current_oracle_version, _parameters);
+
+      auto paras = get_parameters();
+      BOOST_TEST(current_oracle_version == paras["version"].as<uint8_t>());
+      auto params = paras["parameters_data"].as<std::vector<char>>();
+      // BOOST_TEST(4 == params.size());
+      auto oparams = get_oracle_parameters(params);
+      BOOST_TEST(4 == oparams["precision"].as<uint8_t>());
+      
+      // REQUIRE_MATCHING_OBJECT(paras, mvo());
+
+      // REQUIRE_MATCHING_OBJECT(fee, mvo()("service_id", service_id)("fee_type", fee_types[fee_type])("service_price", service_prices[fee_type]));
    }
 }
 FC_LOG_AND_RETHROW()
