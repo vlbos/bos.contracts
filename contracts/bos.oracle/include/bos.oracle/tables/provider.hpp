@@ -147,9 +147,9 @@ struct oracle_parameters {
    uint8_t round_limit = default_round_limit;
    uint32_t arbi_timeout_value = default_arbi_timeout_value;                 
    uint32_t arbi_freeze_stake_duration = default_arbi_freeze_stake_duration; 
-   uint32_t time_deadline = default_time_deadline;                           
-   uint32_t clear_data_time_length = default_clear_data_time_length;        
-   uint16_t max_data_size = default_max_data_size;
+   uint32_t time_deadline = default_time_deadline;                           /// request time deadline or update time deadline
+   uint32_t clear_data_time_length = default_clear_data_time_length;         ///   time length  of expiry of data to be cleared
+   uint16_t max_data_size = default_max_data_size;                           ///  maximum size of string  such as memo,comment etc
    uint16_t min_provider_limit = default_min_provider_limit;
    uint16_t max_provider_limit = default_max_provider_limit;
    uint32_t min_update_cycle = default_min_update_cycle;
