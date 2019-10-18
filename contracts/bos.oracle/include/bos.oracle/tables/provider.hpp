@@ -141,11 +141,11 @@ struct oracle_parameters {
    std::string core_symbol = default_core_symbol;
    uint8_t precision = default_precision;
    uint64_t min_service_stake_limit = default_min_service_stake_limit;
-   uint64_t min_appeal_stake_limit = default_min_appeal_stake_limit;
+   uint64_t min_appeal_stake_limit = default_min_appeal_stake_limit;           ///appeal and response appeal stake
    uint64_t min_reg_arbitrator_stake_limit = default_min_reg_arbitrator_stake_limit;
    uint16_t arbitration_correct_rate = default_arbitration_correct_rate;
    uint8_t round_limit = default_round_limit;
-   uint32_t arbi_timeout_value = default_arbi_timeout_value;                  /// 
+   uint32_t arbi_timeout_value = default_arbi_timeout_value;                  /// response case timeout,reappeal timeout,accept invitation timeout,upload result timeout
    uint32_t arbi_freeze_stake_duration = default_arbi_freeze_stake_duration; 
    uint32_t time_deadline = default_time_deadline;                           /// request time deadline or update time deadline
    uint32_t clear_data_time_length = default_clear_data_time_length;         ///   time length  of expiry of data to be cleared
