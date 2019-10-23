@@ -1,0 +1,107 @@
+/**
+ *  @file
+ *  @copyright defined in eos/LICENSE
+ */
+
+#include "bos.oracle/bos.oracle.hpp"
+#include <eosio/asset.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/time.hpp>
+#include <eosio/transaction.hpp>
+#include <string>
+using namespace eosio;
+// namespace eosio {
+
+using eosio::asset;
+using eosio::public_key;
+using std::string;
+
+/**
+ * @brief   Subscribes oracle service by consumer
+ *
+ * @param service_id  oracle service id
+ * @param contract_account  contract account for receiving data
+ * @param account   consumer account
+ * @param memo   comment
+ */
+void bos_oracle::subscribe(uint64_t service_id, name contract_account, name account, std::string memo) {
+   check_data(memo, "memo");
+   require_auth(account);
+
+   // add consumer service subscription relation
+   data_service_subscriptions subscriptionstable(_self, service_id);
+
+   auto subscriptions_itr = subscriptionstable.find(account.value);
+   check(subscriptions_itr == subscriptionstable.end(), "account exist");
+   subscriptionstable.emplace(_self, [&](auto& subs) {
+      subs.service_id = service_id;
+      subs.account = account;
+      subs.contract_account = contract_account;
+      subs.payment = asset(0, core_symbol());
+      subs.consumption = asset(0, core_symbol());
+      subs.month_consumption = asset(0, core_symbol());
+      subs.balance = subs.payment - subs.consumption - subs.month_consumption;
+      subs.subscription_time = bos_oracle::current_time_point_sec();
+      subs.last_payment_time = time_point_sec();
+      subs.status = subscription_status::subscription_subscribe;
+   });
+}
+
+/**
+ * @brief   Requests data  by a consumer
+ *
+ * @param service_id oracle service id
+ * @param contract_account contract account for receiving data
+ * @param requester  consumer account
+ * @param request_content  request content
+ */
+void bos_oracle::requestdata(uint64_t service_id, name contract_account, name requester, std::string request_content) {
+   check_data(request_content, "request_content");
+   require_auth(requester);
+
+   /// check service available subscription status subscribe
+   check(service_status::service_in == get_service_status(service_id) && subscription_status::subscription_subscribe == get_subscription_status(service_id, requester),
+         "service and subscription must be available");
+
+   fee_service(service_id, requester, fee_type::fee_times);
+
+   data_service_requests reqtable(_self, service_id);
+   uint64_t id = reqtable.available_primary_key();
+   if (0 == id) {
+      id++;
+   }
+
+   reqtable.emplace(_self, [&](auto& r) {
+      r.request_id = id;
+      r.service_id = service_id;
+      r.contract_account = contract_account;
+      r.requester = requester;
+      r.request_time = bos_oracle::current_time_point_sec();
+      r.request_content = request_content;
+      r.status = request_status::reqeust_valid;
+   });
+}
+/**
+ * @brief
+ *
+ * @param service_id
+ * @param contract_account
+ * @param account
+ * @param amount
+ * @param memo
+ */
+void bos_oracle::pay_service(uint64_t service_id, name contract_account, asset amount) {
+   data_service_subscriptions subscriptionstable(_self, service_id);
+
+   auto subscriptions_itr = subscriptionstable.find(contract_account.value);
+   check(subscriptions_itr != subscriptionstable.end(), "contract_account does not exist");
+
+   subscriptionstable.modify(subscriptions_itr, _self, [&](auto& subs) {
+      subs.payment += amount;
+      subs.balance = subs.payment - subs.consumption - subs.month_consumption;
+   });
+}
+
+// } /// namespace eosio
