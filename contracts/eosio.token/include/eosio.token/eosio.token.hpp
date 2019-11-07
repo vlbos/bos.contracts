@@ -49,6 +49,9 @@ namespace eosio {
          [[eosio::action]] 
          void rmblacklist(const std::vector<name>& accounts);
 
+         [[eosio::action]] 
+         void burn(name from, asset quantity, string memo);
+
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
