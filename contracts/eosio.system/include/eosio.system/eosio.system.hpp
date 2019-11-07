@@ -545,7 +545,10 @@ namespace eosiosystem {
          [[eosio::action]]
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
-
+         ////bos burn begin
+         [[eosio::action]] 
+         void undelegatebs(name from, name receiver, asset unstake_net_quantity, asset unstake_cpu_quantity);
+         ////bos burn end
 
          /**
           * Increases receiver's ram quota based upon current price and quantity of
