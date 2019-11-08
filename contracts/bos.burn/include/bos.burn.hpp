@@ -23,7 +23,7 @@ struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
 typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
 
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] unactivated_airdrop_account {
+struct [[eosio::table, eosio::contract("bos.burn")]] unactivated_airdrop_account {
   name account;
   asset quantity;
   uint8_t is_burned;
@@ -32,13 +32,6 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] unactivated_airdrop_accou
 
 typedef eosio::multi_index<"accounts"_n, unactivated_airdrop_account> accounts;
 
-struct unactivated_airdrop_account_item {
-  name account;
-  asset quantity;
-
-   // explicit serialization macro is not necessary, used here only to improve compilation time
-   EOSLIB_SERIALIZE(unactivated_airdrop_account_item, (account)(quantity))
-};
 
 struct [[eosio::table("metaparams"), eosio::contract("bos.burn")]] meta_parameters {
    meta_parameters() {}
@@ -50,7 +43,7 @@ struct [[eosio::table("metaparams"), eosio::contract("bos.burn")]] meta_paramete
 
 typedef eosio::singleton<"metaparams"_n, meta_parameters> meta_parameters_singleton;
 
-static const uint8_t current_oracle_version = 1;
+static const uint8_t current_version = 1;
 class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
  private:
    meta_parameters_singleton _meta_parameters_singleton;
@@ -65,7 +58,7 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
    }
    ~bos_burn() { _meta_parameters_singleton.set(_meta_parameters, _self); }
 
-   [[eosio::action]] void importacnts(std::vector<unactivated_airdrop_account_item> unactivated_airdrop_accounts);
+   [[eosio::action]] void importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts);
    [[eosio::action]] void setparameter(uint8_t version,name account);
    [[eosio::action]] void burns(name account);
    [[eosio::action]] void burn(name account);

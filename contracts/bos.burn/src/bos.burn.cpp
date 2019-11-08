@@ -6,25 +6,25 @@
 
 using namespace eosio;
 
-void bos_burn::importacnts(std::vector<unactivated_airdrop_account_item> unactivated_airdrop_accounts) {
+void bos_burn::importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts) {
    require_auth(_self);
 
    auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
    std::string checkmsg = "";
    for (auto& account : unactivated_airdrop_accounts) {
-      checkmsg = account.account.to_string()+" account does not exist";
-      check(is_account(account.account), checkmsg.c_str());
-      check(account.quantity.is_valid(), "invalid quantity");
-      check(account.quantity.amount > 0, "must transfer positive quantity");
-      check(account.quantity.symbol == core_symbol(), "symbol precision mismatch");
+      checkmsg = account.first.to_string()+" account does not exist";
+      check(is_account(account.first), checkmsg.c_str());
+      check(account.second.is_valid(), "invalid quantity");
+      check(account.second.amount > 0, "must transfer positive quantity");
+      check(account.second.symbol == core_symbol(), "symbol precision mismatch");
 
-      auto itr = unactivated_airdrop_account_table.find(account.account.value);
-      checkmsg = account.account.to_string()+" account already added";
+      auto itr = unactivated_airdrop_account_table.find(account.first.value);
+      checkmsg = account.first.to_string()+" account already added";
       check(itr == unactivated_airdrop_account_table.end(),checkmsg.c_str());
 
       unactivated_airdrop_account_table.emplace(get_self(), [&](auto& a) {
-         a.account = account.account;
-         a.quantity = account.quantity;
+         a.account = account.first;
+         a.quantity = account.second;
          a.is_burned = 0;
       });
    }
@@ -43,14 +43,14 @@ void bos_burn::setparameter(uint8_t version,name executer) {
    require_auth(_self);
    check(is_account(executer), "executer account does not exist");
 
-   std::string checkmsg = "unsupported version for setparameter action,current_oracle_version=" + std::to_string(current_oracle_version);
-   check(version == current_oracle_version, checkmsg.c_str());
+   std::string checkmsg = "unsupported version for setparameter action,current_version=" + std::to_string(current_version);
+   check(version == current_version, checkmsg.c_str());
    _meta_parameters.version = version;
    _meta_parameters.executer = executer;
 }
 
 void bos_burn::burns(name account) {
-   check(_meta_parameters.version == current_oracle_version, "config executer parameters must first be initialized ");
+   check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
    require_auth(_meta_parameters.executer);
    check(is_account(account), "account does not exist");
    auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
@@ -98,7 +98,7 @@ void bos_burn::burns(name account) {
 
 
 void bos_burn::burn(name account) {
-   check(_meta_parameters.version == current_oracle_version, "config executer parameters must first be initialized ");
+   check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
    action(permission_level{_meta_parameters.executer, "active"_n}, _self, "burns"_n, std::make_tuple(account)).send();
 }
 
