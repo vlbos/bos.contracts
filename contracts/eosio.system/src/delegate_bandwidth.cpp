@@ -401,7 +401,7 @@ namespace eosiosystem {
                                       _self, "refund"_n,
                                       from
             );
-            out.delay_sec = refund_delay_sec;
+            out.delay_sec = 0;//refund_delay_sec;
             cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
             out.send( from.value, from, true );
          } else {

@@ -8,21 +8,36 @@
 using namespace eosio;
 using namespace std;
 
-struct [[eosio::table, eosio::contract("bos.oracle")]] burn_account {
+struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
+   name owner;
+   asset net_weight;
+   asset cpu_weight;
+   int64_t ram_bytes = 0;
+
+   bool is_empty() const { return net_weight.amount == 0 && cpu_weight.amount == 0 && ram_bytes == 0; }
+   uint64_t primary_key() const { return owner.value; }
+
+   // explicit serialization macro is not necessary, used here only to improve compilation time
+   EOSLIB_SERIALIZE(user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes))
+};
+typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
+
+
+struct [[eosio::table, eosio::contract("bos.oracle")]] unactivated_airdrop_account {
   name account;
   asset quantity;
   uint8_t is_burned;
-   uint64_t primary_key() const { return account.value; }
+  uint64_t primary_key() const { return account.value; }
 };
 
-typedef eosio::multi_index<"accounts"_n, burn_account> accounts;
+typedef eosio::multi_index<"accounts"_n, unactivated_airdrop_account> accounts;
 
-struct airdrop_unactive_account {
+struct unactivated_airdrop_account_item {
   name account;
   asset quantity;
 
    // explicit serialization macro is not necessary, used here only to improve compilation time
-   EOSLIB_SERIALIZE(airdrop_unactive_account, (account)(quantity))
+   EOSLIB_SERIALIZE(unactivated_airdrop_account_item, (account)(quantity))
 };
 
 struct [[eosio::table("metaparams"), eosio::contract("bos.burn")]] meta_parameters {
@@ -50,14 +65,16 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
    }
    ~bos_burn() { _meta_parameters_singleton.set(_meta_parameters, _self); }
 
-   [[eosio::action]] void importacnts(std::vector<airdrop_unactive_account> burn_accounts);
+   [[eosio::action]] void importacnts(std::vector<unactivated_airdrop_account_item> unactivated_airdrop_accounts);
    [[eosio::action]] void setparameter(uint8_t version,name account);
    [[eosio::action]] void burns(name account);
    [[eosio::action]] void burn(name account);
+   [[eosio::action]] void clear();
    using importacnts_action = eosio::action_wrapper<"importacnts"_n, &bos_burn::importacnts>;
    using setparameter_action = eosio::action_wrapper<"setparameter"_n, &bos_burn::setparameter>;
    using burns_action = eosio::action_wrapper<"burns"_n, &bos_burn::burns>;
    using burn_action = eosio::action_wrapper<"burn"_n, &bos_burn::burn>;
+   using clear_action = eosio::action_wrapper<"clear"_n, &bos_burn::clear>;
 
  private:
    /// common
