@@ -788,8 +788,6 @@ class bos_oracle_tester : public tester {
    }
 
    abi_serializer abi_ser;
-   abi_serializer token_abi_ser;
-   abi_serializer dapp_abi_ser;
 };
 
 BOOST_AUTO_TEST_SUITE(bos_oracle_tests)

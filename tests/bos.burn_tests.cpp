@@ -31,6 +31,7 @@ class bos_burn_tester : public tester {
 
       produce_blocks();
 
+
       const auto& accnt = control->db().get<account_object, by_name>(N(burn.bos));
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
@@ -46,9 +47,10 @@ class bos_burn_tester : public tester {
       create_currency(N(eosio.token), config::system_account_name, eosio::chain::asset::from_string("10000000000.0000 BQS"));
       issue(config::system_account_name, eosio::chain::asset::from_string("1000000000.0000 BQS"));
 
-      set_code(config::system_account_name, contracts::system_wasm());
-      set_abi(config::system_account_name, contracts::system_abi().data());
-      base_tester::push_action(config::system_account_name, N(init), config::system_account_name, mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
+      // set_code(config::system_account_name, contracts::system_wasm());
+      // set_abi(config::system_account_name, contracts::system_abi().data());
+      // base_tester::push_action(config::system_account_name, N(init), config::system_account_name, mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
+      deploy_contract();
       produce_blocks();
 
       set_code(N(dapp.bos), contracts::token_wasm());
@@ -174,6 +176,29 @@ class bos_burn_tester : public tester {
       return asset(result, symbol(CORE_SYM));
    }
 
+ void deploy_contract( bool call_init = true ) {
+      set_code( config::system_account_name, contracts::system_wasm() );
+      set_abi( config::system_account_name, contracts::system_abi().data() );
+      if( call_init ) {
+         base_tester::push_action(config::system_account_name, N(init),
+                                               config::system_account_name,  mutable_variant_object()
+                                               ("version", 0)
+                                               ("core", CORE_SYM_STR)
+         );
+      }
+
+      {
+         const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
+         abi_def abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+         system_abi_ser.set_abi(abi, abi_serializer_max_time);
+      }
+   }
+
+   fc::variant get_total_stake( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, act, N(userres), act );
+      return data.empty() ? fc::variant() : system_abi_ser.binary_to_variant( "user_resources", data, abi_serializer_max_time );
+   }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
 
@@ -228,8 +253,7 @@ class bos_burn_tester : public tester {
  
 
    abi_serializer abi_ser;
-   abi_serializer token_abi_ser;
-   abi_serializer dapp_abi_ser;
+   abi_serializer system_abi_ser;
 };
 
 BOOST_AUTO_TEST_SUITE(bos_burn_tests)
@@ -240,7 +264,7 @@ try {
    produce_blocks(1);
    /// imports
    {
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(N(alice),core_sym::from_string("1.0000")),std::make_pair(N(bob),core_sym::from_string("2.0000"))};
+      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(N(alice1111111),core_sym::from_string("1.0000")),std::make_pair(N(bob11111111),core_sym::from_string("2.0000"))};
       auto result = importacnts(account_quantity);
 
       auto acc = get_account(N(alice));
@@ -265,14 +289,19 @@ try {
 
    /// burns
    {
-      auto result = burns(N(alice1111111));
-
+      name account = N(alice1111111);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto result = burns(account);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       produce_blocks(1);
    }
 
    /// burn
    {
-      auto result = burn(N(bob11111111));
+      name account = N(bob11111111);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto result = burn(N(account));
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
 
       produce_blocks(1);
    }
