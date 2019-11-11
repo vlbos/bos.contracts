@@ -60,15 +60,16 @@ class bos_burn_tester : public tester {
       issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
-      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
-      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
+      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
       create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false,core_sym::from_string("10000.0000"),core_sym::from_string("10000.0000"));
 
 
+
       transfer("eosio", "hole.bos", ("0.0001"), "eosio");
-      transfer("eosio", "alice1111111", ("0.5000"), "eosio");
-      transfer("eosio", "bob111111111", ("0.5000"), "eosio");
+      transfer("eosio", "alice1111111", ("0.7000"), "eosio");
+      transfer("eosio", "bob111111111", ("0.7000"), "eosio");
       transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
@@ -78,7 +79,10 @@ class bos_burn_tester : public tester {
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
       transfer("eosio", "burnbos4unac", ("30000.0000"), "eosio");
       transfer("eosio", "burn.bos", ("30000.0000"), "eosio");
-
+      stake(N(alice1111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      unstake("eosio", N(alice1111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
+      stake(N(bob111111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      unstake("eosio", N(bob111111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
       transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
       std::vector<string> accounts_prefix = {"provider", "consumer", "appellants", "arbitrators"};
@@ -203,6 +207,55 @@ class bos_burn_tester : public tester {
    fc::variant get_total_stake( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, act, N(userres), act );
       return data.empty() ? fc::variant() : system_abi_ser.binary_to_variant( "user_resources", data, abi_serializer_max_time );
+   }
+
+   action_result push_actions( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) {
+         string action_type_name = system_abi_ser.get_action_type(name);
+
+         action act;
+         act.account = config::system_account_name;
+         act.name = name;
+         act.data = system_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+
+         return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
+   }
+   action_result stake( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
+      return push_actions( name(from), N(delegatebw), mvo()
+                          ("from",     from)
+                          ("receiver", to)
+                          ("stake_net_quantity", net)
+                          ("stake_cpu_quantity", cpu)
+                          ("transfer", 0 )
+      );
+   }
+
+
+
+   action_result stake( const account_name& acnt, const asset& net, const asset& cpu ) {
+      return stake( acnt, acnt, net, cpu );
+   }
+
+   action_result stake_with_transfer( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
+      return push_actions( name(from), N(delegatebw), mvo()
+                          ("from",     from)
+                          ("receiver", to)
+                          ("stake_net_quantity", net)
+                          ("stake_cpu_quantity", cpu)
+                          ("transfer", true )
+      );
+   }
+
+   action_result stake_with_transfer( const account_name& acnt, const asset& net, const asset& cpu ) {
+      return stake_with_transfer( acnt, acnt, net, cpu );
+   }
+
+   action_result unstake( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
+      return push_actions( name(from), N(undelegatebw), mvo()
+                          ("from",     from)
+                          ("receiver", to)
+                          ("unstake_net_quantity", net)
+                          ("unstake_cpu_quantity", cpu)
+      );
    }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {

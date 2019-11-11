@@ -288,6 +288,8 @@ public:
       );
    }
 
+
+
    action_result stake( const account_name& acnt, const asset& net, const asset& cpu ) {
       return stake( acnt, acnt, net, cpu );
    }
