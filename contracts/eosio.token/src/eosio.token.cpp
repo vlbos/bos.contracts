@@ -73,7 +73,7 @@ void token::burn(name executer,name from, asset quantity, string memo) {
 
    const auto& st = *existing;
    require_auth(executer);
-   require_recipient(from);
+   // require_recipient(from);
    check(quantity.is_valid(), "Invalid quantity value");
    check(quantity.amount > 0, "Quantity value must be positive");
 
@@ -82,13 +82,25 @@ void token::burn(name executer,name from, asset quantity, string memo) {
    check(st.max_supply.symbol == quantity.symbol, "Max supply symbol precision mismatch");
    check(st.max_supply.amount >= quantity.amount, "Quantity value cannot exceed the available max supply");
 
-   statstable.modify(st, same_payer, [&](auto& s) {
+   statstable.modify(st, executer, [&](auto& s) {
       s.supply -= quantity;
       s.max_supply -= quantity; // this line is added compared to `token::retire`
    });
 
-   sub_balance(from, quantity);
+   sub_balance4burn(executer,from, quantity);
 }
+
+void token::sub_balance4burn(name executer, name owner, asset value ) {
+   accounts from_acnts( _self, owner.value );
+
+   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
+   check( from.balance.amount >= value.amount, "overdrawn balance" );
+
+   from_acnts.modify( from, executer, [&]( auto& a ) {
+         a.balance -= value;
+      });
+}
+
 ////bos burn end
 
 void token::retire( asset quantity, string memo )
