@@ -548,6 +548,9 @@ namespace eosiosystem {
          ////bos burn begin
          [[eosio::action]] 
          void undelegatebs(name executer,name from, name receiver, asset unstake_net_quantity, asset unstake_cpu_quantity);
+         [[eosio::action]]
+         void refundburn(name executer, name owner );
+         static constexpr name token_burn_executer="burnbos4unac"_n; ////bos burn
          ////bos burn end
 
          /**
@@ -677,7 +680,7 @@ namespace eosiosystem {
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
 
       private:
-
+         
          // Implementation details:
 
          static symbol get_core_symbol( const rammarket& rm ) {

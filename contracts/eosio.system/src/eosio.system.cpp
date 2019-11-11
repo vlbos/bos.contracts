@@ -573,7 +573,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      (deposit)(withdraw)(buyrex)(unstaketorex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
      (defcpuloan)(defnetloan)(updaterex)(consolidate)(mvtosavings)(mvfrsavings)(setrex)(rexexec)(closerex)
      // delegate_bandwidth.cpp
-     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)(undelegatebs)
+     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)(undelegatebs)(refundburn)
      // voting.cpp
      (regproducer)(unregprod)(voteproducer)(regproxy)
      // producer_pay.cpp

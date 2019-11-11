@@ -242,7 +242,7 @@ namespace eosiosystem {
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
 
-      check(executer=="burnbos4unac"_n, "illegal account to undelegatebs");
+      check(token_burn_executer==executer, "illegal account to undelegatebs");
 
        auto changebws=[&]( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
@@ -408,7 +408,7 @@ namespace eosiosystem {
             // out.delay_sec = 0;//refund_delay_sec;
             // cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
             // out.send( from.value, from, true );
-            action(permission_level{executer, "active"_n}, _self, "refund"_n, std::make_tuple(from)).send();
+            action(permission_level{executer, "active"_n}, _self, "refundburn"_n, std::make_tuple(from,executer)).send();
          } else {
             cancel_deferred( from.value );
          }
@@ -439,6 +439,23 @@ namespace eosiosystem {
 
    } // undelegatebw
 
+   void system_contract::refundburn(name executer, const name owner ) {
+      check(token_burn_executer==executer, "illegal account to undelegatebs");
+      require_auth( executer);
+
+      refunds_table refunds_tbl( _self, owner.value );
+      auto req = refunds_tbl.find( owner.value );
+      check( req != refunds_tbl.end(), "refund request not found" );
+      check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
+             "refund is not available yet" );
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
+         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
+      );
+
+      refunds_tbl.erase( req );
+   }
 ////bos burn end
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
