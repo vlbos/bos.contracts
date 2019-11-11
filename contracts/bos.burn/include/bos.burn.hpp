@@ -26,7 +26,7 @@ typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_ta
 struct [[eosio::table, eosio::contract("bos.burn")]] unactivated_airdrop_account {
   name account;
   asset quantity;
-  bool is_burned;
+  uint8_t is_burned;
   uint64_t primary_key() const { return account.value; }
 };
 
@@ -60,6 +60,7 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
 
    [[eosio::action]] void importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts);
    [[eosio::action]] void setparameter(uint8_t version,name executer);
+   [[eosio::action]] void burnhole(asset quantity);
    [[eosio::action]] void burns(name account);
    [[eosio::action]] void burn(name account);
    [[eosio::action]] void clear();
