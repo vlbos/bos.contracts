@@ -67,7 +67,7 @@ class bos_burn_tester : public tester {
 
 
 
-      transfer("eosio", "hole.bos", ("0.0001"), "eosio");
+      transfer("eosio", "hole.bos", ("100.0001"), "eosio");
       transfer("eosio", "alice1111111", ("0.7000"), "eosio");
       transfer("eosio", "bob111111111", ("0.7000"), "eosio");
       transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
