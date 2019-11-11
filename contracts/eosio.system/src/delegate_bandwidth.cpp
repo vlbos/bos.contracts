@@ -446,8 +446,8 @@ namespace eosiosystem {
       refunds_table refunds_tbl( _self, owner.value );
       auto req = refunds_tbl.find( owner.value );
       check( req != refunds_tbl.end(), "refund request not found" );
-      check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
-             "refund is not available yet" );
+      // check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
+      //        "refund is not available yet" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
