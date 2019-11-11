@@ -141,6 +141,7 @@ class bos_burn_tester : public tester {
 
       base_tester::push_action(contract, N(create), contract, act);
    }
+
    void issuex(name contract, name to, const asset& amount, name manager = config::system_account_name) {
       base_tester::push_action(contract, N(issue), manager, mutable_variant_object()("to", to)("quantity", amount)("memo", ""));
    }
@@ -244,7 +245,7 @@ class bos_burn_tester : public tester {
    }
 
    action_result burn( const name& account) {
-      return push_action(N(burnbos4unac), N(burn),mvo()("account", account));
+      return push_action(N(dappuser.bos), N(burn),mvo()("account", account));
    }
 
    action_result setparameter(uint8_t version, const name& executer) {
@@ -296,8 +297,14 @@ try {
    {
       name account = N(alice1111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
       auto result = burns(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
       produce_blocks(1);
    }
 
@@ -305,8 +312,14 @@ try {
    {
       name account = N(bob111111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
       auto result = burn(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
 
       produce_blocks(1);
    }
