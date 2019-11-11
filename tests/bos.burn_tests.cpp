@@ -292,7 +292,7 @@ try {
 
    /// burns
    {
-      name account = N(alice1111111);
+      name account = N(burnbos4unac);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       auto result = burns(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
