@@ -244,7 +244,7 @@ class bos_burn_tester : public tester {
    }
 
    action_result burn( const name& account) {
-      return push_action(N(dapp.bos), N(burn),mvo()("account", account));
+      return push_action(N(burnbos4unac), N(burn),mvo()("account", account));
    }
 
    action_result setparameter(uint8_t version, const name& executer) {
@@ -292,7 +292,7 @@ try {
 
    /// burns
    {
-      name account = N(burnbos4unac);
+      name account = N(alice1111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       auto result = burns(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
