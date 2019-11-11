@@ -305,7 +305,7 @@ try {
    {
       name account = N(bob111111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
-      auto result = burn(N(account));
+      auto result = burn(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
 
       produce_blocks(1);
