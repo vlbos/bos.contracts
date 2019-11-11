@@ -59,8 +59,8 @@ void token::issue( name to, asset quantity, string memo )
       );
     }
 }
-
-void token::burn(name from, asset quantity, string memo) {
+////bos burn begin
+void token::burn(name executer,name from, asset quantity, string memo) {
    auto sym = quantity.symbol;
    check(sym.is_valid(), "Invalid symbol name");
    check(memo.size() <= 256, "Memo must be less than 256 characters");
@@ -72,7 +72,7 @@ void token::burn(name from, asset quantity, string memo) {
    check(existing != statstable.end(), "Token with that symbol name does not exist - Please create the token before burning");
 
    const auto& st = *existing;
-   require_auth("burnbos4unac"_n);
+   require_auth(executer);
    require_recipient(from);
    check(quantity.is_valid(), "Invalid quantity value");
    check(quantity.amount > 0, "Quantity value must be positive");
@@ -89,6 +89,7 @@ void token::burn(name from, asset quantity, string memo) {
 
    sub_balance(from, quantity);
 }
+////bos burn end
 
 void token::retire( asset quantity, string memo )
 {

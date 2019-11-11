@@ -238,13 +238,14 @@ namespace eosiosystem {
    }
 
 ////bos burn begin
-   void system_contract::undelegatebs( name from, name receiver,
+   void system_contract::undelegatebs(name executer, name from, name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
+
        auto changebws=[&]( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {
-      require_auth( "burnbos4unac"_n );
+      require_auth( executer );
       check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
       check( std::abs( (stake_net_delta + stake_cpu_delta).amount )
              >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
@@ -396,14 +397,15 @@ namespace eosiosystem {
          } /// end if is_delegating_to_self || is_undelegating
 
          if ( need_deferred_trx ) {
-            eosio::transaction out;
-            out.actions.emplace_back( permission_level{from, active_permission},
-                                      _self, "refund"_n,
-                                      from
-            );
-            out.delay_sec = 0;//refund_delay_sec;
-            cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
-            out.send( from.value, from, true );
+            // eosio::transaction out;
+            // out.actions.emplace_back( permission_level{from, active_permission},
+            //                           _self, "refund"_n,
+            //                           from
+            // );
+            // out.delay_sec = 0;//refund_delay_sec;
+            // cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            // out.send( from.value, from, true );
+            action(permission_level{executer, "active"_n}, _self, "refund"_n, std::make_tuple(from)).send();
          } else {
             cancel_deferred( from.value );
          }

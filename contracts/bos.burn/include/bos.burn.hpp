@@ -26,7 +26,7 @@ typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_ta
 struct [[eosio::table, eosio::contract("bos.burn")]] unactivated_airdrop_account {
   name account;
   asset quantity;
-  uint8_t is_burned;
+  bool is_burned;
   uint64_t primary_key() const { return account.value; }
 };
 

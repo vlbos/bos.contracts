@@ -547,7 +547,7 @@ namespace eosiosystem {
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
          ////bos burn begin
          [[eosio::action]] 
-         void undelegatebs(name from, name receiver, asset unstake_net_quantity, asset unstake_cpu_quantity);
+         void undelegatebs(name executer,name from, name receiver, asset unstake_net_quantity, asset unstake_cpu_quantity);
          ////bos burn end
 
          /**
