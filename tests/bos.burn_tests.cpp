@@ -23,7 +23,7 @@ class bos_burn_tester : public tester {
    bos_burn_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(burnbos4unac), N(burn.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(burnbos4unac), N(burn.bos),N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(burn.bos), contracts::burn_wasm());
@@ -60,10 +60,14 @@ class bos_burn_tester : public tester {
       issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
-      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
-      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
+      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
 
+      transfer("eosio", "hole.bos", ("0.0001"), "eosio");
+      transfer("eosio", "alice1111111", ("0.5000"), "eosio");
+      transfer("eosio", "bob111111111", ("0.5000"), "eosio");
+      transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
       transfer("eosio", "carol", ("3000.0000"), "eosio");
@@ -241,6 +245,10 @@ class bos_burn_tester : public tester {
       return push_action(N(burnbos4unac), N(burns),mvo()("account", account));
    }
 
+   action_result burnhole( const asset& quantity) {
+      return push_action(N(burn.bos), N(burnhole),mvo()("quantity", quantity));
+   }
+
    action_result burn( const name& account) {
       return push_action(N(dappuser.bos), N(burn),mvo()("account", account));
    }
@@ -308,6 +316,22 @@ try {
    /// burn
    {
       name account = N(bob111111111);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
+      auto result = burn(account);
+      BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
+      total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
+
+      produce_blocks(1);
+   }
+
+   /// burnhole
+   {
+      name account = N(hole.bos);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       auto total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());

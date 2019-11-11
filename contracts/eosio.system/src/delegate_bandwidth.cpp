@@ -242,6 +242,8 @@ namespace eosiosystem {
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
 
+      check(executer=="burnbos4unac"_n, "illegal account to undelegatebs");
+
        auto changebws=[&]( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {

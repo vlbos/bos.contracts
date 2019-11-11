@@ -25,7 +25,7 @@ void bos_burn::importacnts(std::vector<std::pair<name,asset>> unactivated_airdro
       unactivated_airdrop_account_table.emplace(get_self(), [&](auto& a) {
          a.account = account.first;
          a.quantity = account.second;
-         a.is_burned = false;
+         a.is_burned = 0;
       });
    }
 }
@@ -49,57 +49,64 @@ void bos_burn::setparameter(uint8_t version,name executer) {
    _meta_parameters.executer = executer;
 }
 
+void bos_burn::burnhole(asset quantity) {
+   require_auth(_self);
+   name account="hole.bos"_n;
+   std::string memo = "";
+   action(permission_level{_self, "active"_n}, token_account, "burn"_n, std::make_tuple(_self,account, quantity,memo)).send();
+
+}
+
+
 void bos_burn::burns(name account) {
    check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
    require_auth(_meta_parameters.executer);
-   std::string checkmsg = account.to_string()+" Account does not exist";
+   std::string checkmsg = account.to_string() + " Account does not exist";
    check(is_account(account), checkmsg.c_str());
    auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
    auto itr = unactivated_airdrop_account_table.find(account.value);
    check(itr != unactivated_airdrop_account_table.end(), "Account is not on list ");
    check(!itr->is_burned, "The airdrop tokens of the account are burned ");
 
-   auto newBalance = eosio::token::get_balance("eosio.token"_n, account, core_symbol().code());
    std::string memo = "";
-   if (newBalance.amount >= itr->quantity.amount) {
-      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity,memo)).send();
-   } else {
-      asset zero_asset(0, core_symbol());
-      asset one_asset(1, core_symbol());
-  
-      user_resources_table totals_tbl("eosio"_n, account.value);
-      auto tot_itr = totals_tbl.find(account.value);
-      asset available_unstake_net_weight = tot_itr->net_weight-one_asset;
-      auto  unstake_available_quantity=[&](asset available_quantity,asset newBalance,asset quantity)->asset
-      {
-            if (available_quantity <= zero_asset) {
-               return zero_asset;
-            }
+   uint8_t token_burned = 1;
+   const uint8_t token_burned_failed_insufficient = 2;
 
-            if (newBalance + available_quantity < quantity) {
-               return available_quantity;
-            }
-
-            return quantity - newBalance;
-      };
-
-      asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, newBalance, itr->quantity);
-      asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight - one_asset, newBalance + unstake_net_quantity, itr->quantity);
-      name receiver=account;
-      action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n, std::make_tuple(_meta_parameters.executer,account, receiver, unstake_net_quantity, unstake_cpu_quantity)).send();
-
-      // transaction t;
-      // t.actions.emplace_back(permission_level{_meta_parameters.executer, active_permission}, _self, "burn"_n, std::make_tuple(account, itr->quantity));
-      // t.delay_sec = 5; // seconds
-      // uint128_t deferred_id = uint128_t(account.value) << 64 | (account.value);
-      // cancel_deferred(deferred_id);
-      // t.send(deferred_id, _self);
-      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity,memo)).send();
+   asset zero_asset(0, core_symbol());
+   asset staked_asset(2000, core_symbol());
+   auto available_balance = eosio::token::get_balance("eosio.token"_n, account, core_symbol().code());
+   auto total_quantity = itr->quantity + staked_asset;
+   user_resources_table totals_tbl("eosio"_n, account.value);
+   auto tot_itr = totals_tbl.find(account.value);
+   asset available_unstake_net_weight = tot_itr->net_weight;
+   auto unstake_available_quantity = [&](asset available_quantity, asset available_balance, asset quantity) -> asset {
+      if (available_quantity <= zero_asset) {
+         return zero_asset;
       }
-      
-       unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) {
-        a.is_burned = true;
-      });
+
+      if (available_balance + available_quantity < quantity) {
+         return available_quantity;
+      }
+
+      return quantity - available_balance;
+   };
+
+   asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, available_balance, total_quantity);
+   asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight, available_balance + unstake_net_quantity, total_quantity);
+   name receiver = account;
+   action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n,
+          std::make_tuple(_meta_parameters.executer, account, receiver, unstake_net_quantity, unstake_cpu_quantity))
+       .send();
+
+   auto new_balance = eosio::token::get_balance("eosio.token"_n, account, core_symbol().code());
+
+   if (new_balance.amount >= total_quantity.amount) {
+      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer, account, total_quantity, memo)).send();
+   } else {
+      token_burned = token_burned_failed_insufficient;
+   }
+
+   unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) { a.is_burned = token_burned; });
 }
 
 
@@ -110,6 +117,6 @@ void bos_burn::burn(name account) {
 
 
 EOSIO_DISPATCH(bos_burn,
- (importacnts)(setparameter)(burns)(burn)(clear)
+ (importacnts)(setparameter)(burnhole)(burns)(burn)(clear)
 )
 
