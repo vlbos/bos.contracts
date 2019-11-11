@@ -62,6 +62,7 @@ void bos_burn::burns(name account) {
    auto newBalance = eosio::token::get_balance("eosio.token"_n, account, core_symbol().code());
    print("newbalance====");
    if (newBalance.amount >= itr->quantity.amount) {
+       print("newbalance==== if");
       action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
    } else {
       print("newbalance==== else");
@@ -97,7 +98,7 @@ void bos_burn::burns(name account) {
       // t.send(deferred_id, _self);
       action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
       }
- print("newbalance==== update");
+       print("newbalance==== update");
        unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) {
         a.is_burned = true;
       });
