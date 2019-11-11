@@ -264,11 +264,14 @@ try {
    produce_blocks(1);
    /// imports
    {
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(N(alice1111111),core_sym::from_string("1.0000")),std::make_pair(N(bob111111111),core_sym::from_string("2.0000"))};
+      name account = N(alice1111111);
+      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("1.0000")),std::make_pair(N(bob111111111),core_sym::from_string("2.0000"))};
       auto result = importacnts(account_quantity);
 
-      auto acc = get_account(N(alice));
-      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", N(alice))("quantity", core_sym::from_string("1.0000"))("is_burned",false));
+   produce_blocks(1);
+
+      auto acc = get_account(account);
+      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity", core_sym::from_string("1.0000"))("is_burned",false));
 
       produce_blocks(1);
    }
