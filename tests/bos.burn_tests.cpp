@@ -258,7 +258,7 @@ class bos_burn_tester : public tester {
 
 BOOST_AUTO_TEST_SUITE(bos_burn_tests)
 
-BOOST_FIXTURE_TEST_CASE(reg_test, bos_burn_tester)
+BOOST_FIXTURE_TEST_CASE(burn_test, bos_burn_tester)
 try {
  
    produce_blocks(1);
