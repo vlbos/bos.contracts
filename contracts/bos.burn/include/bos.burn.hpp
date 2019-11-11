@@ -59,7 +59,7 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
    ~bos_burn() { _meta_parameters_singleton.set(_meta_parameters, _self); }
 
    [[eosio::action]] void importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts);
-   [[eosio::action]] void setparameter(uint8_t version,name account);
+   [[eosio::action]] void setparameter(uint8_t version,name executer);
    [[eosio::action]] void burns(name account);
    [[eosio::action]] void burn(name account);
    [[eosio::action]] void clear();
