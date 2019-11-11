@@ -264,7 +264,7 @@ try {
    produce_blocks(1);
    /// imports
    {
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(N(alice1111111),core_sym::from_string("1.0000")),std::make_pair(N(bob11111111),core_sym::from_string("2.0000"))};
+      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(N(alice1111111),core_sym::from_string("1.0000")),std::make_pair(N(bob111111111),core_sym::from_string("2.0000"))};
       auto result = importacnts(account_quantity);
 
       auto acc = get_account(N(alice));
