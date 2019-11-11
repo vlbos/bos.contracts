@@ -23,7 +23,7 @@ class bos_burn_tester : public tester {
    bos_burn_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser),N(burnbos4unac), N(burn.bos),N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos),N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(burn.bos), contracts::burn_wasm());
@@ -63,6 +63,8 @@ class bos_burn_tester : public tester {
       create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
       create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
+      create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false,core_sym::from_string("10000.0000"),core_sym::from_string("10000.0000"));
+
 
       transfer("eosio", "hole.bos", ("0.0001"), "eosio");
       transfer("eosio", "alice1111111", ("0.5000"), "eosio");
@@ -75,6 +77,7 @@ class bos_burn_tester : public tester {
       transfer("eosio", "dappuser", ("3000.0000"), "eosio");
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
       transfer("eosio", "burnbos4unac", ("30000.0000"), "eosio");
+      transfer("eosio", "burn.bos", ("30000.0000"), "eosio");
 
       transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
@@ -336,7 +339,7 @@ try {
       auto total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
-      auto result = burn(account);
+      auto result = burnhole(core_sym::from_string("1.0000"));
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
