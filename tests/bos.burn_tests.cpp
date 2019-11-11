@@ -261,6 +261,8 @@ BOOST_AUTO_TEST_SUITE(bos_burn_tests)
 BOOST_FIXTURE_TEST_CASE(burn_test, bos_burn_tester)
 try {
  
+   push_permission_update_auth_action(N(burnbos4unac));
+
    produce_blocks(1);
    /// imports
    {

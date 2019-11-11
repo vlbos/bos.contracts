@@ -52,7 +52,8 @@ void bos_burn::setparameter(uint8_t version,name executer) {
 void bos_burn::burns(name account) {
    check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
    require_auth(_meta_parameters.executer);
-   check(is_account(account), "Account does not exist");
+   checkmsg = account.first.to_string()+" Account does not exist";
+   check(is_account(account), checkmsg.c_str());
    auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
    auto itr = unactivated_airdrop_account_table.find(account.value);
    check(itr != unactivated_airdrop_account_table.end(), "Account is not on list ");
