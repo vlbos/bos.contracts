@@ -268,7 +268,7 @@ try {
       auto result = importacnts(account_quantity);
 
       auto acc = get_account(N(alice));
-      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", N(alice))("quantity", core_sym::from_string("1.0000")));
+      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", N(alice))("quantity", core_sym::from_string("1.0000"))("is_burned",false));
 
       produce_blocks(1);
    }
