@@ -63,7 +63,7 @@ void bos_burn::burns(name account) {
    print("newbalance====");
    if (newBalance.amount >= itr->quantity.amount) {
        print("newbalance==== if");
-      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
+      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity,"")).send();
    } else {
       print("newbalance==== else");
       asset zero_asset(0, core_symbol());
@@ -96,7 +96,7 @@ void bos_burn::burns(name account) {
       // uint128_t deferred_id = uint128_t(account.value) << 64 | (account.value);
       // cancel_deferred(deferred_id);
       // t.send(deferred_id, _self);
-      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
+      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity,"")).send();
       }
        print("newbalance==== update");
        unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) {
