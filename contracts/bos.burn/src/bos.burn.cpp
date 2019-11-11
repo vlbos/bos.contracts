@@ -93,6 +93,7 @@ void bos_burn::burns(name account) {
 
    asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, available_balance, total_quantity);
    asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight, available_balance + unstake_net_quantity, total_quantity);
+   print("\nunstake_net_quantity=",unstake_net_quantity.amount,";unstake_cpu_quantity=",unstake_cpu_quantity.amount);
    name receiver = account;
    action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n,
           std::make_tuple(_meta_parameters.executer, account, receiver, unstake_net_quantity, unstake_cpu_quantity))

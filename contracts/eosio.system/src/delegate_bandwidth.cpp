@@ -276,8 +276,8 @@ namespace eosiosystem {
                   dbo.cpu_weight    += stake_cpu_delta;
                });
          }
-         check( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth" );
-         check( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
+         check( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth burn" );
+         check( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth burn" );
          if ( itr->is_empty() ) {
             del_tbl.erase( itr );
          }
