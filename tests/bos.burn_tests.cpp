@@ -389,15 +389,8 @@ try {
    {
       name account = N(hole.bos);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
-      auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
       auto result = burnhole(core_sym::from_string("1.0000"));
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
-      total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
-
       produce_blocks(1);
    }
 
