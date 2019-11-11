@@ -87,7 +87,7 @@ void token::burn(name executer,name from, asset quantity, string memo) {
       s.max_supply -= quantity; // this line is added compared to `token::retire`
    });
 
-   sub_balance(from, quantity);
+   // sub_balance(from, quantity);
 }
 ////bos burn end
 
