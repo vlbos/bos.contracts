@@ -61,33 +61,33 @@ void token::issue( name to, asset quantity, string memo )
 }
 ////bos burn begin
 void token::burn(name executer,name from, asset quantity, string memo) {
-   // auto sym = quantity.symbol;
-   // check(sym.is_valid(), "Invalid symbol name");
-   // check(memo.size() <= 256, "Memo must be less than 256 characters");
+   auto sym = quantity.symbol;
+   check(sym.is_valid(), "Invalid symbol name");
+   check(memo.size() <= 256, "Memo must be less than 256 characters");
 
-   // auto sym_code_raw = sym.code().raw();
+   auto sym_code_raw = sym.code().raw();
 
-   // stats statstable(_self, sym_code_raw);
-   // auto existing = statstable.find(sym_code_raw);
-   // check(existing != statstable.end(), "Token with that symbol name does not exist - Please create the token before burning");
+   stats statstable(_self, sym_code_raw);
+   auto existing = statstable.find(sym_code_raw);
+   check(existing != statstable.end(), "Token with that symbol name does not exist - Please create the token before burning");
 
-   // const auto& st = *existing;
-   // require_auth(executer);
-   // require_recipient(from);
-   // check(quantity.is_valid(), "Invalid quantity value");
-   // check(quantity.amount > 0, "Quantity value must be positive");
+   const auto& st = *existing;
+   require_auth(executer);
+   require_recipient(from);
+   check(quantity.is_valid(), "Invalid quantity value");
+   check(quantity.amount > 0, "Quantity value must be positive");
 
-   // check(st.supply.symbol == quantity.symbol, "Symbol precision mismatch");
-   // check(st.supply.amount >= quantity.amount, "Quantity value cannot exceed the available supply");
-   // check(st.max_supply.symbol == quantity.symbol, "Max supply symbol precision mismatch");
-   // check(st.max_supply.amount >= quantity.amount, "Quantity value cannot exceed the available max supply");
+   check(st.supply.symbol == quantity.symbol, "Symbol precision mismatch");
+   check(st.supply.amount >= quantity.amount, "Quantity value cannot exceed the available supply");
+   check(st.max_supply.symbol == quantity.symbol, "Max supply symbol precision mismatch");
+   check(st.max_supply.amount >= quantity.amount, "Quantity value cannot exceed the available max supply");
 
-   // statstable.modify(st, same_payer, [&](auto& s) {
-   //    s.supply -= quantity;
-   //    s.max_supply -= quantity; // this line is added compared to `token::retire`
-   // });
+   statstable.modify(st, same_payer, [&](auto& s) {
+      s.supply -= quantity;
+      s.max_supply -= quantity; // this line is added compared to `token::retire`
+   });
 
-   // sub_balance(from, quantity);
+   sub_balance(from, quantity);
 }
 ////bos burn end
 
