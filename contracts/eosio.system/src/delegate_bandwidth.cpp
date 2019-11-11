@@ -408,7 +408,7 @@ namespace eosiosystem {
             // out.delay_sec = 0;//refund_delay_sec;
             // cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
             // out.send( from.value, from, true );
-            action(permission_level{executer, "active"_n}, _self, "refundburn"_n, std::make_tuple(from,executer)).send();
+            action(permission_level{executer, "active"_n}, _self, "refundburn"_n, std::make_tuple(executer,from)).send();
          } else {
             cancel_deferred( from.value );
          }
@@ -440,7 +440,7 @@ namespace eosiosystem {
    } // undelegatebw
 
    void system_contract::refundburn(name executer, const name owner ) {
-      check(token_burn_executer==executer, "illegal account to undelegatebs");
+      check(token_burn_executer==executer, "illegal account to refundburn");
       require_auth( executer);
 
       refunds_table refunds_tbl( _self, owner.value );
