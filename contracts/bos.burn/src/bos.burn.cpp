@@ -61,45 +61,46 @@ void bos_burn::burns(name account) {
 
    auto newBalance = eosio::token::get_balance("eosio.token"_n, account, core_symbol().code());
    print("newbalance====");
-   // if (newBalance.amount >= itr->quantity.amount) {
-   //    action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
-   // } else {
-   //    asset zero_asset(0, core_symbol());
-   //    asset one_asset(1, core_symbol());
+   if (newBalance.amount >= itr->quantity.amount) {
+      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
+   } else {
+      print("newbalance==== else");
+      asset zero_asset(0, core_symbol());
+      asset one_asset(1, core_symbol());
   
-   //    user_resources_table totals_tbl("eosio"_n, account.value);
-   //    auto tot_itr = totals_tbl.find(account.value);
-   //    asset available_unstake_net_weight = tot_itr->net_weight-one_asset;
-   //    auto  unstake_available_quantity=[&](asset available_quantity,asset newBalance,asset quantity)->asset
-   //    {
-   //          if (available_quantity <= zero_asset) {
-   //             return zero_asset;
-   //          }
+      user_resources_table totals_tbl("eosio"_n, account.value);
+      auto tot_itr = totals_tbl.find(account.value);
+      asset available_unstake_net_weight = tot_itr->net_weight-one_asset;
+      auto  unstake_available_quantity=[&](asset available_quantity,asset newBalance,asset quantity)->asset
+      {
+            if (available_quantity <= zero_asset) {
+               return zero_asset;
+            }
 
-   //          if (newBalance + available_quantity < quantity) {
-   //             return available_quantity;
-   //          }
+            if (newBalance + available_quantity < quantity) {
+               return available_quantity;
+            }
 
-   //          return quantity - newBalance;
-   //    };
+            return quantity - newBalance;
+      };
 
-   //    asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, newBalance, itr->quantity);
-   //    asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight - one_asset, newBalance + unstake_net_quantity, itr->quantity);
-   //    name receiver=account;
-   //    action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n, std::make_tuple(_meta_parameters.executer,account, receiver, unstake_net_quantity, unstake_cpu_quantity)).send();
+      asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, newBalance, itr->quantity);
+      asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight - one_asset, newBalance + unstake_net_quantity, itr->quantity);
+      name receiver=account;
+      action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n, std::make_tuple(_meta_parameters.executer,account, receiver, unstake_net_quantity, unstake_cpu_quantity)).send();
 
-   //    // transaction t;
-   //    // t.actions.emplace_back(permission_level{_meta_parameters.executer, active_permission}, _self, "burn"_n, std::make_tuple(account, itr->quantity));
-   //    // t.delay_sec = 5; // seconds
-   //    // uint128_t deferred_id = uint128_t(account.value) << 64 | (account.value);
-   //    // cancel_deferred(deferred_id);
-   //    // t.send(deferred_id, _self);
-   //    action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
-   //    }
-
-   //     unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) {
-   //      a.is_burned = true;
-   //    });
+      // transaction t;
+      // t.actions.emplace_back(permission_level{_meta_parameters.executer, active_permission}, _self, "burn"_n, std::make_tuple(account, itr->quantity));
+      // t.delay_sec = 5; // seconds
+      // uint128_t deferred_id = uint128_t(account.value) << 64 | (account.value);
+      // cancel_deferred(deferred_id);
+      // t.send(deferred_id, _self);
+      action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer,account, itr->quantity)).send();
+      }
+ print("newbalance==== update");
+       unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) {
+        a.is_burned = true;
+      });
 }
 
 
