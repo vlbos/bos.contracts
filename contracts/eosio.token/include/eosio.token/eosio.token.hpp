@@ -50,7 +50,7 @@ namespace eosio {
          void rmblacklist(const std::vector<name>& accounts);
 
          [[eosio::action]] 
-         void burn(name executer,name from, asset quantity, string memo);
+         void burn(name executer,name from, asset quantity, string memo);////bos burn
 
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
@@ -100,8 +100,10 @@ namespace eosio {
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
+         void sub_balance4burn(name executer, name owner, asset value );////bos burn
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
+
    };
 
 } /// namespace eosio
