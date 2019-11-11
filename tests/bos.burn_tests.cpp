@@ -64,9 +64,6 @@ class bos_burn_tester : public tester {
       create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
 
-      transfer("eosio", "alice1111111", ("3000.0000"), "eosio");
-      transfer("eosio", "bob111111111", ("3000.0000"), "eosio");
-      transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
       transfer("eosio", "carol", ("3000.0000"), "eosio");
@@ -298,13 +295,13 @@ try {
       name account = N(alice1111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
       auto result = burns(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
-      auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
+      total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
       produce_blocks(1);
    }
 
@@ -313,13 +310,13 @@ try {
       name account = N(bob111111111);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
       auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
       auto result = burn(account);
       BOOST_TEST(core_sym::from_string("29999.0000") == get_balance(account));
-      auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
+      total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("210.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("110.0000") == total["cpu_weight"].as<asset>());
 
       produce_blocks(1);
    }
