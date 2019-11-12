@@ -60,17 +60,19 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
 
    [[eosio::action]] void importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts);
    [[eosio::action]] void setparameter(uint8_t version,name executer);
-   [[eosio::action]] void burnhole(asset quantity);
-   [[eosio::action]] void burns(name account);
-   [[eosio::action]] void burn(name account);
+   [[eosio::action]] void burn(asset quantity);
+   [[eosio::action]] void transferairs(name account);
+   [[eosio::action]] void transferair(name account);
    [[eosio::action]] void clear();
    using importacnts_action = eosio::action_wrapper<"importacnts"_n, &bos_burn::importacnts>;
    using setparameter_action = eosio::action_wrapper<"setparameter"_n, &bos_burn::setparameter>;
-   using burns_action = eosio::action_wrapper<"burns"_n, &bos_burn::burns>;
    using burn_action = eosio::action_wrapper<"burn"_n, &bos_burn::burn>;
+   using transferairs_action = eosio::action_wrapper<"transferairs"_n, &bos_burn::transferairs>;
+   using transferair_action = eosio::action_wrapper<"transferair"_n, &bos_burn::transferair>;
    using clear_action = eosio::action_wrapper<"clear"_n, &bos_burn::clear>;
 
  private:
+  static  constexpr  name hole_account="hole.bos"_n;
    /// common
    symbol core_symbol() const {
       symbol _core_symbol = symbol(symbol_code("BOS"), 4);
