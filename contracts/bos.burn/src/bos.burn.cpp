@@ -105,6 +105,7 @@ void bos_burn::burns(name account) {
       action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "burn"_n, std::make_tuple(_meta_parameters.executer, account, total_quantity, memo)).send();
    } else {
       token_burned = token_burned_failed_insufficient;
+      print("\n burn failed, the balance of the account less than quantity of airdroped token  :",account);
    }
 
    unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) { a.is_burned = token_burned; });
