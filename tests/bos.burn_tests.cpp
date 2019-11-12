@@ -69,7 +69,7 @@ class bos_burn_tester : public tester {
 
       transfer("eosio", "hole.bos", ("100.0001"), "eosio");
       transfer("eosio", "alice1111111", ("0.7000"), "eosio");
-      transfer("eosio", "bob111111111", ("0.7000"), "eosio");
+      transfer("eosio", "bob111111111", ("0.8000"), "eosio");
       transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
@@ -81,8 +81,9 @@ class bos_burn_tester : public tester {
       transfer("eosio", "burn.bos", ("30000.0000"), "eosio");
       stake(N(alice1111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
       unstake("eosio", N(alice1111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
-      stake(N(bob111111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      stake(N(bob111111111), core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
       unstake("eosio", N(bob111111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
+
       transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
       std::vector<string> accounts_prefix = {"provider", "consumer", "appellants", "arbitrators"};
@@ -297,16 +298,16 @@ class bos_burn_tester : public tester {
       return push_action(N(burn.bos), N(clear), mvo());
    }
 
-   action_result burns( const name& account) {
-      return push_action(N(burnbos4unac), N(burns),mvo()("account", account));
+   action_result transferairs( const name& account) {
+      return push_action(N(burnbos4unac), N(transferairs),mvo()("account", account));
    }
 
-   action_result burnhole( const asset& quantity) {
-      return push_action(N(burn.bos), N(burnhole),mvo()("quantity", quantity));
+   action_result burn( const asset& quantity) {
+      return push_action(N(burn.bos), N(burn),mvo()("quantity", quantity));
    }
 
-   action_result burn( const name& account) {
-      return push_action(N(dappuser.bos), N(burn),mvo()("account", account));
+   action_result transferair( const name& account) {
+      return push_action(N(dappuser.bos), N(transferair),mvo()("account", account));
    }
 
    action_result setparameter(uint8_t version, const name& executer) {
@@ -329,13 +330,13 @@ try {
    /// imports
    {
       name account = N(alice1111111);
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("1.0000")),std::make_pair(N(bob111111111),core_sym::from_string("2.0000"))};
+      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("0.5000")),std::make_pair(N(bob111111111),core_sym::from_string("0.8000"))};
       auto result = importacnts(account_quantity);
 
-   produce_blocks(1);
+      produce_blocks(1);
 
       auto acc = get_account(account);
-      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity", core_sym::from_string("1.0000"))("is_burned",false));
+      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity","0.5000 BOS")("is_burned",0));
 
       produce_blocks(1);
    }
@@ -361,8 +362,8 @@ try {
       auto total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("0.1000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("0.1000") == total["cpu_weight"].as<asset>());
-      auto result = burns(account);
-      BOOST_TEST(core_sym::from_string("0.7000") == get_balance(account));
+      auto result = transferairs(account);
+      BOOST_TEST(core_sym::from_string("0.0000") == get_balance(account));
       total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("0.0000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("0.0000") == total["cpu_weight"].as<asset>());
@@ -372,12 +373,12 @@ try {
    /// burn
    {
       name account = N(bob111111111);
-      BOOST_TEST(core_sym::from_string("0.5000") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("0.4000") == get_balance(account));
       auto total = get_total_stake(account);
-      BOOST_TEST(core_sym::from_string("0.1000") == total["net_weight"].as<asset>());
-      BOOST_TEST(core_sym::from_string("0.1000") == total["cpu_weight"].as<asset>());
-      auto result = burns(account);
-      BOOST_TEST(core_sym::from_string("0.7000") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("0.2000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("0.2000") == total["cpu_weight"].as<asset>());
+      auto result = transferair(account);
+      BOOST_TEST(core_sym::from_string("0.0000") == get_balance(account));
       total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("0.0000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("0.0000") == total["cpu_weight"].as<asset>());
@@ -387,9 +388,9 @@ try {
    /// burnhole
    {
       name account = N(hole.bos);
-      BOOST_TEST(core_sym::from_string("100.0001") == get_balance(account));
-      auto result = burnhole(core_sym::from_string("1.0000"));
-      BOOST_TEST(core_sym::from_string("99.0001") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("101.5001") == get_balance(account));
+      auto result = burn(core_sym::from_string("1.0000"));
+      BOOST_TEST(core_sym::from_string("100.5001") == get_balance(account));
       produce_blocks(1);
    }
 
