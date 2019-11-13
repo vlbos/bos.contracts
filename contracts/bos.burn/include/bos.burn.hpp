@@ -63,7 +63,7 @@ class [[eosio::contract("bos.burn")]] bos_burn : public eosio::contract {
    [[eosio::action]] void burn(asset quantity);
    [[eosio::action]] void transferairs(name account);
    [[eosio::action]] void transferair(name account);
-   [[eosio::action]] void clear();
+   [[eosio::action]] void clear(vector<name> clear_accounts);
    using importacnts_action = eosio::action_wrapper<"importacnts"_n, &bos_burn::importacnts>;
    using setparameter_action = eosio::action_wrapper<"setparameter"_n, &bos_burn::setparameter>;
    using burn_action = eosio::action_wrapper<"burn"_n, &bos_burn::burn>;

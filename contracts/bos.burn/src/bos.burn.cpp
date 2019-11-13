@@ -8,10 +8,10 @@ using namespace eosio;
 
 void bos_burn::importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts) {
    require_auth(_self);
-
-   auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
+  
    std::string checkmsg = "";
    for (auto& account : unactivated_airdrop_accounts) {
+      auto unactivated_airdrop_account_table = accounts(get_self(), account.first.value);
       checkmsg = account.first.to_string()+" account does not exist";
       check(is_account(account.first), checkmsg.c_str());
       check(account.second.is_valid(), "invalid quantity");
@@ -30,13 +30,22 @@ void bos_burn::importacnts(std::vector<std::pair<name,asset>> unactivated_airdro
    }
 }
 
-void bos_burn::clear() {
+void bos_burn::clear(vector<name> clear_accounts) {
    require_auth(_self);
-    auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
 
-   for (auto itr = unactivated_airdrop_account_table.begin(); itr != unactivated_airdrop_account_table.end();) {
-      itr = unactivated_airdrop_account_table.erase(itr);
+   bool erased_flag = false;
+   for (name account : clear_accounts) {
+      std::string checkmsg = account.to_string() + " Account does not exist";
+      check(is_account(account), checkmsg.c_str());
+      auto unactivated_airdrop_account_table = accounts(get_self(), account.value);
+      auto itr = unactivated_airdrop_account_table.find(account.value);
+      if (itr != unactivated_airdrop_account_table.end()) {
+         unactivated_airdrop_account_table.erase(itr);
+         erased_flag = true;
+      }
    }
+
+   check(erased_flag, "all clear accounts are not on list");
 }
 
 void bos_burn::setparameter(uint8_t version,name executer) {
@@ -60,7 +69,7 @@ void bos_burn::transferairs(name account) {
    require_auth(_meta_parameters.executer);
    std::string checkmsg = account.to_string() + " Account does not exist";
    check(is_account(account), checkmsg.c_str());
-   auto unactivated_airdrop_account_table = accounts(get_self(), get_self().value);
+   auto unactivated_airdrop_account_table = accounts(get_self(), account.value);
    auto itr = unactivated_airdrop_account_table.find(account.value);
    check(itr != unactivated_airdrop_account_table.end(), "Account is not on list ");
    check(!itr->is_burned, "The airdrop tokens of the account are burned ");
@@ -104,14 +113,12 @@ void bos_burn::transferairs(name account) {
 
    asset unstake_net_quantity = unstake_available_quantity(available_unstake_net_weight, available_balance, total_quantity);
    asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight, available_balance + unstake_net_quantity, total_quantity);
-   print("\nunstake_net_quantity=",unstake_net_quantity.amount,";unstake_cpu_quantity=",unstake_cpu_quantity.amount);
    name receiver = account;
    action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n,
           std::make_tuple(_meta_parameters.executer, account, receiver, unstake_net_quantity, unstake_cpu_quantity))
        .send();
 
 
-   print("\n new balance=",new_balance.amount ,"total_quantity=",total_quantity.amount,";quantity=",itr->quantity.amount);
    action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "transferburn"_n, std::make_tuple(_meta_parameters.executer, account,hole_account,total_quantity, memo)).send();
 
    unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) { a.is_burned = token_burned; });

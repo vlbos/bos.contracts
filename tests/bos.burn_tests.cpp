@@ -279,7 +279,7 @@ class bos_burn_tester : public tester {
    }
 
    fc::variant get_account(const name& account) {
-      vector<char> data = get_row_by_account(N(burn.bos), N(burn.bos), N(accounts), account);
+      vector<char> data = get_row_by_account(N(burn.bos), account, N(accounts), account);
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("unactivated_airdrop_account", data, abi_serializer_max_time);
    }
 
@@ -294,8 +294,8 @@ class bos_burn_tester : public tester {
       return push_action(N(burn.bos), N(importacnts), mvo()("unactivated_airdrop_accounts", unactivated_airdrop_accounts));
    }
 
-   action_result clear() {
-      return push_action(N(burn.bos), N(clear), mvo());
+   action_result clear(std::vector<name> clear_accounts) {
+      return push_action(N(burn.bos), N(clear), mvo()("clear_accounts",clear_accounts));
    }
 
    action_result transferairs( const name& account) {
@@ -396,7 +396,10 @@ try {
 
    /// clear
    {
-      auto result = clear();
+
+      name account = N(alice1111111);
+      std::vector<name> accounts = {account,N(bob111111111)};
+      auto result = clear(accounts);
 
       produce_blocks(1);
    }
