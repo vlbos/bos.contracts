@@ -1,0 +1,3 @@
+升级部署系统合约，eosio.token合约
+编译前指定指定燃烧token的执行账户和合约账户(合约账户当前是burn.bos,执行账户burnbos4unac可是都是执行账户)
+部署燃烧token合约

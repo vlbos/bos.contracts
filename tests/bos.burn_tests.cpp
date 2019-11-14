@@ -66,7 +66,6 @@ class bos_burn_tester : public tester {
       create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false,core_sym::from_string("10000.0000"),core_sym::from_string("10000.0000"));
 
 
-
       transfer("eosio", "hole.bos", ("100.0001"), "eosio");
       transfer("eosio", "alice1111111", ("0.7000"), "eosio");
       transfer("eosio", "bob111111111", ("0.8000"), "eosio");
@@ -299,7 +298,7 @@ class bos_burn_tester : public tester {
    }
 
    action_result transferairs( const name& account) {
-      return push_action(N(burnbos4unac), N(transferairs),mvo()("account", account));
+      return push_action(N(burn.bos), N(transferairs),mvo()("account", account));
    }
 
    action_result burn( const asset& quantity) {
@@ -324,7 +323,7 @@ BOOST_AUTO_TEST_SUITE(bos_burn_tests)
 BOOST_FIXTURE_TEST_CASE(burn_test, bos_burn_tester)
 try {
  
-   push_permission_update_auth_action(N(burnbos4unac));
+   push_permission_update_auth_action(N(burn.bos));
 
    produce_blocks(1);
    /// imports
@@ -346,7 +345,7 @@ try {
    /// set parameter
    {
       uint8_t version = 1;
-      name account = N(burnbos4unac);
+      name account = N(burn.bos);
       auto result = setparameter(version,account);
 
       auto para = get_parameters();
