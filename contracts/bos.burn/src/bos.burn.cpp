@@ -11,13 +11,18 @@ void bos_burn::importacnts(std::vector<std::pair<name, asset>> unactivated_airdr
 
    std::string checkmsg = "";
    for (auto& account : unactivated_airdrop_accounts) {
-      auto unactivated_airdrop_account_table = accounts(get_self(), account.first.value);
       checkmsg = account.first.to_string() + " account does not exist";
-      check(is_account(account.first), checkmsg.c_str());
+      // check(is_account(account.first), checkmsg.c_str());
+      if(!is_account(account.first))
+      {
+         print("\n",checkmsg);
+         continue;
+      }
+
       check(account.second.is_valid(), "invalid quantity");
       check(account.second.amount > 0, "must transfer positive quantity");
       check(account.second.symbol == core_symbol(), "symbol precision mismatch");
-
+      auto unactivated_airdrop_account_table = accounts(get_self(), account.first.value);
       auto itr = unactivated_airdrop_account_table.find(account.first.value);
       checkmsg = account.first.to_string() + " account already added";
       check(itr == unactivated_airdrop_account_table.end(), checkmsg.c_str());
