@@ -60,15 +60,15 @@ class bos_burn_tester : public tester {
       issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
-      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false);
-      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false);
+      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false,core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
       create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false,core_sym::from_string("10000.0000"),core_sym::from_string("10000.0000"));
 
 
       transfer("eosio", "hole.bos", ("100.0001"), "eosio");
-      transfer("eosio", "alice1111111", ("0.7000"), "eosio");
-      transfer("eosio", "bob111111111", ("0.8000"), "eosio");
+      transfer("eosio", "alice1111111", ("0.5000"), "eosio");
+      transfer("eosio", "bob111111111", ("0.4000"), "eosio");
       transfer("eosio", "carol1111111", ("3000.0000"), "eosio");
       transfer("eosio", "alice", ("3000.0000"), "eosio");
       transfer("eosio", "bob", ("3000.0000"), "eosio");
@@ -78,10 +78,10 @@ class bos_burn_tester : public tester {
       transfer("eosio", "dapp", ("3000.0000"), "eosio");
       transfer("eosio", "burnbos4unac", ("30000.0000"), "eosio");
       transfer("eosio", "burn.bos", ("30000.0000"), "eosio");
-      stake(N(alice1111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
-      unstake("eosio", N(alice1111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
-      stake(N(bob111111111), core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
-      unstake("eosio", N(bob111111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
+      // stake(N(alice1111111), core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
+      // unstake("eosio", N(alice1111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
+      // stake(N(bob111111111), core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
+      // unstake("eosio", N(bob111111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
 
       transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
@@ -138,7 +138,7 @@ class bos_burn_tester : public tester {
       trx.actions.emplace_back(get_action(N(eosio), N(buyram), vector<permission_level>{{creator, config::active_name}}, mvo()("payer", creator)("receiver", a)("quant", ramfunds)));
 
       trx.actions.emplace_back(get_action(N(eosio), N(delegatebw), vector<permission_level>{{creator, config::active_name}},
-                                          mvo()("from", creator)("receiver", a)("stake_net_quantity", net)("stake_cpu_quantity", cpu)("transfer", 0)));
+                                          mvo()("from", creator)("receiver", a)("stake_net_quantity", net)("stake_cpu_quantity", cpu)("transfer", 1)));
 
       set_transaction_headers(trx);
       trx.sign(get_private_key(creator, "active"), control->get_chain_id());
@@ -329,7 +329,8 @@ try {
    /// imports
    {
       name account = N(alice1111111);
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("0.5000")),std::make_pair(N(bob111111111),core_sym::from_string("0.8000"))};
+      
+      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("0.5000")),std::make_pair(N(bob111111111),core_sym::from_string("0.8000")),std::make_pair(N(carol1111111),core_sym::from_string("1.8000"))};
       auto result = importacnts(account_quantity);
 
       produce_blocks(1);
@@ -384,12 +385,27 @@ try {
       produce_blocks(1);
    }
 
+   /// burn
+   {
+      name account = N(carol1111111);
+      BOOST_TEST(core_sym::from_string("3000.0000") == get_balance(account));
+      auto total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("10.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("10.0000") == total["cpu_weight"].as<asset>());
+      auto result = transferair(account);
+      BOOST_TEST(core_sym::from_string("2998.2000") == get_balance(account));
+      total = get_total_stake(account);
+      BOOST_TEST(core_sym::from_string("10.0000") == total["net_weight"].as<asset>());
+      BOOST_TEST(core_sym::from_string("10.0000") == total["cpu_weight"].as<asset>());
+      produce_blocks(1);
+   }
+
    /// burnhole
    {
       name account = N(hole.bos);
-      BOOST_TEST(core_sym::from_string("101.5001") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("103.3001") == get_balance(account));
       auto result = burn(core_sym::from_string("1.0000"));
-      BOOST_TEST(core_sym::from_string("100.5001") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("102.3001") == get_balance(account));
       produce_blocks(1);
    }
 
