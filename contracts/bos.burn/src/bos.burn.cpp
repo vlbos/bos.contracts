@@ -79,7 +79,7 @@ void bos_burn::transferairs(name account) {
    auto unactivated_airdrop_account_table = accounts(get_self(), account.value);
    auto itr = unactivated_airdrop_account_table.find(account.value);
    check(itr != unactivated_airdrop_account_table.end(), "Account is not on list ");
-   check(!itr->is_burned, "The airdrop tokens of the account are burned ");
+   check(0==itr->is_burned, "The airdrop tokens of the account are burned ");
 
    std::string memo = "";
    const uint8_t token_burned = 1;
@@ -99,7 +99,7 @@ void bos_burn::transferairs(name account) {
       return;
    }
 
-   if (available_balance==itr->quantity && new_balance == itr->quantity + staked_asset) {
+   if (available_balance>=itr->quantity && new_balance >= itr->quantity + staked_asset) {
       total_quantity += staked_asset;
    }
 
