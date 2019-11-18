@@ -393,7 +393,7 @@ try {
       BOOST_TEST(core_sym::from_string("10.0000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("10.0000") == total["cpu_weight"].as<asset>());
       auto result = transferair(account);
-      BOOST_TEST(core_sym::from_string("2998.2000") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("2998.0000") == get_balance(account));
       total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("10.0000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("10.0000") == total["cpu_weight"].as<asset>());
@@ -403,9 +403,9 @@ try {
    /// burnhole
    {
       name account = N(hole.bos);
-      BOOST_TEST(core_sym::from_string("103.3001") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("103.5001") == get_balance(account));
       auto result = burn(core_sym::from_string("1.0000"));
-      BOOST_TEST(core_sym::from_string("102.3001") == get_balance(account));
+      BOOST_TEST(core_sym::from_string("102.5001") == get_balance(account));
       produce_blocks(1);
    }
 
