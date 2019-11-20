@@ -2,7 +2,10 @@
 ## 获取快照空投账户名单
   
 ```
+     cd dataset
      get clone  https://github.com/boscore/bos-airdrop-snapshots
+     mv ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.msig.json .
+     mv ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.normal.csv .
 ```    
 输出文件:
 * accounts_info_bos_snapshot.airdrop.msig.json
