@@ -11,7 +11,7 @@
 ## 导出bos主网未激活账户及msig账户
 
 ```
-curl localhost:8888/v1/chain/get_unused_accounts 
+curl 127.0.0.1:8888/v1/chain/get_unused_accounts 
 或
 curl -X POST --url http://127.0.0.1:8888/v1/chain/get_unused_accounts  -d '{
   "file_path": "/Users/lisheng/Downloads/nonactivated_bos_accounts.txt"
@@ -31,7 +31,7 @@ curl -X POST --url http://127.0.0.1:8888/v1/chain/get_unused_accounts  -d '{
 * nonactivated_bos_accounts.txt       主网未激活账户
 * nonactivated_bos_accounts.msig                 主网未激活多签账户  
 
-[获取主网未激活空投账户python脚本文件](https://github.com/vlbos/bos.oracle-test/blob/master/oracle.testenv/test/airdropburn/unionset.py)
+[获取主网未激活空投账户python脚本文件](https://github.com/boscore/bos.contracts/tree/bos.burn/contracts/bos.burn/scripts/unionset.py)
 执行脚本
 
 ```
@@ -44,7 +44,7 @@ python ./scripts/unionset.py
 ## 升级部署系统合约，eosio.token合约
 * 编译前指定指定燃烧token的执行账户和合约账户(合约账户当前是burn.bos,执行账户burnbos4unac可都是同一账户如合约账户)
 ## 部署燃烧token合约
-[执行燃烧token合约命令脚本文件](https://github.com/vlbos/bos.oracle-test/blob/master/oracle.testenv/test/burn_test.sh)
+[执行燃烧token合约命令脚本文件](https://github.com/vlbos/bos.contracts/tree/bos.burn/contracts/bos.burn/scripts/burn_tests.sh)
 
 执行命令
 ```
