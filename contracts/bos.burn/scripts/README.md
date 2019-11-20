@@ -93,7 +93,7 @@ ${!cleos} set account permission ${contract_burn} active '{"threshold": 1,"keys"
 ### 多签合约账户
 
 ```
-cleos set contract oracle.bos bos.oracle/ -p oracle.bos  -s -j -d > setcontract.json
+cleos set contract burn.bos bos.burn/ -p burn.bos  -s -j -d > setcontract.json
 cleos multisig propose_trx setcontract bppermission.json  setcontract.json  -p bostesterter
 cleos multisig approve bostesterter updatasystem '{"actor":"${BP_NAME}","permission":"active"}' -p ${BP_NAME}
 cleos multisig exec bostesterter setcontract -p bostesterter@active
