@@ -30,21 +30,23 @@ start_keosd() {
     mkdir ${WALLET_DIR}
     nohup keosd --wallet-dir ${WALLET_DIR} --unlock-timeout 90000 1>/dev/null 2>/dev/null &
 }
-start_keosd
 
 create_wallet() {
     # rm -rf ~/eosio-wallet/
     cleos wallet create -f ${WALLET_DIR}/password.txt
     cleos wallet import --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 }
-create_wallet
 
 import_key() {
     echo prikey=$1
     cleos wallet import --private-key $1
 }
 
-import_key ${burn_c_prikey}
+init() {
+    start_keosd
+    create_wallet
+    import_key ${burn_c_prikey}
+}
 
 get_burn_table() {
     ${cleos1} get table ${contract_burn} ${contract_burn} $1 --limit 100
@@ -75,7 +77,6 @@ setparameter() {
     ${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
 }
 
-
 OLD_IFS='='
 save_ifs_() {
     OLD_IFS=$IFS #保存原始值
@@ -105,7 +106,6 @@ get_end() {
     Time=$(($End - $Start))
     echo $Time"==============end======Time======="
 }
-
 
 import_accs() {
     save_ifs_eq
@@ -161,12 +161,12 @@ transferairs_from_csv() {
 
 checkresult() {
     save_ifs_eq
-    result=$(cleos -u $http_endpoint  get table ${contract_burn} $1 accounts)
+    result=$(cleos -u $http_endpoint get table ${contract_burn} $1 accounts)
     status=${result##*is_burned} #结果为 @@@
     status=$(echo $status | tr -d "\]")
     status=$(echo $status | tr -cd "[0-9]")
     if [[ temp -eq 0 ]]; then
-        echo $1','$2' '$3 >> $result_file
+        echo $1','$2' '$3 >>$result_file
     else
         echo $1 done !
     fi
@@ -230,6 +230,7 @@ test_() {
 }
 
 case "$1" in
+"init") init  ;;
 "set") set_contracts ;;
 "imp") import_from_csv ;;
 "setp") setparameter ;;
@@ -242,6 +243,5 @@ case "$1" in
 "tables") get_burn_table_scope "$2" "$3" ;;
 "info") get_info ;;
 "scope") get_scope ;;
-"test") test_ "$2" ;;
-*) echo "usage: burn_test.sh set|imp|setp|air|chk|burn|clr|acc|table {name}|tables {scope name}|info|scope|test" ;;
+*) echo "usage: burn_test.sh init|set|imp|setp|air|chk|burn|clr|acc|table {name}|tables {scope name}|info|scope" ;;
 esac
