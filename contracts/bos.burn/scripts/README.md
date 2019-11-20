@@ -17,7 +17,7 @@
 curl 127.0.0.1:8888/v1/chain/get_unused_accounts 
 或
 curl -X POST --url http://127.0.0.1:8888/v1/chain/get_unused_accounts  -d '{
-  "file_path": "/Users/lisheng/Downloads/nonactivated_bos_accounts.txt"
+  "file_path": "/Users/xxxx/Downloads/nonactivated_bos_accounts.txt"
 }'
 ```
 
@@ -101,6 +101,7 @@ cleos multisig exec bostesterter setcontract -p bostesterter@active
 [详见多签文档](https://github.com/boscore/Documentation/blob/master/Oracle/BOS_Oracle_Deployment.md#22-create-msig)
 ### 执行从未激活空投账户到hole.bos 账户转账空投部署tokens
 执行命令
+
 ```
 ./burn_tests.sh air
 ```
