@@ -47,6 +47,7 @@ python ./scripts/unionset.py
 ## 升级部署系统合约，eosio.token合约
 * 编译前指定指定燃烧token的执行账户和合约账户(合约账户当前是burn.bos,执行账户burnbos4unac可都是同一账户如合约账户)
 ## 部署燃烧token合约
+### 设置执行账户（与合约账户为同一账户）是 eosio.code 权限给合约
 [执行燃烧token合约命令脚本文件](https://github.com/vlbos/bos.contracts/tree/bos.burn/contracts/bos.burn/scripts/burn_tests.sh)
 
 执行命令
@@ -58,6 +59,7 @@ python ./scripts/unionset.py
 
 ```
 ${cleos} set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} -x 1000 -p ${contract_burn}
+${!cleos} set account permission ${contract_burn} active '{"threshold": 1,"keys": [{"key": "'${burn_c_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_burn}'","permission":"eosio.code"},"weight":1}]}' owner -p ${contract_burn}@owner
 ```
 
 ### 导入未激活空投账户
@@ -79,16 +81,6 @@ ${cleos} set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} 
 ${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
 ```
 
-### 设置执行账户（与合约账户为同一账户）是 eosio.code 权限给合约
-执行命令
-```
-./burn_tests.sh set
-```
-
-命令内容
-```
-${!cleos} set account permission ${contract_burn} active '{"threshold": 1,"keys": [{"key": "'${burn_c_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_burn}'","permission":"eosio.code"},"weight":1}]}' owner -p ${contract_burn}@owner
-```
 
 ### 多签合约账户
 
