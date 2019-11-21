@@ -99,7 +99,7 @@ cleos multisig approve bostesterter updatasystem '{"actor":"${BP_NAME}","permiss
 cleos multisig exec bostesterter setcontract -p bostesterter@active
 ```
 [详见多签文档](https://github.com/boscore/Documentation/blob/master/Oracle/BOS_Oracle_Deployment.md#22-create-msig)
-### 执行从未激活空投账户到 hole.bos 账户转账空投部署tokens
+###  执行从未激活空投账户到 hole.bos 账户转账空投部署tokens
 执行命令
 
 ```
