@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <eosio/chain/abi_serializer.hpp>
 #include <eosio/testing/tester.hpp>
-// #include "eosio.system_tester.hpp"
+#include "eosio.system_tester.hpp"
 #include "contracts.hpp"
 #include "test_symbol.hpp"
 
@@ -18,19 +18,18 @@ using namespace std;
 
 using mvo = fc::mutable_variant_object;
 
-class bos_burn_tester : public tester {
+class bos_burn_tester : public  eosio_system::eosio_system_tester  {
  public:
    bos_burn_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos),N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos), N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(burn.bos), contracts::burn_wasm());
       set_abi(N(burn.bos), contracts::burn_abi().data());
 
       produce_blocks();
-
 
       const auto& accnt = control->db().get<account_object, by_name>(N(burn.bos));
       abi_def abi;
@@ -60,11 +59,10 @@ class bos_burn_tester : public tester {
       issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
-      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false,core_sym::from_string("0.1000"),core_sym::from_string("0.1000"));
-      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false,core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
+      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false, core_sym::from_string("0.1000"), core_sym::from_string("0.1000"));
+      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false, core_sym::from_string("0.2000"), core_sym::from_string("0.2000"));
       create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
-      create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false,core_sym::from_string("10000.0000"),core_sym::from_string("10000.0000"));
-
+      create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false, core_sym::from_string("10000.0000"), core_sym::from_string("10000.0000"));
 
       transfer("eosio", "hole.bos", ("100.0001"), "eosio");
       transfer("eosio", "alice1111111", ("0.5000"), "eosio");
@@ -115,9 +113,7 @@ class bos_burn_tester : public tester {
          set_abi(consumer, contracts::consumer_abi().data());
          produce_blocks(1);
       }
-
    }
-
 
    transaction_trace_ptr create_account_with_resources(account_name a, account_name creator, asset ramfunds, bool multisig, asset net = core_sym::from_string("10.0000"),
                                                        asset cpu = core_sym::from_string("10.0000")) {
@@ -185,77 +181,50 @@ class bos_burn_tester : public tester {
       return asset(result, symbol(CORE_SYM));
    }
 
- void deploy_contract( bool call_init = true ) {
-      set_code( config::system_account_name, contracts::system_wasm() );
-      set_abi( config::system_account_name, contracts::system_abi().data() );
-      if( call_init ) {
-         base_tester::push_action(config::system_account_name, N(init),
-                                               config::system_account_name,  mutable_variant_object()
-                                               ("version", 0)
-                                               ("core", CORE_SYM_STR)
-         );
+   void deploy_contract(bool call_init = true) {
+      set_code(config::system_account_name, contracts::system_wasm());
+      set_abi(config::system_account_name, contracts::system_abi().data());
+      if (call_init) {
+         base_tester::push_action(config::system_account_name, N(init), config::system_account_name, mutable_variant_object()("version", 0)("core", CORE_SYM_STR));
       }
 
       {
-         const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
+         const auto& accnt = control->db().get<account_object, by_name>(config::system_account_name);
          abi_def abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          system_abi_ser.set_abi(abi, abi_serializer_max_time);
       }
    }
 
-   fc::variant get_total_stake( const account_name& act ) {
-      vector<char> data = get_row_by_account( config::system_account_name, act, N(userres), act );
-      return data.empty() ? fc::variant() : system_abi_ser.binary_to_variant( "user_resources", data, abi_serializer_max_time );
+   fc::variant get_total_stake(const account_name& act) {
+      vector<char> data = get_row_by_account(config::system_account_name, act, N(userres), act);
+      return data.empty() ? fc::variant() : system_abi_ser.binary_to_variant("user_resources", data, abi_serializer_max_time);
    }
 
-   action_result push_actions( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) {
-         string action_type_name = system_abi_ser.get_action_type(name);
+   action_result push_actions(const account_name& signer, const action_name& name, const variant_object& data, bool auth = true) {
+      string action_type_name = system_abi_ser.get_action_type(name);
 
-         action act;
-         act.account = config::system_account_name;
-         act.name = name;
-         act.data = system_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+      action act;
+      act.account = config::system_account_name;
+      act.name = name;
+      act.data = system_abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
 
-         return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
+      return base_tester::push_action(std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111));
    }
-   action_result stake( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
-      return push_actions( name(from), N(delegatebw), mvo()
-                          ("from",     from)
-                          ("receiver", to)
-                          ("stake_net_quantity", net)
-                          ("stake_cpu_quantity", cpu)
-                          ("transfer", 0 )
-      );
+   action_result stake(const account_name& from, const account_name& to, const asset& net, const asset& cpu) {
+      return push_actions(name(from), N(delegatebw), mvo()("from", from)("receiver", to)("stake_net_quantity", net)("stake_cpu_quantity", cpu)("transfer", 0));
    }
 
+   action_result stake(const account_name& acnt, const asset& net, const asset& cpu) { return stake(acnt, acnt, net, cpu); }
 
-
-   action_result stake( const account_name& acnt, const asset& net, const asset& cpu ) {
-      return stake( acnt, acnt, net, cpu );
+   action_result stake_with_transfer(const account_name& from, const account_name& to, const asset& net, const asset& cpu) {
+      return push_actions(name(from), N(delegatebw), mvo()("from", from)("receiver", to)("stake_net_quantity", net)("stake_cpu_quantity", cpu)("transfer", true));
    }
 
-   action_result stake_with_transfer( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
-      return push_actions( name(from), N(delegatebw), mvo()
-                          ("from",     from)
-                          ("receiver", to)
-                          ("stake_net_quantity", net)
-                          ("stake_cpu_quantity", cpu)
-                          ("transfer", true )
-      );
-   }
+   action_result stake_with_transfer(const account_name& acnt, const asset& net, const asset& cpu) { return stake_with_transfer(acnt, acnt, net, cpu); }
 
-   action_result stake_with_transfer( const account_name& acnt, const asset& net, const asset& cpu ) {
-      return stake_with_transfer( acnt, acnt, net, cpu );
-   }
-
-   action_result unstake( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
-      return push_actions( name(from), N(undelegatebw), mvo()
-                          ("from",     from)
-                          ("receiver", to)
-                          ("unstake_net_quantity", net)
-                          ("unstake_cpu_quantity", cpu)
-      );
+   action_result unstake(const account_name& from, const account_name& to, const asset& net, const asset& cpu) {
+      return push_actions(name(from), N(undelegatebw), mvo()("from", from)("receiver", to)("unstake_net_quantity", net)("unstake_cpu_quantity", cpu));
    }
 
    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data) {
@@ -289,30 +258,19 @@ class bos_burn_tester : public tester {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("meta_parameters", data, abi_serializer_max_time);
    }
 
-   action_result importacnts(std::vector<std::pair<name,asset>> unactivated_airdrop_accounts) {
+   action_result importacnts(std::vector<std::pair<name, asset>> unactivated_airdrop_accounts) {
       return push_action(N(burn.bos), N(importacnts), mvo()("unactivated_airdrop_accounts", unactivated_airdrop_accounts));
    }
 
-   action_result clear(std::vector<name> clear_accounts) {
-      return push_action(N(burn.bos), N(clear), mvo()("clear_accounts",clear_accounts));
-   }
+   action_result clear(std::vector<name> clear_accounts) { return push_action(N(burn.bos), N(clear), mvo()("clear_accounts", clear_accounts)); }
 
-   action_result transferairs( const name& account) {
-      return push_action(N(burn.bos), N(transferairs),mvo()("account", account));
-   }
+   action_result transferairs(const name& account) { return push_action(N(burn.bos), N(transferairs), mvo()("account", account)); }
 
-   action_result burn( const asset& quantity) {
-      return push_action(N(burn.bos), N(burn),mvo()("quantity", quantity));
-   }
+   action_result burn(const asset& quantity) { return push_action(N(burn.bos), N(burn), mvo()("quantity", quantity)); }
 
-   action_result transferair( const name& account) {
-      return push_action(N(dappuser.bos), N(transferair),mvo()("account", account));
-   }
+   action_result transferair(const name& account) { return push_action(N(dappuser.bos), N(transferair), mvo()("account", account)); }
 
-   action_result setparameter(uint8_t version, const name& executer) {
-      return push_action(N(burn.bos), N(setparameter), mvo()("version", version)("executer",executer));
-   }
- 
+   action_result setparameter(uint8_t version, const name& executer) { return push_action(N(burn.bos), N(setparameter), mvo()("version", version)("executer", executer)); }
 
    abi_serializer abi_ser;
    abi_serializer system_abi_ser;
@@ -322,35 +280,43 @@ BOOST_AUTO_TEST_SUITE(bos_burn_tests)
 
 BOOST_FIXTURE_TEST_CASE(burn_test, bos_burn_tester)
 try {
- 
+
    push_permission_update_auth_action(N(burn.bos));
 
    produce_blocks(1);
    /// imports
    {
       name account = N(alice1111111);
-      
-      std::vector<std::pair<name,asset>> account_quantity = {std::make_pair(account,core_sym::from_string("0.5000")),std::make_pair(N(bob111111111),core_sym::from_string("0.8000")),std::make_pair(N(carol1111111),core_sym::from_string("1.8000"))};
+
+      std::vector<std::pair<name, asset>> account_quantity = {std::make_pair(account, core_sym::from_string("0.5000")), std::make_pair(N(bob111111111), core_sym::from_string("0.8000")),
+                                                              std::make_pair(N(carol1111111), core_sym::from_string("1.8000"))};
       auto result = importacnts(account_quantity);
 
       produce_blocks(1);
 
       auto acc = get_account(account);
-      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity","0.5000 BOS")("is_burned",0));
+      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity", "0.5000 BOS")("is_burned", 0));
 
       produce_blocks(1);
    }
 
    produce_blocks(1);
 
+   auto trace_auth = TESTER::push_action(
+       config::system_account_name, updateauth::get_name(), config::system_account_name,
+       mvo()("account", name(N(burn.bos)).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
+           "auth", authority(1, {key_weight{get_public_key(N(burn.bos), "active"), 1}},
+                             {permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1}, permission_level_weight{{config::producers_account_name, config::active_name}, 1}})));
+   BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
+
    /// set parameter
    {
       uint8_t version = 1;
       name account = N(burn.bos);
-      auto result = setparameter(version,account);
+      auto result = setparameter(version, account);
 
       auto para = get_parameters();
-      REQUIRE_MATCHING_OBJECT(para, mvo()("version",version)("executer", account));
+      REQUIRE_MATCHING_OBJECT(para, mvo()("version", version)("executer", account));
 
       produce_blocks(1);
    }
@@ -413,11 +379,142 @@ try {
    {
 
       name account = N(alice1111111);
-      std::vector<name> accounts = {account,N(bob111111111)};
+      std::vector<name> accounts = {account, N(bob111111111)};
       auto result = clear(accounts);
 
       produce_blocks(1);
    }
+}
+FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(msig_burn_test, bos_burn_tester)
+try {
+
+   push_permission_update_auth_action(N(burn.bos));
+
+   produce_blocks(1);
+   /// imports
+   {
+      name account = N(alice1111111);
+
+      std::vector<std::pair<name, asset>> account_quantity = {std::make_pair(account, core_sym::from_string("0.5000")), std::make_pair(N(bob111111111), core_sym::from_string("0.8000")),
+                                                              std::make_pair(N(carol1111111), core_sym::from_string("1.8000"))};
+      auto result = importacnts(account_quantity);
+
+      produce_blocks(1);
+
+      auto acc = get_account(account);
+      REQUIRE_MATCHING_OBJECT(acc, mvo()("account", account)("quantity", "0.5000 BOS")("is_burned", 0));
+
+      produce_blocks(1);
+   }
+
+   produce_blocks(1);
+
+   auto trace_auth = TESTER::push_action(
+       config::system_account_name, updateauth::get_name(), config::system_account_name,
+       mvo()("account", name(config::system_account_name).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
+           "auth", authority(1, {key_weight{get_public_key(config::system_account_name, "active"), 1}},
+                             {permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1}, permission_level_weight{{config::producers_account_name, config::active_name}, 1}})));
+   BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
+
+   /// set parameter
+   {
+      uint8_t version = 1;
+      name account = N(burn.bos);
+      auto result = setparameter(version, account);
+
+      auto para = get_parameters();
+      REQUIRE_MATCHING_OBJECT(para, mvo()("version", version)("executer", account));
+
+      produce_blocks(1);
+   }
+}
+FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE(setparameter, bos_burn_tester)
+try
+{
+   //install multisig contract
+   abi_serializer msig_abi_ser = initialize_multisig();
+   auto producer_names = active_and_vote_producers();
+
+   //helper function
+   auto push_action_msig = [&](const account_name &signer, const action_name &name, const variant_object &data, bool auth = true) -> action_result {
+      string action_type_name = msig_abi_ser.get_action_type(name);
+
+      action act;
+      act.account = N(eosio.msig);
+      act.name = name;
+      act.data = msig_abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
+
+      return base_tester::push_action(std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111));
+   };
+
+   // test begins
+   vector<permission_level> prod_perms;
+   for (auto &x : producer_names)
+   {
+      prod_perms.push_back({name(x), config::active_name});
+   }
+
+   uint8_t version = 1;
+   name executer = N(burn.bos);
+
+   transaction trx;
+   {
+         variant pretty_trx = fc::mutable_variant_object()
+         ("expiration", "2020-01-01T00:30")
+         ("ref_block_num", 2)
+         ("ref_block_prefix", 3)
+         ("net_usage_words", 0)
+         ("max_cpu_usage_ms", 0)
+         ("delay_sec", 0)
+         ("actions", fc::variants({
+               fc::mutable_variant_object()
+                  ("account", name(config::system_account_name))
+                  ("name", "setparameter")
+                  ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name } })
+                  ("data", fc::mutable_variant_object()
+                     ("version", version)
+                     ("executer", executer)
+                  )
+                  })
+         );
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+   }
+
+     BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "setguaminres")
+                                                    ("trx",           trx)
+                                                    ("requested", prod_perms)
+                       )
+   );
+
+   // get 15 approvals
+   for (size_t i = 0; i < 15; ++i){
+      BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
+                                                       ("proposer",      "alice1111111")
+                                                       ("proposal_name", "setparameter")
+                                                       ("level",         permission_level{ name(producer_names[i]), config::active_name })
+                          )
+      );
+   }
+
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect([&](const transaction_trace_ptr &t) { if (t->scheduled) { trace = t; } });
+   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
+                                                    ("proposer",      "alice1111111")
+                                                    ("proposal_name", "setparameter")
+                                                    ("executer",      "alice1111111")
+                       )
+   );
+
+   BOOST_REQUIRE(bool(trace));
+   BOOST_REQUIRE_EQUAL(1, trace->action_traces.size());
+   BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace->receipt->status);
 
 
 }
