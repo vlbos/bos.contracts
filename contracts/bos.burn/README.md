@@ -79,7 +79,7 @@ ${cleos} set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} 
 ${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
 ```
 
-### 设置执行账户（与合约账户为同一账户）是eosio.code 权限给合约
+### 设置执行账户（与合约账户为同一账户）是 eosio.code 权限给合约
 执行命令
 ```
 ./burn_tests.sh set
@@ -99,7 +99,7 @@ cleos multisig approve bostesterter updatasystem '{"actor":"${BP_NAME}","permiss
 cleos multisig exec bostesterter setcontract -p bostesterter@active
 ```
 [详见多签文档](https://github.com/boscore/Documentation/blob/master/Oracle/BOS_Oracle_Deployment.md#22-create-msig)
-###  执行从未激活空投账户到 hole.bos 账户转账空投部署tokens
+###  执行从未激活空投账户到 hole.bos 账户转账空投部署 tokens
 执行命令
 
 ```
