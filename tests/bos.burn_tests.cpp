@@ -460,6 +460,7 @@ try
    }
 
    uint8_t version = 1;
+   name contract_account = N(burn.bos);
    name executer = N(burn.bos);
 
    transaction trx;
@@ -473,7 +474,7 @@ try
          ("delay_sec", 0)
          ("actions", fc::variants({
                fc::mutable_variant_object()
-                  ("account", name(config::system_account_name))
+                  ("account", name(contract_account))
                   ("name", "setparameter")
                   ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name } })
                   ("data", fc::mutable_variant_object()
