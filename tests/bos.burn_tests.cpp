@@ -18,12 +18,12 @@ using namespace std;
 
 using mvo = fc::mutable_variant_object;
 
-class bos_burn_tester : public  eosio_system::eosio_system_tester  {
+class bos_burn_tester : public  tester  {
  public:
    bos_burn_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({N(alice), N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos), N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({ N(alice),N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos), N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(burn.bos), contracts::burn_wasm());
@@ -59,9 +59,9 @@ class bos_burn_tester : public  eosio_system::eosio_system_tester  {
       issuex(N(dapp.bos), N(dappuser.bos), core_sym::from_string("1000000000.0000"), N(dappuser.bos));
       produce_blocks();
 
-      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false, core_sym::from_string("0.1000"), core_sym::from_string("0.1000"));
-      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false, core_sym::from_string("0.2000"), core_sym::from_string("0.2000"));
-      create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false);
+      create_account_with_resources(N(alice1111111), N(eosio), core_sym::from_string("4000.0000"), false, core_sym::from_string("10.1000"), core_sym::from_string("10.1000"));
+      create_account_with_resources(N(bob111111111), N(eosio), core_sym::from_string("4000.4500"), false, core_sym::from_string("10.2000"), core_sym::from_string("10.2000"));
+      create_account_with_resources(N(carol1111111), N(eosio), core_sym::from_string("4000.0000"), false);
       create_account_with_resources(N(burnbos4unac), N(eosio), core_sym::from_string("1000.4500"), false, core_sym::from_string("10000.0000"), core_sym::from_string("10000.0000"));
 
       transfer("eosio", "hole.bos", ("100.0001"), "eosio");
@@ -80,6 +80,8 @@ class bos_burn_tester : public  eosio_system::eosio_system_tester  {
       // unstake("eosio", N(alice1111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
       // stake(N(bob111111111), core_sym::from_string("0.2000"),core_sym::from_string("0.2000"));
       // unstake("eosio", N(bob111111111), core_sym::from_string("10.0000"),core_sym::from_string("10.0000"));
+   //       BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_sym::from_string("10000000.0000") ) );
+   // BOOST_REQUIRE_EQUAL( core_sym::from_string("90000998.0049"), get_balance( "alice1111111" ) );
 
       transferex(N(eosio.token), "eosio", "dappuser.bos", ("1000000000.0000 BQS"), "eosio");
 
@@ -113,6 +115,41 @@ class bos_burn_tester : public  eosio_system::eosio_system_tester  {
          set_abi(consumer, contracts::consumer_abi().data());
          produce_blocks(1);
       }
+   }
+   transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, uint32_t ram_bytes = 8000 ) {
+      signed_transaction trx;
+      set_transaction_headers(trx);
+
+      authority owner_auth;
+      owner_auth =  authority( get_public_key( a, "owner" ) );
+
+      trx.actions.emplace_back( vector<permission_level>{{creator,config::active_name}},
+                                newaccount{
+                                   .creator  = creator,
+                                   .name     = a,
+                                   .owner    = owner_auth,
+                                   .active   = authority( get_public_key( a, "active" ) )
+                                });
+
+      trx.actions.emplace_back( get_action( config::system_account_name, N(buyrambytes), vector<permission_level>{{creator,config::active_name}},
+                                            mvo()
+                                            ("payer", creator)
+                                            ("receiver", a)
+                                            ("bytes", ram_bytes) )
+                              );
+      trx.actions.emplace_back( get_action( config::system_account_name, N(delegatebw), vector<permission_level>{{creator,config::active_name}},
+                                            mvo()
+                                            ("from", creator)
+                                            ("receiver", a)
+                                            ("stake_net_quantity", core_sym::from_string("10.0000") )
+                                            ("stake_cpu_quantity", core_sym::from_string("10.0000") )
+                                            ("transfer", 0 )
+                                          )
+                                );
+
+      set_transaction_headers(trx);
+      trx.sign( get_private_key( creator, "active" ), control->get_chain_id()  );
+      return push_transaction( trx );
    }
 
    transaction_trace_ptr create_account_with_resources(account_name a, account_name creator, asset ramfunds, bool multisig, asset net = core_sym::from_string("10.0000"),
@@ -155,6 +192,14 @@ class bos_burn_tester : public  eosio_system::eosio_system_tester  {
    }
    void transfer(name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
       base_tester::push_action(N(eosio.token), N(transfer), manager, mutable_variant_object()("from", from)("to", to)("quantity", core_sym::from_string(amount))("memo", memo));
+   }
+   void transfer( name from, name to, const asset& amount, name manager = config::system_account_name) {
+      base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
+                                ("from",    from)
+                                ("to",      to )
+                                ("quantity", amount)
+                                ("memo", "")
+                                );
    }
 
    void transferex(name contract, name from, name to, const string& amount, name manager = config::system_account_name, const std::string& memo = "") {
@@ -199,6 +244,150 @@ class bos_burn_tester : public  eosio_system::eosio_system_tester  {
    fc::variant get_total_stake(const account_name& act) {
       vector<char> data = get_row_by_account(config::system_account_name, act, N(userres), act);
       return data.empty() ? fc::variant() : system_abi_ser.binary_to_variant("user_resources", data, abi_serializer_max_time);
+   }
+ 
+   abi_serializer initialize_multisig() {
+      abi_serializer msig_abi_ser;
+      {
+         create_account_with_resources( N(eosio.msig), config::system_account_name );
+         BOOST_REQUIRE_EQUAL( success(), buyram( "eosio", "eosio.msig", core_sym::from_string("5000.0000") ) );
+         produce_block();
+
+         auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
+                                               config::system_account_name,  mutable_variant_object()
+                                               ("account", "eosio.msig")
+                                               ("is_priv", 1)
+         );
+
+         set_code( N(eosio.msig), contracts::msig_wasm() );
+         set_abi( N(eosio.msig), contracts::msig_abi().data() );
+
+         produce_blocks();
+         const auto& accnt = control->db().get<account_object,by_name>( N(eosio.msig) );
+         abi_def msig_abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, msig_abi), true);
+         msig_abi_ser.set_abi(msig_abi, abi_serializer_max_time);
+      }
+      return msig_abi_ser;
+   }
+
+
+   transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts,
+                                                  asset ram = core_sym::from_string("1.0000"),
+                                                  asset cpu = core_sym::from_string("80.0000"),
+                                                  asset net = core_sym::from_string("80.0000")
+                                                )
+   {
+      account_name creator(config::system_account_name);
+      signed_transaction trx;
+      set_transaction_headers(trx);
+
+      for (const auto& a: accounts) {
+         authority owner_auth( get_public_key( a, "owner" ) );
+         trx.actions.emplace_back( vector<permission_level>{{creator,config::active_name}},
+                                   newaccount{
+                                         .creator  = creator,
+                                         .name     = a,
+                                         .owner    = owner_auth,
+                                         .active   = authority( get_public_key( a, "active" ) )
+                                         });
+
+         trx.actions.emplace_back( get_action( config::system_account_name, N(buyram), vector<permission_level>{ {creator, config::active_name} },
+                                               mvo()
+                                               ("payer", creator)
+                                               ("receiver", a)
+                                               ("quant", ram) )
+                                   );
+
+         trx.actions.emplace_back( get_action( config::system_account_name, N(delegatebw), vector<permission_level>{ {creator, config::active_name} },
+                                               mvo()
+                                               ("from", creator)
+                                               ("receiver", a)
+                                               ("stake_net_quantity", net)
+                                               ("stake_cpu_quantity", cpu )
+                                               ("transfer", 0 )
+                                               )
+                                   );
+      }
+
+      set_transaction_headers(trx);
+      trx.sign( get_private_key( creator, "active" ), control->get_chain_id()  );
+      return push_transaction( trx );
+   }
+   action_result regproducer( const account_name& acnt, int params_fixture = 1 ) {
+      action_result r = push_actions( acnt, N(regproducer), mvo()
+                          ("producer",  acnt )
+                          ("producer_key", get_public_key( acnt, "active" ) )
+                          ("url", "" )
+                          ("location", 0 )
+      );
+      BOOST_REQUIRE_EQUAL( success(), r);
+      return r;
+   }
+
+vector<name> active_and_vote_producers() {
+      //stake more than 15% of total EOS supply to activate chain
+      transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );
+      BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("300000000.0000"), core_sym::from_string("300000000.0000") ) );
+
+      // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
+      std::vector<account_name> producer_names;
+      {
+         producer_names.reserve('z' - 'a' + 1);
+         const std::string root("defproducer");
+         for ( char c = 'a'; c < 'a'+21; ++c ) {
+            producer_names.emplace_back(root + std::string(1, c));
+         }
+         setup_producer_accounts(producer_names);
+         for (const auto& p: producer_names) {
+
+            BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
+         }
+      }
+      produce_blocks( 250);
+
+      auto trace_auth = tester::push_action(config::system_account_name, updateauth::get_name(), config::system_account_name, mvo()
+                                            ("account", name(config::system_account_name).to_string())
+                                            ("permission", name(config::active_name).to_string())
+                                            ("parent", name(config::owner_name).to_string())
+                                            ("auth",  authority(1, {key_weight{get_public_key( config::system_account_name, "active" ), 1}}, {
+                                                  permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1},
+                                                     permission_level_weight{{config::producers_account_name,  config::active_name}, 1}
+                                               }
+                                            ))
+      );
+      BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
+
+      //vote for producers
+      {
+         transfer( config::system_account_name, "alice1111111", core_sym::from_string("100000000.0000"), config::system_account_name );
+         BOOST_REQUIRE_EQUAL(success(), stake( "alice1111111", core_sym::from_string("30000000.0000"), core_sym::from_string("30000000.0000") ) );
+         BOOST_REQUIRE_EQUAL(success(), buyram( "alice1111111", "alice1111111", core_sym::from_string("30000000.0000") ) );
+         BOOST_REQUIRE_EQUAL(success(), push_actions(N(alice1111111), N(voteproducer), mvo()
+                                                    ("voter",  "alice1111111")
+                                                    ("proxy", name(0).to_string())
+                                                    ("producers", vector<account_name>(producer_names.begin(), producer_names.begin()+21))
+                             )
+         );
+      }
+      produce_blocks( 250 );
+
+      auto producer_keys = control->head_block_state()->active_schedule.producers;
+      BOOST_REQUIRE_EQUAL( 21, producer_keys.size() );
+      BOOST_REQUIRE_EQUAL( name("defproducera"), producer_keys[0].producer_name );
+
+      return producer_names;
+   }
+
+   action_result buyram( const account_name& payer, account_name receiver, const asset& eosin ) {
+      return push_actions( payer, N(buyram), mvo()( "payer",payer)("receiver",receiver)("quant",eosin) );
+   }
+   action_result buyrambytes( const account_name& payer, account_name receiver, uint32_t numbytes ) {
+      return push_actions( payer, N(buyrambytes), mvo()( "payer",payer)("receiver",receiver)("bytes",numbytes) );
+   }
+
+   action_result sellram( const account_name& account, uint64_t numbytes ) {
+      return push_actions( account, N(sellram), mvo()( "account", account)("bytes",numbytes) );
    }
 
    action_result push_actions(const account_name& signer, const action_name& name, const variant_object& data, bool auth = true) {
@@ -302,7 +491,7 @@ try {
 
    produce_blocks(1);
 
-   auto trace_auth = TESTER::push_action(
+   auto trace_auth = tester::push_action(
        config::system_account_name, updateauth::get_name(), config::system_account_name,
        mvo()("account", name(N(burn.bos)).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
            "auth", authority(1, {key_weight{get_public_key(N(burn.bos), "active"), 1}},
@@ -411,12 +600,6 @@ try {
 
    produce_blocks(1);
 
-   auto trace_auth = TESTER::push_action(
-       config::system_account_name, updateauth::get_name(), config::system_account_name,
-       mvo()("account", name(config::system_account_name).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
-           "auth", authority(1, {key_weight{get_public_key(config::system_account_name, "active"), 1}},
-                             {permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1}, permission_level_weight{{config::producers_account_name, config::active_name}, 1}})));
-   BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
 
    /// set parameter
    {
@@ -433,9 +616,19 @@ try {
 FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE(setparameter, bos_burn_tester)
+BOOST_FIXTURE_TEST_CASE(setparameter_test, bos_burn_tester)
 try
 {
+      auto trace_auth = tester::push_action(
+       config::system_account_name, updateauth::get_name(), config::system_account_name,
+       mvo()("account", name(config::system_account_name).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
+           "auth", authority(1, {key_weight{get_public_key(config::system_account_name, "active"), 1}},
+                             {permission_level_weight{{config::system_account_name, config::active_name}, 1}})));
+                              //   {permission_level_weight{{config::system_account_name, config::eosio_code_name}, 1}, permission_level_weight{{config::producers_account_name, config::active_name}, 1}})));
+   BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
+
+produce_blocks(250);
+
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
    auto producer_names = active_and_vote_producers();
@@ -451,6 +644,8 @@ try
 
       return base_tester::push_action(std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111));
    };
+
+
 
    // test begins
    vector<permission_level> prod_perms;
@@ -488,7 +683,7 @@ try
 
      BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
                                                     ("proposer",      "alice1111111")
-                                                    ("proposal_name", "setguaminres")
+                                                    ("proposal_name", "setparameter")
                                                     ("trx",           trx)
                                                     ("requested", prod_perms)
                        )
@@ -505,7 +700,19 @@ try
    }
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&](const transaction_trace_ptr &t) { if (t->scheduled) { trace = t; } });
+   control->applied_transaction.connect([&](const transaction_trace_ptr& t) {
+      if (t->scheduled) {
+         trace = t;
+         BOOST_TEST("s" == "ss");
+      }
+      BOOST_TEST("s" == "sss");
+      BOOST_TEST(1 == t->action_traces.size());
+      BOOST_TEST(transaction_receipt::executed == t->receipt->status);
+      BOOST_TEST("w" == t->action_traces[0].console);
+      BOOST_TEST("burn.bos" == name{t->action_traces[0].act.account});
+      BOOST_TEST("approve" == name{t->action_traces[0].act.name});
+   });
+
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
                                                     ("proposer",      "alice1111111")
                                                     ("proposal_name", "setparameter")
