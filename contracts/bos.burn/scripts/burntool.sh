@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
 
-contract_repo_dir=bos.contracts
-
-# CONTRACTS_DIR=~/${contract_repo_dir}/build/contracts/
-CONTRACTS_DIR=~/mygit/vlbos/burn/${contract_repo_dir}/build/contracts/
-# CONTRACTS_DIR=~/abos/${contract_repo_dir}
+CONTRACTS_DIR=bos.contract-prebuild/
 WALLET_DIR=~/bosburn-wallet
 
-http_endpoint='http://127.0.0.1:8888'
-cleos1="cleos -u "$http_endpoint
+http_endpoint='http://127.0.0.1:80'
 
 contract_burn=burn.bos
 contract_burn_folder=bos.burn
@@ -20,6 +15,7 @@ burn_total_quantity="0.0001 BOS"
 flag=0
 count=0
 limits=100
+actininterval=0.01
 accs=''
 file=./unactive_airdrop_accounts.csv
 result_file=./unactive_airdrop_accounts_result.csv
@@ -49,32 +45,32 @@ init() {
 }
 
 get_burn_table() {
-    ${cleos1} get table ${contract_burn} ${contract_burn} $1 --limit 100
+    cleos -u $http_endpoint get table ${contract_burn} ${contract_burn} $1 --limit 100
 
 }
 
 get_burn_table_scope() {
-    ${cleos1} get table ${contract_burn} $1 $2 --limit 100
+    cleos -u $http_endpoint get table ${contract_burn} $1 $2 --limit 100
 }
 
 get_info() {
-    ${cleos1} get info
+    cleos -u $http_endpoint get info
 }
 get_scope() {
-    ${cleos1} get scope -t stat eosio.token
-    ${cleos1} get scope -t accounts ${contract_burn}
+    cleos -u $http_endpoint get scope -t stat eosio.token
+    cleos -u $http_endpoint get scope -t accounts ${contract_burn}
 }
 
 set_contracts() {
-    ${cleos1} set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} -x 1000 -p ${contract_burn}
+    cleos -u $http_endpoint set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} -x 1000 -p ${contract_burn}
     sleep .2
 
-    ${cleos1} set account permission ${contract_burn} active '{"threshold": 1,"keys": [{"key": "'${burn_c_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_burn}'","permission":"eosio.code"},"weight":1}]}' owner -p ${contract_burn}@owner
+    cleos -u $http_endpoint set account permission ${contract_burn} active '{"threshold": 1,"keys": [{"key": "'${burn_c_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_burn}'","permission":"eosio.code"},"weight":1}]}' owner -p ${contract_burn}@owner
 }
 
 setparameter() {
-    # ${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
-    ${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
+    # cleos -u $http_endpoint push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
+    cleos -u $http_endpoint push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
 }
 
 OLD_IFS='='
@@ -122,13 +118,14 @@ import_from_csv() {
         count=$(($count + 1))
         if (($(($count % $limits)) == 0)); then
             import_accs
-            echo "=========count========"$count
+            echo "=========count========"$count+"\n"
             End=$(date +%s)
             echo $End
             accs=''
         else
             accs=$accs','
         fi
+        sleep $actininterval
     done <$file
 
     if (($(($count % $limits)) > 0)); then
@@ -154,6 +151,7 @@ transferairs_from_csv() {
         End=$(date +%s)
         count=$(($count + 1))
         echo $count"=====transferairs==Time===="
+        sleep $actininterval
     done <$file
 
     get_end
@@ -182,6 +180,7 @@ checkresult_from_csv() {
         End=$(date +%s)
         count=$(($count + 1))
         echo $count"=====checkresult_from_csv==Time===="
+        sleep $actininterval
     done <$file
     get_end
 }
@@ -210,6 +209,7 @@ clear_from_csv() {
         else
             accs=$accs','
         fi
+        sleep $actininterval
     done <$file
 
     if (($(($count % $limits)) > 0)); then
