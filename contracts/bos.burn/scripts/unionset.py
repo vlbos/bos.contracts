@@ -54,7 +54,6 @@ def unionset():
         resCsv.append([item, caccset[item]])
         sumBurn += float(caccset[item].replace('BOS', '').strip())
 
-    print('len of unactive', len(resCsv))
     msig, sumBurnmsig = intersectmsigset()
     resCsv += msig
     sumBurn += sumBurnmsig
