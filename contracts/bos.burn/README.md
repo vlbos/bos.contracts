@@ -1,23 +1,65 @@
-# 数据
+# BOS 未激活空投账户燃烧方案
+
+
+## 流程
+1. 生成待燃烧账户列表
+2. 将待燃烧账户列表导入 `burn.bos` 合约
+3. 开放社区验证燃烧账户、合约代码
+4. 升级燃烧版本的 `eosio.system`、`eosio.token` 合约
+5. 执行燃烧
+6. 收尾
+
+
+# 生成待燃烧账户列表
+
 ## 获取快照空投账户名单
   
+将空投文件放到 `dataset` 目录
+
 ```
-     cd dataset
-     get clone  https://github.com/boscore/bos-airdrop-snapshots
-     mv ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.msig.json .
-     mv ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.normal.csv .
+mkdir dataset && cd dataset
+git clone  https://github.com/boscore/bos-airdrop-snapshots
+cp ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.msig.json .
+cp ./bos-airdrop-snapshots/accounts_info_bos_snapshot.airdrop.normal.csv .
 ```    
-输出文件:
-* accounts_info_bos_snapshot.airdrop.msig.json
-* accounts_info_bos_snapshot.airdrop.normal.csv
 
-## 导出bos主网未激活账户及msig账户
+使用 [bos.burn](https://github.com/boscore/bos/tree/bos.burn) 分支的 `nodeos` 导出 `auth_sequence=0||auth_sequence=2` 的账户；
+燃烧截止的时间点是 `2019-11-27 03:26:27 UTC-0`，对应块高度为 `54,172,308`，可以使用此时间之前的 `snapshot` 来启动 `bos.burn` 的节点，并指定 ` --netruncate-at-block=54172308`。
+
+比如，docker-compose.yml 可以为：
+```
+version: "3"
+
+services:
+  burnnode:
+    image: boscore/burnbos:v1.0.2
+    command: /opt/eosio/bin/nodeosd.sh --data-dir /opt/eosio/bin/data-dir --max-irreversible-block-age=5000000 --max-transaction-time=100000 --wasm-runtime wabt --netruncate-at-block=321899 --snapshot /opt/eosio/bin/data-dir/snapshots/snapshot-2019112702.bin
+    hostname: burnnode
+    ports:
+      - 280:80
+      - 643:443
+    environment:
+      - NODEOSPORT=80
+      - WALLETPORT=8888
+    volumes:
+      - /data/bos/fullnode:/opt/eosio/bin/data-dir
+```
+
+注：`bos.burn` 分支对应的 Docker Image 为：boscore/burnbos:v1.0.2
+
+可以通过 `get_info` API 来检查 `head` 是否停止到指定高度：
 
 ```
-curl 127.0.0.1:8888/v1/chain/get_unused_accounts 
-或
+curl 127.0.0.1:280/v1/chain/get_info
+```
+
+调用以下接口生成中间文件：
+
+```
+curl 127.0.0.1:280/v1/chain/get_unused_accounts 
+#OR
 curl -X POST --url http://127.0.0.1:8888/v1/chain/get_unused_accounts  -d '{
-  "file_path": "/Users/xxxx/Downloads/nonactivated_bos_accounts.txt"
+  "file_path": "/xxx/xxx/nonactivated_bos_accounts.txt"  
 }'
 ```
 
@@ -25,105 +67,161 @@ curl -X POST --url http://127.0.0.1:8888/v1/chain/get_unused_accounts  -d '{
 * nonactivated_bos_accounts.txt
 * nonactivated_bos_accounts.msig
 
-
-## 执行脚本获得主网未激活空投账户
-
-输入文件列表 dataset文件夹下
-* accounts_info_bos_snapshot.airdrop.normal.csv    空投账户         
-* accounts_info_bos_snapshot.airdrop.msig.json        空投多签账户
-* nonactivated_bos_accounts.txt       主网未激活账户
-* nonactivated_bos_accounts.msig                 主网未激活多签账户  
-
-[获取主网未激活空投账户python脚本文件](https://github.com/boscore/bos.contracts/tree/bos.burn/contracts/bos.burn/scripts/unionset.py)
-执行脚本
+将上面的输出文件放到 `dataset` 目录下，将 [unionset.py](https://github.com/boscore/bos.contracts/blob/bos.burn/contracts/bos.burn/scripts/unionset.py) 放至 `dataset` 同一目录下，然后执行：
 
 ```
-python ./scripts/unionset.py
+python3 unionset.py
 ```
+
 输出文件
 * unactive_airdrop_accounts.csv
 
-# 合约
-## 升级部署系统合约，eosio.token合约
-* 编译前指定指定燃烧token的执行账户和合约账户(合约账户当前是burn.bos,执行账户burnbos4unac可都是同一账户如合约账户)
-## 部署燃烧token合约
-### 设置执行账户（与合约账户为同一账户）是 eosio.code 权限给合约
-[执行燃烧token合约命令脚本文件](https://github.com/vlbos/bos.contracts/tree/bos.burn/contracts/bos.burn/scripts/burn_tests.sh)
 
-执行命令
-```
-./burn_tests.sh set
-```
+# 燃烧
 
-命令内容
+## 创建燃烧账户
 
-```
-${cleos} set contract ${contract_burn} ${CONTRACTS_DIR}/${contract_burn_folder} -x 1000 -p ${contract_burn}
-${!cleos} set account permission ${contract_burn} active '{"threshold": 1,"keys": [{"key": "'${burn_c_pubkey}'","weight": 1}],"accounts": [{"permission":{"actor":"'${contract_burn}'","permission":"eosio.code"},"weight":1}]}' owner -p ${contract_burn}@owner
-```
+燃烧合约将会部署在 `burn.bos` 上面，启动以后任何账户都可以触发燃烧。
 
-### 导入未激活空投账户
+具有燃烧功能的合约代码：[bos.contracts/bos.burn](https://github.com/boscore/bos.contracts/tree/bos.burn/contracts/bos.burn)  
+对应的编译版本：[bos.contract-prebuild/bos.burn](https://github.com/boscore/bos.contract-prebuild/tree/bos.burn)
 
-执行命令
-```
-./burn_testa.sh imp
-```
+## 部署合约
 
-### 设置指定执行账户如合约账户
-
-执行命令
-```
-./burn_tests.sh setp
-```
-
-命令内容
-```
-${cleos1} push action ${contract_burn} setparameter '[1,"'${contract_burn}'"]' -p ${contract_burn}
-```
-
-
-### 多签合约账户
+### 升级 burn.bos 合约
 
 ```
-cleos set contract burn.bos bos.burn/ -p burn.bos  -s -j -d > setcontract.json
-cleos multisig propose_trx setcontract bppermission.json  setcontract.json  -p bostesterter
-cleos multisig approve bostesterter updatasystem '{"actor":"${BP_NAME}","permission":"active"}' -p ${BP_NAME}
-cleos multisig exec bostesterter setcontract -p bostesterter@active
-```
-[详见多签文档](https://github.com/boscore/Documentation/blob/master/Oracle/BOS_Oracle_Deployment.md#22-create-msig)
-### 执行未激活空投账户到 hole.bos 账户转账空投部署 tokens
-执行命令
-
-```
-./burn_tests.sh air
+CONTRACTS_FOLDER='./bos.contract-prebuild' 
+cleos set contract burn.bos ${CONTRACTS_FOLDER}/bos.burn -p burn.bos
 ```
 
-### 检查执行结果，
-执行命令
+### burn.bos 导入未激活账户
+
+可以使用 [burntool.sh](https://github.com/boscore/bos.contracts/blob/bos.burn/contracts/bos.burn/scripts/burntool.sh) 来进行导入。
+
+需要调整 `burntool.sh` 里面的变量：`http_endpoint`，将 `burntool.sh` 和 待燃烧账户文件 `unactive_airdrop_accounts.csv` 位于同一目录下，然后执行：
+
 ```
-./burn_tests.sh chk
+bash burntool.sh imp
 ```
-未成功重新执行上一步
+
+_注意：在执行导入之前，请确保 `burn.bos` 资源充足：_
+* RAM，整个未激活账户在50万以内，需要购买 160M RAM；
+* CPU 40s；
+* NET 16MB；
+* 整个导入过程应该在 30 分钟以内完成
+
+### 进行社区公示3天
+
+将 `burn.bos` 权限更改为 `eosio`，并启用 `eosio.code` 权限，等待社区进行验证：
+
+```
+# resign active
+cleos set account permission burn.bos active '{"threshold": 1,"keys": [],"accounts": [{"permission":{"actor":"burn.bos","permission":"eosio.code"},"weight":1},{"permission":{"actor":"eosio","permission":"active"},"weight":1}]}' owner -p burn.bos@owner
+# resign owner
+cleos set account permission burn.bos owner '{"threshold": 1,"keys": [],"accounts": [{"permission":{"actor":"eosio","permission":"owner"},"weight":1}]}' -p burn.bos@owner
+```
+
+社区成员自己生成 `unactive_airdrop_accounts.csv` 可以通过以下命令来与 `burn.bos` 导入数据进行对比：
+
+```
+TODO: 需要添加对比工具
+```
+
+### 升级 eosio.system 
+
+经过社区共识没有异议以后，需要使用编译版本 [bos.contract-prebuild/bos.burn](https://github.com/boscore/bos.contract-prebuild/tree/bos.burn) 中的 `eosio.system` 和 `eosio.token` 合约进行升级。本次以 `eosio.system` 升级为例。
+
+准备 top 30 的 `bp.json` ：
+```
+[
+    {"actor":"bponeoneonee","permission":"active"},
+    ....
+]
+```
+
+发起多签升级 `eosio` 合约：
+
+```
+CONTRACTS_FOLDER='./bos.contract-prebuild' 
+
+```
+
+同时发起 `eosio.system` 和 `eosio.token` 的多签升级，等待 BP 多签通过。
+
+### 开启 `burn.bos` 燃烧
+
+```
+# set burning account: burn.bos
+# burnbosooooo is a common acount
+cleos multisig propose enablebrun bp.json '[{"actor": "burn.bos", "permission": "active"}]' burn.bos setparameter '{"version":1,"executer":"burn.bos"}' burnbosooooo 336 -p  burnbosooooo@active
+
+# review proposal
+cleos multisig review burnbosooooo enablebrun
+
+# approve proposal
+cleos multisig approve burnbosooooo enablebrun  '{"actor":"bponeoneonee","permission":"active"}' -p bponeoneonee@active 
+
+# exec proposal
+cleos multisig exec burnbosooooo enablebrun -p burnbosooooo@active
+```
+
+设置完燃烧账户以后，就可以进行燃烧：
+
+```
+bash burntool.sh air
+```
+
+_注意：在执行导入之前，请确保 `burn.bos` 资源充足：_
+* RAM，需要购买到 180M RAM；
+* CPU 10min；
+* NET 200MB；
+* 整个导入过程应该在3个小时以内完成
+
+### 检查燃烧结果
+
+```
+bash burntool.sh chk
+```
+
+燃烧失败的账户会存放到 `unactive_airdrop_accounts_result.csv`，可以针对这部分账户再次发起燃烧，直到全部成功：
+
 ```
 mv ./unactive_airdrop_accounts.csv ./unactive_airdrop_accounts.csv.old
 mv ./unactive_airdrop_accounts_result.csv ./unactive_airdrop_accounts.csv
-./burn_tests.sh air
+bash burntool.sh air
 ```
 
-### 执行燃烧token操作销毁hole.bos指定金额tokens
-执行命令
+### 销毁 hole.bos 余额
+
+获取 `hole.bos` 的余额，比如 40000.0000 BOS，修改 `burntool.sh` 中 `burn_total_quantity` 值：
+
 ```
-./burn_tests.sh burn
+burn_total_quantity="40000.0000 BOS"
+```
+然后执行：
+```
+bash burntool.sh burn
 ```
 
-命令内容
+# 收尾
+
+### 恢复系统合约 
+
+需要使用编译版本 [bos.contract-prebuild/master](https://github.com/boscore/bos.contract-prebuild/tree/master) 中的 `eosio.system` 和 `eosio.token` 合约进行升级，过程参考之前的步骤。
+
+### 释放 burn.bos 资源
+
 ```
-${cleos1} push action ${contract_burn} burn '["46839967.5494 BOS"]' -p ${contract_burn}
+bash burntool.sh clr
 ```
 
-### 结束后清除数据
+然后发起 BP 多签将 `burn.bos` 的 `active` 权限更新回来：
 
-执行命令
 ```
-./burn_tests.sh clr
+cleos multisig propose upactive bp.json '[{"actor": "burn.bos", "permission": "owner"}]' eosio updateauth '{"threshold":1,"keys":[{"key":"EOS8FsuQAe7vXzYnGWoDXtdMgTXc2Hv9ctqAMvtRPrYAvn17nCftR", "weight":"1"}], "accounts":[]}' burnbosooooo 366 -p burnbosooooo@active
+
+cleos multisig approve burnbosooooo upactive '{"actor":"bponeoneonee","permission":"active"}' -p bponeoneonee@owner
+
+cleos multisig exec burnbosooooo upactive -p burnbosooooo@active
 ```
