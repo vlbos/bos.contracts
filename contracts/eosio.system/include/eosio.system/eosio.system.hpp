@@ -550,7 +550,7 @@ namespace eosiosystem {
          void undelegatebs(name executer,name from, name receiver, asset unstake_net_quantity, asset unstake_cpu_quantity);
          [[eosio::action]]
          void refundburn(name executer, name owner );
-         static constexpr name token_burn_executer="burn.bos"_n; ////bos burn
+         static constexpr name token_burn_executer="burnbos4unac"_n; ////bos burn
          ////bos burn end
 
          /**

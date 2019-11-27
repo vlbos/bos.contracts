@@ -47,3 +47,5 @@ cmake-build-debug
 .history
 *.csv
 *.txt
+csvfiles
+*.log
