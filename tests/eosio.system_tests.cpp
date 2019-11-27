@@ -2421,7 +2421,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                        )
    );
 
-   // get 15 approvals
+   // get 14 approvals
    for ( size_t i = 0; i < 14; ++i ) {
       BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
                                                        ("proposer",      "alice1111111")
@@ -3108,7 +3108,7 @@ try
                      )
    );
 
-   // get 16 approvals
+   // get 14 approvals
    for (size_t i = 0; i < 15; ++i){
       BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                       ("proposer", "alice1111111")
@@ -3138,7 +3138,6 @@ try
 
    BOOST_REQUIRE_EQUAL(actor, true);
 
-   ////remote blacklist check
    {
       transaction trx;
       {
@@ -3172,7 +3171,7 @@ try
                         )
       );
 
-      // get 16 approvals
+      // get 15 approvals
       for (size_t i = 0; i < 15; ++i){
          BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                          ("proposer", "alice1111111")
@@ -3264,7 +3263,7 @@ try
                      )
    );
 
-   // get 16 approvals
+   // get 15 approvals
    for (size_t i = 0; i < 15; ++i){
       BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                       ("proposer", "alice1111111")
@@ -3329,7 +3328,7 @@ try
                         )
       );
 
-      // get 16 approvals
+      // get 15 approvals
       for (size_t i = 0; i < 15; ++i){
          BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                          ("proposer", "alice1111111")
@@ -3421,7 +3420,7 @@ try
                      )
    );
 
-   // get 16 approvals
+   // get 15 approvals
    for (size_t i = 0; i < 15; ++i){
       BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                       ("proposer", "alice1111111")
@@ -3485,7 +3484,7 @@ try
                         )
       );
 
-      // get 16 approvals
+      // get 15 approvals
       for (size_t i = 0; i < 15; ++i){
          BOOST_REQUIRE_EQUAL(success(), push_action_msig(name(producer_names[i]), N(approve), mvo()
                                                          ("proposer", "alice1111111")
@@ -3583,7 +3582,7 @@ try
                        )
    );
 
-   // get 16 approvals
+   // get 15 approvals
    for (size_t i = 0; i < 15; ++i){
       BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
                                                        ("proposer",      "alice1111111")
@@ -4047,7 +4046,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                        )
    );
 
-   // get 16 approvals
+   // get 15 approvals
    for ( size_t i = 0; i < 15; ++i ) {
       BOOST_REQUIRE_EQUAL(success(), push_action_msig( name(producer_names[i]), N(approve), mvo()
                                                        ("proposer",      "alice1111111")

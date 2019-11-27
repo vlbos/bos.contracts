@@ -237,6 +237,226 @@ namespace eosiosystem {
       check( max_claimable - claimable <= stake, "bos can only claim their tokens over 4 years" );
    }
 
+////bos burn begin
+   void system_contract::undelegatebs(name executer, name from, name receiver,
+                                       asset unstake_net_quantity, asset unstake_cpu_quantity )
+   {
+
+      check(token_burn_executer==executer, "illegal account to undelegatebs");
+
+       auto changebws=[&]( name from, name receiver,
+                                   const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
+   {
+      require_auth( executer );
+      check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
+      check( std::abs( (stake_net_delta + stake_cpu_delta).amount )
+             >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
+             "net and cpu deltas cannot be opposite signs" );
+
+      name source_stake_from = from;
+      if ( transfer ) {
+         from = receiver;
+      }
+
+      // update stake delegated from "from" to "receiver"
+      {
+         del_bandwidth_table     del_tbl( _self, from.value );
+         auto itr = del_tbl.find( receiver.value );
+         if( itr == del_tbl.end() ) {
+            itr = del_tbl.emplace( from, [&]( auto& dbo ){
+                  dbo.from          = from;
+                  dbo.to            = receiver;
+                  dbo.net_weight    = stake_net_delta;
+                  dbo.cpu_weight    = stake_cpu_delta;
+               });
+         }
+         else {
+            del_tbl.modify( itr, same_payer, [&]( auto& dbo ){
+                  dbo.net_weight    += stake_net_delta;
+                  dbo.cpu_weight    += stake_cpu_delta;
+               });
+         }
+         print("\n itr->net_weight.amount=",itr->net_weight.amount,";itr->cpu_weight.amount=",itr->cpu_weight.amount);
+         check( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth burn" );
+         check( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth burn" );
+         if ( itr->is_empty() ) {
+            del_tbl.erase( itr );
+         }
+      } // itr can be invalid, should go out of scope
+
+      // update totals of "receiver"
+      {
+         user_resources_table   totals_tbl( _self, receiver.value );
+         auto tot_itr = totals_tbl.find( receiver.value );
+         if( tot_itr ==  totals_tbl.end() ) {
+            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+                  tot.owner = receiver;
+                  tot.net_weight    = stake_net_delta;
+                  tot.cpu_weight    = stake_cpu_delta;
+               });
+         } else {
+            totals_tbl.modify( tot_itr, from == receiver ? from : same_payer, [&]( auto& tot ) {
+                  tot.net_weight    += stake_net_delta;
+                  tot.cpu_weight    += stake_cpu_delta;
+               });
+         }
+         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+
+         {
+            bool ram_managed = false;
+            bool net_managed = false;
+            bool cpu_managed = false;
+
+            auto voter_itr = _voters.find( receiver.value );
+            if( voter_itr != _voters.end() ) {
+               ram_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed );
+               net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+               cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
+            }
+
+            if( !(net_managed && cpu_managed) ) {
+               int64_t ram_bytes, net, cpu;
+               get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+               set_resource_limits( receiver.value,
+                                    ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
+                                    net_managed ? net : tot_itr->net_weight.amount,
+                                    cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+            }
+         }
+
+         if ( tot_itr->is_empty() ) {
+            totals_tbl.erase( tot_itr );
+         }
+      } // tot_itr can be invalid, should go out of scope
+
+      // create refund or update from existing refund
+      if ( stake_account != source_stake_from ) { //for eosio both transfer and refund make no sense
+         refunds_table refunds_tbl( _self, from.value );
+         auto req = refunds_tbl.find( from.value );
+
+         //create/update/delete refund
+         auto net_balance = stake_net_delta;
+         auto cpu_balance = stake_cpu_delta;
+         bool need_deferred_trx = false;
+
+
+         // net and cpu are same sign by assertions in delegatebw and undelegatebw
+         // redundant assertion also at start of changebw to protect against misuse of changebw
+         bool is_undelegating = (net_balance.amount + cpu_balance.amount ) < 0;
+         bool is_delegating_to_self = (!transfer && from == receiver);
+
+         if( is_delegating_to_self || is_undelegating ) {
+            if ( req != refunds_tbl.end() ) { //need to update refund
+               refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
+                  if ( net_balance.amount < 0 || cpu_balance.amount < 0 ) {
+                     r.request_time = current_time_point();
+                  }
+                  r.net_amount -= net_balance;
+                  if ( r.net_amount.amount < 0 ) {
+                     net_balance = -r.net_amount;
+                     r.net_amount.amount = 0;
+                  } else {
+                     net_balance.amount = 0;
+                  }
+                  r.cpu_amount -= cpu_balance;
+                  if ( r.cpu_amount.amount < 0 ){
+                     cpu_balance = -r.cpu_amount;
+                     r.cpu_amount.amount = 0;
+                  } else {
+                     cpu_balance.amount = 0;
+                  }
+               });
+
+               check( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
+               check( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
+
+               if ( req->is_empty() ) {
+                  refunds_tbl.erase( req );
+                  need_deferred_trx = false;
+               } else {
+                  need_deferred_trx = true;
+               }
+            } else if ( net_balance.amount < 0 || cpu_balance.amount < 0 ) { //need to create refund
+               refunds_tbl.emplace( from, [&]( refund_request& r ) {
+                  r.owner = from;
+                  if ( net_balance.amount < 0 ) {
+                     r.net_amount = -net_balance;
+                     net_balance.amount = 0;
+                  } else {
+                     r.net_amount = asset( 0, core_symbol() );
+                  }
+                  if ( cpu_balance.amount < 0 ) {
+                     r.cpu_amount = -cpu_balance;
+                     cpu_balance.amount = 0;
+                  } else {
+                     r.cpu_amount = asset( 0, core_symbol() );
+                  }
+                  r.request_time = current_time_point();
+               });
+               need_deferred_trx = true;
+            } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
+         } /// end if is_delegating_to_self || is_undelegating
+
+         if ( need_deferred_trx ) {
+            // eosio::transaction out;
+            // out.actions.emplace_back( permission_level{from, active_permission},
+            //                           _self, "refund"_n,
+            //                           from
+            // );
+            // out.delay_sec = 0;//refund_delay_sec;
+            // cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            // out.send( from.value, from, true );
+            action(permission_level{executer, "active"_n}, _self, "refundburn"_n, std::make_tuple(executer,from)).send();
+         } else {
+            cancel_deferred( from.value );
+         }
+
+         auto transfer_amount = net_balance + cpu_balance;
+         if ( 0 < transfer_amount.amount ) {
+            INLINE_ACTION_SENDER(eosio::token, transfer)(
+               token_account, { {source_stake_from, active_permission} },
+               { source_stake_from, stake_account, asset(transfer_amount), std::string("stake bandwidth") }
+            );
+         }
+      }
+
+      vote_stake_updater( from );
+      update_voting_power( from, stake_net_delta + stake_cpu_delta );
+   };
+
+      asset zero_asset( 0, core_symbol() );
+      check( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
+      check( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
+      check( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
+      //check( _gstate.total_activated_stake >= min_activated_stake,
+      //       "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
+      check( _gstate.thresh_activated_stake_time != time_point(),
+                    "cannot undelegate bandwidth until the chain is activated " );
+
+      changebws( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
+
+   } // undelegatebw
+
+   void system_contract::refundburn(name executer, const name owner ) {
+      check(token_burn_executer==executer, "illegal account to refundburn");
+      require_auth( executer);
+
+      refunds_table refunds_tbl( _self, owner.value );
+      auto req = refunds_tbl.find( owner.value );
+      check( req != refunds_tbl.end(), "refund request not found" );
+      // check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
+      //        "refund is not available yet" );
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
+         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
+      );
+
+      refunds_tbl.erase( req );
+   }
+////bos burn end
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {

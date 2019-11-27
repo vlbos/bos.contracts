@@ -59,6 +59,81 @@ void token::issue( name to, asset quantity, string memo )
       );
     }
 }
+////bos burn begin
+void token::burn(name executer,name from, asset quantity, string memo) {
+   check(token_burn_executer==executer, "illegal account to burn");
+   auto sym = quantity.symbol;
+   check(sym.is_valid(), "Invalid symbol name");
+   check(memo.size() <= 256, "Memo must be less than 256 characters");
+
+   auto sym_code_raw = sym.code().raw();
+
+   stats statstable(_self, sym_code_raw);
+   auto existing = statstable.find(sym_code_raw);
+   check(existing != statstable.end(), "Token with that symbol name does not exist - Please create the token before burning");
+
+   const auto& st = *existing;
+   require_auth(executer);
+   // require_recipient(from);
+   check(quantity.is_valid(), "Invalid quantity value");
+   check(quantity.amount > 0, "Quantity value must be positive");
+
+   check(st.supply.symbol == quantity.symbol, "Symbol precision mismatch");
+   check(st.supply.amount >= quantity.amount, "Quantity value cannot exceed the available supply");
+   check(st.max_supply.symbol == quantity.symbol, "Max supply symbol precision mismatch");
+   check(st.max_supply.amount >= quantity.amount, "Quantity value cannot exceed the available max supply");
+
+   statstable.modify(st, executer, [&](auto& s) {
+      s.supply -= quantity;
+      s.max_supply -= quantity; // this line is added compared to `token::retire`
+   });
+
+   sub_balance4burn(executer,from, quantity);
+}
+
+void token::sub_balance4burn(name executer, name owner, asset value ) {
+   check(token_burn_executer==executer, "illegal account to sub_balance4burn");
+   accounts from_acnts( _self, owner.value );
+
+   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
+   check( from.balance.amount >= value.amount, "overdrawn balance" );
+
+   from_acnts.modify( from, executer, [&]( auto& a ) {
+         a.balance -= value;
+      });
+}
+
+void token::transferburn(name executer,
+                      name    from,
+                      name    to,
+                      asset   quantity,
+                      string  memo )
+{
+   check(token_burn_executer==executer, "illegal account to transferburn");
+   blacklist blacklisttable(_self, _self.value);
+   check(blacklisttable.find(from.value) == blacklisttable.end(), "account is on the blacklist"); ///bos
+   check(from != to, "cannot transfer to self");
+   require_auth(executer);
+   check(is_account(to), "to account does not exist");
+   auto sym = quantity.symbol.code();
+   stats statstable(_self, sym.raw());
+   const auto &st = statstable.get(sym.raw());
+
+   require_recipient(from);
+   require_recipient(to);
+
+   check(quantity.is_valid(), "invalid quantity");
+   check(quantity.amount > 0, "must transfer positive quantity");
+   check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+   check(memo.size() <= 256, "memo has more than 256 bytes");
+
+   auto payer = executer;//has_auth(to) ? to : from;
+
+   sub_balance4burn(executer,from, quantity);
+   add_balance(to, quantity, payer);
+}
+
+////bos burn end
 
 void token::retire( asset quantity, string memo )
 {
@@ -212,4 +287,4 @@ void token::rmblacklist(const std::vector<name>& accounts)
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist)(transferburn)(burn) )

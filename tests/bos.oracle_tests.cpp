@@ -788,8 +788,6 @@ class bos_oracle_tester : public tester {
    }
 
    abi_serializer abi_ser;
-   abi_serializer token_abi_ser;
-   abi_serializer dapp_abi_ser;
 };
 
 BOOST_AUTO_TEST_SUITE(bos_oracle_tests)
@@ -2684,7 +2682,7 @@ try {
 
    /// appeal
    // _appeal(arbitration_id, appeal_name, round, amount, role_type);
-   BOOST_REQUIRE_EXCEPTION(_appeal(arbitration_id, appeal_name, round, amount, role_type), eosio_assert_message_exception, eosio_assert_message_is("service status is not service_in when notify"));
+   BOOST_REQUIRE_EXCEPTION(_appeal(arbitration_id, appeal_name, round, amount, role_type), eosio_assert_message_exception, eosio_assert_message_is("service status is not 'in(1)' when notify"));
    // BOOST_REQUIRE_EQUAL(wasm_assert_msg("no provider"), _appeal(arbitration_id, appeal_name, round, amount, role_type));
    // BOOST_TEST(core_sym::from_string("0.0000") == get_data_service_provision(service_id, provider_name)["freeze_amount"].as<asset>());
    // BOOST_TEST(core_sym::from_string("0.0000") == get_data_provider(provider_name)["total_freeze_amount"].as<asset>());

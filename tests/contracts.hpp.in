@@ -29,6 +29,9 @@ struct contracts {
    static std::vector<uint8_t> consumer_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/consumer.contract/consumer.contract.wasm"); }
    static std::string consumer_wast() { return read_wast("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/consumer.contract/consumer.contract.wast"); }
    static std::vector<char> consumer_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/bos.oracle/consumer.contract/consumer.contract.abi"); }
+   static std::vector<uint8_t> burn_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/bos.burn/bos.burn.wasm"); }
+   static std::string burn_wast() { return read_wast("${CMAKE_BINARY_DIR}/../contracts/bos.burn/bos.burn.wast"); }
+   static std::vector<char> burn_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/bos.burn/bos.burn.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
