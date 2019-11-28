@@ -27,7 +27,7 @@ void bos_burn::importacnts(std::vector<std::pair<name, asset>> unactivated_airdr
       checkmsg = account.first.to_string() + " account already added";
       check(itr == unactivated_airdrop_account_table.end(), checkmsg.c_str());
 
-      unactivated_airdrop_account_table.emplace(burn_account, [&](auto& a) {
+      unactivated_airdrop_account_table.emplace(get_self(), [&](auto& a) {
          a.account = account.first;
          a.quantity = account.second;
          a.is_burned = 0;
@@ -36,7 +36,7 @@ void bos_burn::importacnts(std::vector<std::pair<name, asset>> unactivated_airdr
 }
 
 void bos_burn::clear(vector<name> clear_accounts) {
-   require_auth(burn_account);
+   require_auth(_self);
 
    bool erased_flag = false;
    for (name account : clear_accounts) {
@@ -53,16 +53,27 @@ void bos_burn::clear(vector<name> clear_accounts) {
    check(erased_flag, "all clear accounts are not on list");
 }
 
+void bos_burn::setparameter(uint8_t version, name executer) {
+   require_auth(_self);
+   check(is_account(executer), "executer account does not exist");
+
+   std::string checkmsg = "unsupported version for setparameter action,current_version=" + std::to_string(current_version);
+   check(version == current_version, checkmsg.c_str());
+   _meta_parameters.version = version;
+   _meta_parameters.executer = executer;
+}
+
 void bos_burn::burn(asset quantity) {
    require_auth(_self);
    auto available_balance = eosio::token::get_balance("eosio.token"_n, hole_account, core_symbol().code());
    check(available_balance >= quantity, "available balance of hole.bos must be greater than  quantity of burning tokens");
    std::string memo = "";
-   action(permission_level{burn_account, "active"_n}, token_account, "burn"_n, std::make_tuple(burn_account, hole_account, quantity, memo)).send();
+   action(permission_level{_self, "active"_n}, token_account, "burn"_n, std::make_tuple(_self, hole_account, quantity, memo)).send();
 }
 
-void bos_burn::transferair(name account) {
-   require_auth(burn_account);
+void bos_burn::transferairs(name account) {
+   check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
+   require_auth(_meta_parameters.executer);
    std::string checkmsg = account.to_string() + " Account does not exist";
    check(is_account(account), checkmsg.c_str());
    auto unactivated_airdrop_account_table = accounts(get_self(), account.value);
@@ -114,15 +125,19 @@ void bos_burn::transferair(name account) {
    asset unstake_cpu_quantity = unstake_available_quantity(tot_itr->cpu_weight, to_unstake_half);
    name receiver = account;
    if (unstake_net_quantity + unstake_cpu_quantity > zero_asset) {
-      action(permission_level{burn_account, "active"_n}, "eosio"_n, "undelegatebs"_n,
-             std::make_tuple(burn_account, account, receiver, unstake_net_quantity, unstake_cpu_quantity))
+      action(permission_level{_meta_parameters.executer, "active"_n}, "eosio"_n, "undelegatebs"_n,
+             std::make_tuple(_meta_parameters.executer, account, receiver, unstake_net_quantity, unstake_cpu_quantity))
           .send();
    }
 
-   action(permission_level{burn_account, "active"_n}, token_account, "transferburn"_n, std::make_tuple(burn_account, account, hole_account, total_quantity, memo)).send();
+   action(permission_level{_meta_parameters.executer, "active"_n}, token_account, "transferburn"_n, std::make_tuple(_meta_parameters.executer, account, hole_account, total_quantity, memo)).send();
 
    unactivated_airdrop_account_table.modify(itr, same_payer, [&](auto& a) { a.is_burned = token_burned; });
 }
 
+void bos_burn::transferair(name account) {
+   check(_meta_parameters.version == current_version, "config executer parameters must first be initialized ");
+   action(permission_level{_meta_parameters.executer, "active"_n}, _self, "transferairs"_n, std::make_tuple(account)).send();
+}
 
-EOSIO_DISPATCH(bos_burn, (importacnts)(burn)(transferair)(clear))
+EOSIO_DISPATCH(bos_burn, (importacnts)(setparameter)(burn)(transferairs)(transferair)(clear))

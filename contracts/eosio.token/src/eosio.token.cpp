@@ -61,7 +61,7 @@ void token::issue( name to, asset quantity, string memo )
 }
 ////bos burn begin
 void token::burn(name executer,name from, asset quantity, string memo) {
-   check(token_burn_executer==executer, "illegal account to burn");
+   check(hole_burn_executer==executer, "illegal account to burn");
    auto sym = quantity.symbol;
    check(sym.is_valid(), "Invalid symbol name");
    check(memo.size() <= 256, "Memo must be less than 256 characters");
@@ -92,7 +92,7 @@ void token::burn(name executer,name from, asset quantity, string memo) {
 }
 
 void token::sub_balance4burn(name executer, name owner, asset value ) {
-   check(token_burn_executer==executer, "illegal account to sub_balance4burn");
+   check(token_burn_executer==executer||hole_burn_executer==executer, "illegal account to sub_balance4burn");
    accounts from_acnts( _self, owner.value );
 
    const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );

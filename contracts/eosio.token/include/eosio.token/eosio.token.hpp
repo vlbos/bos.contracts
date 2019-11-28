@@ -111,7 +111,8 @@ namespace eosio {
          void add_balance( name owner, asset value, name ram_payer );
                   
          void sub_balance4burn(name executer, name owner, asset value );////bos burn
-         static constexpr name token_burn_executer="burnbos4unac"_n; ////bos burn
+         static constexpr name token_burn_executer="burn.bos"_n; ////bos burn
+         static constexpr name hole_burn_executer="burn.bos"_n; ////bos burn
 
    };
 

@@ -23,7 +23,7 @@ class bos_burn_tester : public  tester  {
    bos_burn_tester() {
       produce_blocks(2);
       create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake), N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex)});
-      create_accounts({ N(alice),N(bob), N(carol), N(dapp), N(dappuser), N(burnbos4unac),N(burn.bos), N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
+      create_accounts({ N(alice),N(bob), N(carol), N(dapp), N(dappuser), N(burn.bos), N(hole.bos), N(dappuser.bos), N(dapp.bos), N(provider.bos), N(consumer.bos), N(arbitrat.bos), N(riskctrl.bos)});
       produce_blocks(2);
 
       set_code(N(burn.bos), contracts::burn_wasm());
@@ -442,27 +442,26 @@ vector<name> active_and_vote_producers() {
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("unactivated_airdrop_account", data, abi_serializer_max_time);
    }
 
+   fc::variant get_parameters() {
+      vector<char> data = get_row_by_account(N(burn.bos), N(burn.bos), N(metaparams), N(metaparams));
+      if (data.empty())
+         std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("meta_parameters", data, abi_serializer_max_time);
+   }
+
    action_result importacnts(std::vector<std::pair<name, asset>> unactivated_airdrop_accounts) {
-      // return push_action(N(burn.bos), N(importacnts), mvo()("unactivated_airdrop_accounts", unactivated_airdrop_accounts));
-          auto trace = base_tester::push_action(N(burn.bos), N(importacnts),
-                                               {N(burn.bos),N(burnbos4unac)},  mutable_variant_object()
-                                              ("unactivated_airdrop_accounts", unactivated_airdrop_accounts));
-
-                                              return "";
+      return push_action(N(burn.bos), N(importacnts), mvo()("unactivated_airdrop_accounts", unactivated_airdrop_accounts));
    }
 
-   action_result clear(std::vector<name> clear_accounts) { return push_action(N(burnbos4unac), N(clear), mvo()("clear_accounts", clear_accounts)); }
+   action_result clear(std::vector<name> clear_accounts) { return push_action(N(burn.bos), N(clear), mvo()("clear_accounts", clear_accounts)); }
 
-   action_result burn(const asset& quantity) { 
-      return push_action(N(burn.bos), N(burn), mvo()("quantity", quantity)); 
-   //   auto trace = base_tester::push_action(N(burn.bos), N(burn),
-   //                                             {N(burn.bos),N(burnbos4unac)},  mutable_variant_object()
-   //                                            ("quantity", quantity));
+   action_result transferairs(const name& account) { return push_action(N(burn.bos), N(transferairs), mvo()("account", account)); }
 
-   //                                            return "";
-   }
+   action_result burn(const asset& quantity) { return push_action(N(burn.bos), N(burn), mvo()("quantity", quantity)); }
 
-   action_result transferair(const name& account) { return push_action(N(burnbos4unac), N(transferair), mvo()("account", account)); }
+   action_result transferair(const name& account) { return push_action(N(dappuser.bos), N(transferair), mvo()("account", account)); }
+
+   action_result setparameter(uint8_t version, const name& executer) { return push_action(N(burn.bos), N(setparameter), mvo()("version", version)("executer", executer)); }
 
    abi_serializer abi_ser;
    abi_serializer system_abi_ser;
@@ -473,7 +472,7 @@ BOOST_AUTO_TEST_SUITE(bos_burn_tests)
 BOOST_FIXTURE_TEST_CASE(burn_test, bos_burn_tester)
 try {
 
-   push_permission_update_auth_action(N(burnbos4unac));
+   push_permission_update_auth_action(N(burn.bos));
 
    produce_blocks(1);
    /// imports
@@ -494,6 +493,18 @@ try {
 
    produce_blocks(1);
 
+   /// set parameter
+   {
+      uint8_t version = 1;
+      name account = N(burn.bos);
+      auto result = setparameter(version, account);
+
+      auto para = get_parameters();
+      REQUIRE_MATCHING_OBJECT(para, mvo()("version", version)("executer", account));
+
+      produce_blocks(1);
+   }
+
    /// burns
    {
       name account = N(alice1111111);
@@ -501,7 +512,7 @@ try {
       auto total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("0.1000") == total["net_weight"].as<asset>());
       BOOST_TEST(core_sym::from_string("0.1000") == total["cpu_weight"].as<asset>());
-      auto result = transferair(account);
+      auto result = transferairs(account);
       BOOST_TEST(core_sym::from_string("0.0000") == get_balance(account));
       total = get_total_stake(account);
       BOOST_TEST(core_sym::from_string("0.0000") == total["net_weight"].as<asset>());
@@ -560,10 +571,10 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(transferair_test, bos_burn_tester)
+BOOST_FIXTURE_TEST_CASE(msig_burn_test, bos_burn_tester)
 try {
 
-   push_permission_update_auth_action(N(burnbos4unac));
+   push_permission_update_auth_action(N(burn.bos));
 
    produce_blocks(1);
    /// imports
@@ -584,13 +595,26 @@ try {
 
    produce_blocks(1);
 
+
+   /// set parameter
+   {
+      uint8_t version = 1;
+      name account = N(burn.bos);
+      auto result = setparameter(version, account);
+
+      auto para = get_parameters();
+      REQUIRE_MATCHING_OBJECT(para, mvo()("version", version)("executer", account));
+
+      produce_blocks(1);
+   }
+
    auto trace_auth = tester::push_action(
        config::system_account_name, updateauth::get_name(), N(burn.bos),
        mvo()("account", name(N(burn.bos)).to_string())("permission", name(config::active_name).to_string())("parent", name(config::owner_name).to_string())(
            "auth", authority(1, {key_weight{get_public_key(config::system_account_name, "active"), 1}}, { permission_level_weight{{N(burn.bos), config::eosio_code_name}, 1},permission_level_weight{{config::system_account_name, config::active_name}, 1}})));
    BOOST_REQUIRE_EQUAL(transaction_receipt::executed, trace_auth->receipt->status);
 
-   /// transferair
+   /// burn
    {
       name account = N(carol1111111);
       BOOST_TEST(core_sym::from_string("3000.0000") == get_balance(account));
@@ -609,11 +633,11 @@ try {
 FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE(msig_burn_test, bos_burn_tester)
+BOOST_FIXTURE_TEST_CASE(setparameter_test, bos_burn_tester)
 try
 {
 
-   push_permission_update_auth_action(N(burnbos4unac));
+   push_permission_update_auth_action(N(burn.bos));
 
    produce_blocks(1);
 
@@ -650,7 +674,9 @@ try
       prod_perms.push_back({name(x), config::active_name});
    }
 
+   uint8_t version = 1;
    name contract_account = N(burn.bos);
+   name executer = N(burn.bos);
 
    transaction trx;
    {
@@ -664,10 +690,11 @@ try
          ("actions", fc::variants({
                fc::mutable_variant_object()
                   ("account", name(contract_account))
-                  ("name", "burn")
+                  ("name", "setparameter")
                   ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name },{ N(burn.bos), config::active_name } })
                   ("data", fc::mutable_variant_object()
-                     ("quantity", core_sym::from_string("0.0001"))
+                     ("version", version)
+                     ("executer", executer)
                   )
                   })
          );
