@@ -46,6 +46,5 @@ cmake-build-debug
 .clang-format
 .history
 *.csv
-*.txt
 csvfiles
 *.log
