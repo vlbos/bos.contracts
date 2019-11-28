@@ -123,10 +123,14 @@ cleos set account permission burn.bos owner '{"threshold": 1,"keys": [],"account
 ```
 
 社区成员自己生成 `unactive_airdrop_accounts.csv` 可以通过以下命令来与 `burn.bos` 导入数据进行对比：
+ `unactive_airdrop_accounts.csv` 放到脚本同一目录下
 
 ```
-TODO: 需要添加对比工具
+python3 vmp.py
 ```
+
+输出文件(若合约不存在账户或金额不一致会输出no.csv文件)
+* no.csv
 
 ### 升级 eosio.system 
 
