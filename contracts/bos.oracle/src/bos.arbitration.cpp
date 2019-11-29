@@ -109,7 +109,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
    data_services svctable(get_self(), get_self().value);
    auto svc_itr = svctable.find(service_id);
    check(svc_itr != svctable.end(), "service does not exist");
-   check(svc_itr->status == service_status::service_in, "service status should be service_in");
+   check(svc_itr->status == service_status::service_in, "service status should be 'in(1)'");
 
    uint64_t arbitration_id = service_id;
    if (arbitration_role_type::consumer == role_type) {
@@ -278,7 +278,7 @@ void bos_oracle::_appeal(name appellant, uint64_t service_id, asset amount, std:
       auto svc_itr = svctable.find(service_id);
       check(svc_itr != svctable.end(), "service does not exist");
       print("\n no status=", svc_itr->status);
-      check(svc_itr->status == service_status::service_in, "service status is not service_in when notify");
+      check(svc_itr->status == service_status::service_in, "service status is not 'in(1)' when notify");
       std::vector<name> reg_providers = get_providers_by_service_id(service_id);
       check(reg_providers.size() >= svc_itr->provider_limit, "current available providers is insufficient");
       // Service data providers
