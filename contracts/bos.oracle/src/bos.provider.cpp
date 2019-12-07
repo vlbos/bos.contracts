@@ -742,6 +742,19 @@ void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
       print("\n removed record_id=", itr->record_id);
       itr = oracledatatable.erase(itr);
    }
+
+
+   data_service_provision_logs logtable(_self, service_id);
+
+   for (auto itr = logtable.begin(); itr != logtable.end();) {
+      print("\n traverse log_id=", itr->log_id, ",c=", bos_oracle::current_time_point_sec().sec_since_epoch(), ",t=", itr->update_time.sec_since_epoch());
+      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->update_time.sec_since_epoch() < time_length || bos_oracle::current_time_point_sec().sec_since_epoch() - begin_time > run_time) {
+         break;
+      }
+      print("\n removed log_id=", itr->log_id);
+      itr = logtable.erase(itr);
+   }
+
 }
 
 uint64_t bos_oracle::get_provider_count(uint64_t service_id) {
