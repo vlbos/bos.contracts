@@ -252,6 +252,49 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
+   // `rex_return_pool` structure underlying the rex return pool table. A rex return pool table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
+   // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
+   // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
+      uint8_t        version = 0;
+      time_point_sec last_dist_time;
+      time_point_sec pending_bucket_time      = time_point_sec::maximum();
+      time_point_sec oldest_bucket_time       = time_point_sec::min();
+      int64_t        pending_bucket_proceeds  = 0;
+      int64_t        current_rate_of_increase = 0;
+      int64_t        proceeds                 = 0;
+
+      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
+      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
+      static constexpr uint8_t  hours_per_bucket = 12;
+      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "rexretpool"_n, rex_return_pool > rex_return_pool_table;
+
+   // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
+   // - `version` defaulted to zero,
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
+      uint8_t                           version = 0;
+      std::map<time_point_sec, int64_t> return_buckets;
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "retbuckets"_n, rex_return_buckets > rex_return_buckets_table;
+
+   // `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `owner` the owner of the rex fund,
+   // - `balance` the balance of the fund.
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
       uint8_t version = 0;
       name    owner;
@@ -332,12 +375,16 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
+         global_state4_singleton  _global4;
          guaranteed_min_res_singleton  _guarantee;     // *bos*
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
+         eosio_global_state4      _gstate4;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
+         rex_return_pool_table    _rexretpool;
+         rex_return_buckets_table _rexretbuckets;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
@@ -714,6 +761,7 @@ namespace eosiosystem {
          static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
          asset add_to_rex_pool( const asset& payment );
+         void add_to_rex_return_pool( const asset& fee );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
