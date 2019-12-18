@@ -12,6 +12,9 @@
 
 namespace eosiosystem {
 
+   double get_continuous_rate(int64_t annual_rate) {
+      return std::log1p(double(annual_rate)/double(100*inflation_precision));
+   }
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
     _voters(_self, _self.value),
