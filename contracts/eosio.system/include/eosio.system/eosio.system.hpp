@@ -58,6 +58,8 @@ namespace eosiosystem {
          return ( flags & ~static_cast<F>(field) );
    }
 
+   static constexpr uint32_t seconds_per_hour      = 3600;
+   static constexpr int64_t  useconds_per_hour     = int64_t(seconds_per_hour) * 1000'000ll;
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
      name            high_bidder;
@@ -131,6 +133,15 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
+   // Defines new global state parameters to store inflation rate and distribution
+   struct [[eosio::table("global4"), eosio::contract("eosio.system")]] eosio_global_state4 {
+      eosio_global_state4() { }
+      double   continuous_rate;
+      int64_t  inflation_pay_factor;
+      int64_t  votepay_factor;
+
+      EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
+   };
    struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
 //      std::string  active_proposal = "none";
       uint32_t     target_block_num;
@@ -230,6 +241,7 @@ namespace eosiosystem {
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
+   typedef eosio::singleton< "global4"_n, eosio_global_state4 > global_state4_singleton;
    typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;      // *bos*
 
    typedef eosio::singleton< "upgrade"_n, upgrade_state > upgrade_singleton;
@@ -667,6 +679,27 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
 
+         /**
+          * Change the annual inflation rate of the core token supply and specify how
+          *          the new issued tokens will be distributed based on the following structure.
+
+          *
+          * @param annual_rate - Annual inflation rate of the core token supply.
+          *     (eg. For 5% Annual inflation => annual_rate=500
+          *          For 1.5% Annual inflation => annual_rate=150
+          *
+          * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
+          *     The remaining inflation will be sent to the `eosio.saving` account.
+          *     (eg. For 20% of inflation going to block producer rewards   => inflation_pay_factor = 50000
+          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor = 10000).
+          *
+          * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
+          *     The remaining rewards will be distributed proportional to votes received.
+          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor = 40000
+          *          For 75% of block producer rewards going towards block pay => votepay_factor = 13333).
+          */
+         [[eosio::action]]
+         void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
          struct upgrade_proposal {
 //             std::string      proposal_name;
              uint32_t    target_block_num;
@@ -680,6 +713,7 @@ namespace eosiosystem {
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
          using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
+         using activate_action = eosio::action_wrapper<"activate"_n, &system_contract::activate>;
          using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
          using deposit_action = eosio::action_wrapper<"deposit"_n, &system_contract::deposit>;
          using withdraw_action = eosio::action_wrapper<"withdraw"_n, &system_contract::withdraw>;
@@ -719,6 +753,7 @@ namespace eosiosystem {
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+         using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
 
       private:
 
@@ -732,6 +767,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
+		 static eosio_global_state4 get_default_inflation_parameters();
          static time_point current_time_point();
          static time_point_sec current_time_point_sec();
          static block_timestamp current_block_time();
@@ -740,6 +776,7 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
+         void update_rex_pool();
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
                                         const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
