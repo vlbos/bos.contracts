@@ -375,6 +375,20 @@ namespace eosiosystem {
       _gstate2.revision = revision;
    }
 
+   void system_contract::setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+      require_auth(get_self());
+      check(annual_rate >= 0, "annual_rate can't be negative");
+      if ( inflation_pay_factor < pay_factor_precision ) {
+         check( false, "inflation_pay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
+      if ( votepay_factor < pay_factor_precision ) {
+         check( false, "votepay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
+      _gstate4.continuous_rate      = get_continuous_rate(annual_rate);
+      _gstate4.inflation_pay_factor = inflation_pay_factor;
+      _gstate4.votepay_factor       = votepay_factor;
+      _global4.set( _gstate4, get_self() );
+   }
    void system_contract::bidname( name bidder, name newname, asset bid ) {
       require_auth( bidder );
       check( newname.suffix() == newname, "you can only bid on top-level suffix" );
