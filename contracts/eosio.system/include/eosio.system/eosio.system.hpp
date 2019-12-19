@@ -58,6 +58,28 @@ namespace eosiosystem {
          return ( flags & ~static_cast<F>(field) );
    }
 
+   static constexpr uint32_t seconds_per_hour      = 3600;
+   static constexpr int64_t  useconds_per_hour     = int64_t(seconds_per_hour) * 1000'000ll;
+
+
+
+
+   /**
+    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
+    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
+    *    delegate their vote to a proxy.
+    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
+    * - Users can buy and sell RAM at a market-determined price.
+    * - Users can bid on premium names.
+    * - A resource exchange system (REX) allows token holders to lend their tokens,
+    *    and users to rent CPU and Network resources in return for a market-determined fee.
+    */
+
+   // A name bid, which consists of:
+   // - a `newname` name that the bid is for
+   // - a `high_bidder` account name that is the one with the highest bid so far
+   // - the `high_bid` which is amount of highest bid
+   // - and `last_bid_time` which is the time of the highest bid
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
      name            high_bidder;
@@ -252,6 +274,49 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
+   // `rex_return_pool` structure underlying the rex return pool table. A rex return pool table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
+   // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
+   // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
+      uint8_t        version = 0;
+      time_point_sec last_dist_time;
+      time_point_sec pending_bucket_time      = time_point_sec::maximum();
+      time_point_sec oldest_bucket_time       = time_point_sec::min();
+      int64_t        pending_bucket_proceeds  = 0;
+      int64_t        current_rate_of_increase = 0;
+      int64_t        proceeds                 = 0;
+
+      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
+      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
+      static constexpr uint8_t  hours_per_bucket = 12;
+      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "rexretpool"_n, rex_return_pool > rex_return_pool_table;
+
+   // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
+   // - `version` defaulted to zero,
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
+      uint8_t                           version = 0;
+      std::map<time_point_sec, int64_t> return_buckets;
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "retbuckets"_n, rex_return_buckets > rex_return_buckets_table;
+
+   // `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `owner` the owner of the rex fund,
+   // - `balance` the balance of the fund.
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
       uint8_t version = 0;
       name    owner;
@@ -338,6 +403,8 @@ namespace eosiosystem {
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
+         rex_return_pool_table    _rexretpool;
+         rex_return_buckets_table _rexretbuckets;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
@@ -693,6 +760,7 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
+         void update_rex_pool();
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
                                         const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
@@ -714,6 +782,7 @@ namespace eosiosystem {
          static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
          asset add_to_rex_pool( const asset& payment );
+         void add_to_rex_return_pool( const asset& fee );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
