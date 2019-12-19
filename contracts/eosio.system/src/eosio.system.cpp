@@ -12,9 +12,6 @@
 
 namespace eosiosystem {
 
-   double get_continuous_rate(int64_t annual_rate) {
-      return std::log1p(double(annual_rate)/double(100*inflation_precision));
-   }
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
     _voters(_self, _self.value),
@@ -23,7 +20,6 @@ namespace eosiosystem {
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
-    _global4(get_self(), get_self().value),
     _guarantee(_self, _self.value),
     _rammarket(_self, _self.value),
     _rexpool(_self, _self.value),
@@ -378,20 +374,6 @@ namespace eosiosystem {
       _gstate2.revision = revision;
    }
 
-   void system_contract::setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
-      require_auth(get_self());
-      check(annual_rate >= 0, "annual_rate can't be negative");
-      if ( inflation_pay_factor < pay_factor_precision ) {
-         check( false, "inflation_pay_factor must not be less than " + std::to_string(pay_factor_precision) );
-      }
-      if ( votepay_factor < pay_factor_precision ) {
-         check( false, "votepay_factor must not be less than " + std::to_string(pay_factor_precision) );
-      }
-      _gstate4.continuous_rate      = get_continuous_rate(annual_rate);
-      _gstate4.inflation_pay_factor = inflation_pay_factor;
-      _gstate4.votepay_factor       = votepay_factor;
-      _global4.set( _gstate4, get_self() );
-   }
    void system_contract::bidname( name bidder, name newname, asset bid ) {
       require_auth( bidder );
       check( newname.suffix() == newname, "you can only bid on top-level suffix" );

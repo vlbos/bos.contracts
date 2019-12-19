@@ -64,12 +64,6 @@ namespace eosiosystem {
 
 
 
-   static constexpr int64_t  inflation_precision           = 100;     // 2 decimals
-   static constexpr int64_t  default_annual_rate           = 500;     // 5% annual rate
-   static constexpr int64_t  pay_factor_precision          = 10000;
-   static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
-   static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
-
    /**
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
     * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
@@ -159,15 +153,6 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
-   // Defines new global state parameters to store inflation rate and distribution
-   struct [[eosio::table("global4"), eosio::contract("eosio.system")]] eosio_global_state4 {
-      eosio_global_state4() { }
-      double   continuous_rate;
-      int64_t  inflation_pay_factor;
-      int64_t  votepay_factor;
-
-      EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
-   };
    struct [[eosio::table("upgrade"), eosio::contract("eosio.system")]] upgrade_state  {
 //      std::string  active_proposal = "none";
       uint32_t     target_block_num;
@@ -267,7 +252,6 @@ namespace eosiosystem {
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
-   typedef eosio::singleton< "global4"_n, eosio_global_state4 > global_state4_singleton;
    typedef eosio::singleton< "guaranminres"_n, eosio_guaranteed_min_res > guaranteed_min_res_singleton;      // *bos*
 
    typedef eosio::singleton< "upgrade"_n, upgrade_state > upgrade_singleton;
@@ -413,12 +397,10 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
-         global_state4_singleton  _global4;
          guaranteed_min_res_singleton  _guarantee;     // *bos*
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
-         eosio_global_state4      _gstate4;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
          rex_return_pool_table    _rexretpool;
@@ -705,27 +687,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
 
-         /**
-          * Change the annual inflation rate of the core token supply and specify how
-          *          the new issued tokens will be distributed based on the following structure.
-
-          *
-          * @param annual_rate - Annual inflation rate of the core token supply.
-          *     (eg. For 5% Annual inflation => annual_rate=500
-          *          For 1.5% Annual inflation => annual_rate=150
-          *
-          * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
-          *     The remaining inflation will be sent to the `eosio.saving` account.
-          *     (eg. For 20% of inflation going to block producer rewards   => inflation_pay_factor = 50000
-          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor = 10000).
-          *
-          * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
-          *     The remaining rewards will be distributed proportional to votes received.
-          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor = 40000
-          *          For 75% of block producer rewards going towards block pay => votepay_factor = 13333).
-          */
-         [[eosio::action]]
-         void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
          struct upgrade_proposal {
 //             std::string      proposal_name;
              uint32_t    target_block_num;
@@ -778,7 +739,6 @@ namespace eosiosystem {
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
-         using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
 
       private:
 
@@ -792,7 +752,6 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
-		 static eosio_global_state4 get_default_inflation_parameters();
          static time_point current_time_point();
          static time_point_sec current_time_point_sec();
          static block_timestamp current_block_time();
