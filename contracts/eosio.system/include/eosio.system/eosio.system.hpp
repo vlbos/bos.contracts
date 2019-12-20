@@ -291,10 +291,11 @@ namespace eosiosystem {
       int64_t        current_rate_of_increase = 0;
       int64_t        proceeds                 = 0;
 
-      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
-      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
-      static constexpr uint8_t  hours_per_bucket = 12;
-      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+      static constexpr uint32_t total_intervals  = 36;//30 * 144; // 30 days
+      static constexpr uint32_t dist_interval    = 10;//10 * 60;  // 10 minutes
+      static constexpr uint8_t  hours_per_bucket = 2;//12;
+      // static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+      static_assert( total_intervals * dist_interval == 360);////rex4test
 
       uint64_t primary_key()const { return 0; }
    };

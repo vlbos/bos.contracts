@@ -796,6 +796,7 @@ namespace eosiosystem {
 
       {
          const bool new_return_bucket = ret_pool_elem->pending_bucket_time <= effective_time;
+         print("new_return_bucket=",new_return_bucket);
          int64_t        new_bucket_rate = 0;
          time_point_sec new_bucket_time = time_point_sec::min();
          _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
@@ -823,6 +824,7 @@ namespace eosiosystem {
       }
 
       const time_point_sec time_threshold = effective_time - seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval);
+      print(effective_time.sec_since_epoch(),"oldest_bucket_time=",ret_pool_elem->oldest_bucket_time.sec_since_epoch(),"time_threshold",time_threshold.sec_since_epoch());
       if ( ret_pool_elem->oldest_bucket_time <= time_threshold ) {
          int64_t expired_rate = 0;
          int64_t surplus      = 0;
@@ -834,6 +836,7 @@ namespace eosiosystem {
                ++next;
                const uint32_t overtime = get_elapsed_intervals( effective_time,
                                                                 iter->first + seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval) );
+                                                                
                surplus      += iter->second * overtime;
                expired_rate += iter->second;
                return_buckets.erase(iter);
@@ -895,7 +898,7 @@ namespace eosiosystem {
          c.payment      = payment;
          c.balance      = fund;
          c.total_staked = asset( rented_tokens, core_symbol() );
-         c.expiration   = current_time_point() + eosio::days(30);
+         c.expiration   = current_time_point() + eosio::seconds(360);//rex4test//eosio::days(30);
          c.loan_num     = pool->loan_num;
       });
 
@@ -1226,7 +1229,7 @@ namespace eosiosystem {
 
       const time_point_sec ct              = current_time_point();
       const uint32_t       cts             = ct.sec_since_epoch();
-      const uint32_t       bucket_interval = rex_return_pool::hours_per_bucket * seconds_per_hour;
+      const uint32_t       bucket_interval = rex_return_pool::hours_per_bucket * 60;//rex4test//seconds_per_hour;
       const time_point_sec effective_time{cts - cts % bucket_interval + bucket_interval};
       const auto return_pool_elem = _rexretpool.begin();
       if ( return_pool_elem == _rexretpool.end() ) {
