@@ -732,7 +732,7 @@ void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
 void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
    auto begin_time = bos_oracle::current_time_point_sec().sec_since_epoch();
    oracle_data oracledatatable(_self, service_id);
-   const uint8_t run_time = 10; // seconds
+   const uint8_t run_time = 1; // seconds
 
    for (auto itr = oracledatatable.begin(); itr != oracledatatable.end();) {
       print("\n traverse record_id=", itr->record_id, ",c=", bos_oracle::current_time_point_sec().sec_since_epoch(), ",t=", itr->timestamp);
