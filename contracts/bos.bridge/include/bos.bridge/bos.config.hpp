@@ -1,7 +1,8 @@
 #pragma once
 #include <eosio/eosio.hpp>
 
+using bytes = vector<uint8_t>;
 
-enum class chain_type : uint8_t { btc,eth,eos};
 
-
+static const std::string default_core_symbol =  "BOS";
+static const uint8_t default_precision =  4;
