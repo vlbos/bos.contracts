@@ -1,16 +1,12 @@
-
+#include <eosio/eosio.hpp>
+#include "bos.bridge/bos.config.hpp"
 #include "bos.bridge/interfaces/IBridgeValidators.hpp"
 
+template <class TableType, typename Iterator>
 class BasicBridge {
-
-    // /* --- EVENTS --- */
-
-    // event GasPriceChanged(uint64_t gasPrice);
-    // event RequiredBlockConfirmationChanged(uint64_t requiredBlockConfirmations);
-    // event DailyLimit(address token, uint64_t newLimit);
-
-    // /* --- MODIFIERs --- */
-
+protected:
+    TableType table;
+    name self;
     void onlyValidator(name sender) {
         check(validatorContract().isValidator(sender), "Sender is not a validator");
     }
@@ -19,21 +15,10 @@ class BasicBridge {
         check(validatorContract().owner() == sender, "Sender is not owner");
     }
 
-    /* --- FIELDS --- */
-
-    // /* Beginning of V1 storage variables */
-    // name  validatorContractAddress;
-    // uint64_t  gasPrice; // Used by bridge client to determine proper gas price for corresponding chain
-    // uint64_t  requiredBlockConfirmations; // Used by bridge client to determine proper number of blocks to wait before validating transfer
-    // uint64_t  deployedAtBlock; // Used by bridge client to determine initial block number to start listening for transfers
-    // mapping(address => uint64_t)  minPerTx;
-    // mapping(address => uint64_t)  maxPerTx; // Set to 0 to disable
-    // mapping(address => uint64_t)  dailyLimit; // Set to 0 to disable
-    // mapping(address => mapping(uint64_t => uint64_t)) totalSpentPerDay;
-    // /* End of V1 storage variables */
 
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 public:
+    BasicBridge(name _self):self(_self),table(_self,_self.value)
     void setMaxPerTx(symbol token, uint64_t _maxPerTx)   {
         check(_maxPerTx < dailyLimit[token], "Error setting maxPerTx");
         maxPerTx[token] = _maxPerTx;

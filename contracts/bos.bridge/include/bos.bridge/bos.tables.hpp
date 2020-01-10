@@ -12,34 +12,37 @@ struct [[eosio::table, eosio::contract("bos.bridge")]] bridge_validator {
    uint64_t validatorCount;
    uint64_t requiredSignatures;
    
+    name  validatorContractAddress;
+    uint64_t  gasPrice; // Used by bridge client to determine proper gas price for corresponding chain
+    uint64_t  requiredBlockConfirmations; // Used by bridge client to determine proper number of blocks to wait before validating transfer
+    uint64_t  deployedAtBlock; // Used by bridge client to determine initial block number to start listening for transfers
+    
+    std::map<name,uint64_t>   minPerTx;
+    std::map<name,uint64_t>   maxPerTx; // Set to 0 to disable
+    std::map<name,uint64_t>   dailyLimit; // Set to 0 to disable
+    std::map<name,std::map<uint64_t,uint64_t>>  totalSpentPerDay;
+
     std::map<std::string,bool>  transfers;
     // mapping between foreign token addresses to home token addresses
     std::map<name,name>  foreignToHomeTokenMap;
     // mapping between home token addresses to foreign token addresses
     std::map<name,name> homeToForeignTokenMap;
     // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
-    std::map<bytes,bytes>  messages;
+    std::map<eosio::checksum256,bytes>  messages;
     // mapping between hash of (transfer message hash, validator index) to the validator signature
-    std::map<bytes,bytes> signatures;
+    std::map<eosio::checksum256,bytes> signatures;
     // mapping between hash of (validator, transfer message hash) to whether the transfer was signed by the validator
-    std::map<bytes,bool>  transfersSigned;
+    std::map<eosio::checksum256,bool>  transfersSigned;
     // mapping between the transfer message hash and the number of validator signatures
-    std::map<bytes,uint64_t>  numTransfersSigned;
+    std::map<eosio::checksum256,uint64_t>  numTransfersSigned;
     // mapping between the hash of (validator, transfer message hash) to whether the transfer was signed by the validator
-    std::map<bytes,bool>  messagesSigned;
+    std::map<eosio::checksum256,bool>  messagesSigned;
     // mapping between the transfer message hash and the number of validator signatures
-    std::map<bytes,uint64_t> numMessagesSigned;
+    std::map<eosio::checksum256,uint64_t> numMessagesSigned;
 
    uint64_t primary_key() const { return chain.value; }
 };
 
-
-// struct [[eosio::table, eosio::contract("bos.bridge")]] foreign_bridge {
-//    name chain;
-//    std::map<std::string,bool>  transfers;
-
-//    uint64_t primary_key() const { return chain.value; }
-// };
 
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] transfer_data_item {
@@ -58,23 +61,7 @@ struct [[eosio::table, eosio::contract("bos.oracle")]] transfer_data_item {
 
 typedef eosio::multi_index<"validators"_n, bridge_validator> bridge_validators;
 
-typedef eosio::multi_index<"transferdata"_n, transfer_data_item> transfer_data;
 
-struct [[eosio::table, eosio::contract("bos.bridge")]] basic_bridge {
-    name  validatorContractAddress;
-    uint64_t  gasPrice; // Used by bridge client to determine proper gas price for corresponding chain
-    uint64_t  requiredBlockConfirmations; // Used by bridge client to determine proper number of blocks to wait before validating transfer
-    uint64_t  deployedAtBlock; // Used by bridge client to determine initial block number to start listening for transfers
-    
-    std::map<name,uint64_t>   minPerTx;
-    std::map<name,uint64_t>   maxPerTx; // Set to 0 to disable
-    std::map<name,uint64_t>   dailyLimit; // Set to 0 to disable
-    std::map<name,std::map<uint64_t,uint64_t>>  totalSpentPerDay;
-    
-    uint64_t primary_key() const { return validatorContractAddress.value; }
-};
-
-typedef eosio::multi_index<"basicbridges"_n, basic_bridge> basic_bridges;
 
 
 
