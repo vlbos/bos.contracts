@@ -1,7 +1,6 @@
-
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./migrations/Initializable.sol";
+#include "bos.bridge/bos.config.hpp"
+#include <eosio/eosio.hpp>
+#include "bos.bridge/interfaces/IBridgeValidators.hpp"
 
 class BridgeValidators :public IBridgeValidators {
     // using SafeMath for uint256;
@@ -22,7 +21,7 @@ class BridgeValidators :public IBridgeValidators {
 
     /* --- CONSTRUCTOR / INITIALIZATION --- */
 
-   void initialize(uint64_t _requiredSignatures, std::vector<name> _initialValidators, address _owner)
+   void initialize(uint64_t _requiredSignatures, std::vector<name> _initialValidators, name _owner)
     {
         setOwner(_owner);
         require(_requiredSignatures != 0, "RequiredSignatures should be greater than 0");
@@ -40,7 +39,7 @@ class BridgeValidators :public IBridgeValidators {
 
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-    function addValidator(address _validator) external onlyOwner {
+    void addValidator(name _validator) {
         require(_validator != address(0), "Validator address should not be 0x0");
         require(!isValidator(_validator), "New validator should be an existing validator");
         validatorCount = validatorCount.add(1);
@@ -48,7 +47,7 @@ class BridgeValidators :public IBridgeValidators {
         emit ValidatorAdded(_validator);
     }
 
-    function removeValidator(address _validator) external onlyOwner {
+    name removeValidator(name _validator) {
         require(validatorCount > requiredSignatures, "Removing validator should not make validator count be < requiredSignatures");
         require(isValidator(_validator), "Cannot remove address that is not a validator");
         validators[_validator] = false;
@@ -56,21 +55,21 @@ class BridgeValidators :public IBridgeValidators {
         emit ValidatorRemoved(_validator);
     }
 
-    function setRequiredSignatures(uint256 _requiredSignatures) external onlyOwner {
+    void setRequiredSignatures(uint64_t _requiredSignatures)  {
         require(validatorCount >= _requiredSignatures, "New requiredSignatures should be greater than num of validators");
         require(_requiredSignatures != 0, "New requiredSignatures should be > than 0");
         requiredSignatures = _requiredSignatures;
         emit RequiredSignaturesChanged(_requiredSignatures);
     }
 
-    function isValidator(address _validator) public view returns(bool) {
-        return validators[_validator] == true;
+    bool isValidator(name _validator)  {
+        return validators.find(_validator) && validators[_validator];
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */
 
-    function setOwner(address _owner) private {
-        require(_owner != address(0), "New owner cannot be 0x0");
+    void setOwner(name _owner)  {
+        check(_owner != name(), "New owner cannot be 0x0");
         owner = _owner;
     }
-}
+};

@@ -11,10 +11,35 @@ struct [[eosio::table, eosio::contract("bos.bridge")]] bridge_validator {
    std::map<name,bool>  validators;
    uint64_t validatorCount;
    uint64_t requiredSignatures;
-   std::map<std::string,bool>  transfers;
+   
+    std::map<std::string,bool>  transfers;
+    // mapping between foreign token addresses to home token addresses
+    std::map<name,name>  foreignToHomeTokenMap;
+    // mapping between home token addresses to foreign token addresses
+    std::map<name,name> homeToForeignTokenMap;
+    // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
+    std::map<bytes,bytes>  messages;
+    // mapping between hash of (transfer message hash, validator index) to the validator signature
+    std::map<bytes,bytes> signatures;
+    // mapping between hash of (validator, transfer message hash) to whether the transfer was signed by the validator
+    std::map<bytes,bool>  transfersSigned;
+    // mapping between the transfer message hash and the number of validator signatures
+    std::map<bytes,uint64_t>  numTransfersSigned;
+    // mapping between the hash of (validator, transfer message hash) to whether the transfer was signed by the validator
+    std::map<bytes,bool>  messagesSigned;
+    // mapping between the transfer message hash and the number of validator signatures
+    std::map<bytes,uint64_t> numMessagesSigned;
 
    uint64_t primary_key() const { return chain.value; }
 };
+
+
+// struct [[eosio::table, eosio::contract("bos.bridge")]] foreign_bridge {
+//    name chain;
+//    std::map<std::string,bool>  transfers;
+
+//    uint64_t primary_key() const { return chain.value; }
+// };
 
 
 struct [[eosio::table, eosio::contract("bos.oracle")]] transfer_data_item {

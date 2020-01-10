@@ -2,6 +2,6 @@
 
 class IBurnableMintableToken {
     public:
-    bool mint(name _to, uint64_t _amount) ;
-    void burn(uint64_t _value) ;
+    virtual bool mint(name _to, uint64_t _amount) = 0 ;
+    virtual void burn(uint64_t _value)  = 0;
 };

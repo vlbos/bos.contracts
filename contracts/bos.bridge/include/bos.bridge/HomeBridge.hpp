@@ -1,118 +1,115 @@
-pragma solidity 0.4.24;
+#include <eosio/eosio.hpp>
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./libraries/Message.sol";
-import "./interfaces/IBurnableMintableToken.sol";
-import "./BasicBridge.sol";
-import "./migrations/Initializable.sol";
+#include "bos.bridge/libraries/Message.hpp"
+#include "bos.bridge/BasicBridge.hpp"
+#include "bos.bridge/interfaces/IBurnableMintableToken.hpp"
 
-contract HomeBridge is Initializable, BasicBridge {
-    using SafeMath for uint256;
+
+class HomeBridge : public BasicBridge {
 
     /* --- EVENTS --- */
 
-    event TransferToForeign (address indexed token, address recipient, uint256 value);
-    event TransferFromForeign (address indexed token, address recipient, uint256 value, bytes32 indexed transactionHash);
-    event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
-    event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
-    event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
+    // event TransferToForeign (address indexed token, address recipient, uint64_t value);
+    // event TransferFromForeign (address indexed token, address recipient, uint64_t value, bytes32 indexed transactionHash);
+    // event SignedForTransferToForeign(address indexed signer, bytes32 messageHash);
+    // event SignedForTransferFromForeign(address indexed signer, bytes32 transactionHash);
+    // event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint64_t NumberOfCollectedSignatures);
 
     /* --- FIELDS --- */
 
     /* Beginning of V1 storage variables */
     // mapping between foreign token addresses to home token addresses
-    mapping(address => address) public foreignToHomeTokenMap;
-    // mapping between home token addresses to foreign token addresses
-    mapping(address => address) public homeToForeignTokenMap;
-    // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
-    mapping(bytes32 => bytes) public messages;
-    // mapping between hash of (transfer message hash, validator index) to the validator signature
-    mapping(bytes32 => bytes) public signatures;
-    // mapping between hash of (validator, transfer message hash) to whether the transfer was signed by the validator
-    mapping(bytes32 => bool) public transfersSigned;
-    // mapping between the transfer message hash and the number of validator signatures
-    mapping(bytes32 => uint256) public numTransfersSigned;
-    // mapping between the hash of (validator, transfer message hash) to whether the transfer was signed by the validator
-    mapping(bytes32 => bool) public messagesSigned;
-    // mapping between the transfer message hash and the number of validator signatures
-    mapping(bytes32 => uint256) public numMessagesSigned;
+    // mapping(address => address) public foreignToHomeTokenMap;
+    // // mapping between home token addresses to foreign token addresses
+    // mapping(address => address) public homeToForeignTokenMap;
+    // // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
+    // mapping(bytes32 => bytes) public messages;
+    // // mapping between hash of (transfer message hash, validator index) to the validator signature
+    // mapping(bytes32 => bytes) public signatures;
+    // // mapping between hash of (validator, transfer message hash) to whether the transfer was signed by the validator
+    // mapping(bytes32 => bool) public transfersSigned;
+    // // mapping between the transfer message hash and the number of validator signatures
+    // mapping(bytes32 => uint64_t) public numTransfersSigned;
+    // // mapping between the hash of (validator, transfer message hash) to whether the transfer was signed by the validator
+    // mapping(bytes32 => bool) public messagesSigned;
+    // // mapping between the transfer message hash and the number of validator signatures
+    // mapping(bytes32 => uint64_t) public numMessagesSigned;
     /* End of V1 storage variables */
 
     /* --- CONSTRUCTOR / INITIALIZATION --- */
 
-    function initialize (
-        address _validatorContract,
-        uint256 _dailyLimit,
-        uint256 _maxPerTx,
-        uint256 _minPerTx,
-        uint256 _homeGasPrice,
-        uint256 _requiredBlockConfirmations
-    ) public
-      isInitializer
+    void initialize (
+        name _validatorContract,
+        uint64_t _dailyLimit,
+        uint64_t _maxPerTx,
+        uint64_t _minPerTx,
+        uint64_t _homeGasPrice,
+        uint64_t _requiredBlockConfirmations
+    ) 
     {
-        require(_validatorContract != address(0), "Validator contract address cannot be 0x0");
-        require(_homeGasPrice > 0, "HomeGasPrice should be greater than 0");
-        require(_requiredBlockConfirmations > 0, "RequiredBlockConfirmations should be greater than 0");
-        require(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx, "Tx limits initialization error");
+        check(_validatorContract != name(), "Validator contract address cannot be 0x0");
+        check(_homeGasPrice > 0, "HomeGasPrice should be greater than 0");
+        check(_requiredBlockConfirmations > 0, "RequiredBlockConfirmations should be greater than 0");
+        check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx, "Tx limits initialization error");
 
         validatorContractAddress = _validatorContract;
         deployedAtBlock = block.number;
-        dailyLimit[address(0)] = _dailyLimit;
-        maxPerTx[address(0)] = _maxPerTx;
-        minPerTx[address(0)] = _minPerTx;
+        dailyLimit[name()] = _dailyLimit;
+        maxPerTx[name()] = _maxPerTx;
+        minPerTx[name()] = _minPerTx;
         gasPrice = _homeGasPrice;
         requiredBlockConfirmations = _requiredBlockConfirmations;
     }
 
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-    function registerToken(address foreignAddress, address homeAddress) external onlyOwner {
-        require(foreignToHomeTokenMap[foreignAddress] == address(0) &&
-                homeToForeignTokenMap[homeAddress] == address(0)
+    void registerToken(name foreignAddress, name homeAddress) {
+        check(foreignToHomeTokenMap[foreignAddress] == name() &&
+                homeToForeignTokenMap[homeAddress] == name()
                 , "Token already registered");
         foreignToHomeTokenMap[foreignAddress] = homeAddress;
         homeToForeignTokenMap[homeAddress] = foreignAddress;
     }
 
-    function transferNativeToForeign(address recipient) external payable {
-        require(withinLimit(address(0), msg.value), "Transfer exceeds limit");
-        totalSpentPerDay[address(0)][getCurrentDay()] = totalSpentPerDay[address(0)][getCurrentDay()].add(msg.value);
+    void transferNativeToForeign(name recipient,uint64_t value) {
+        check(withinLimit(name(), value), "Transfer exceeds limit");
+        totalSpentPerDay[name()][getCurrentDay()] += value;
 
-        address foreignToken = homeToForeignTokenMap[address(0)];
-        require(foreignToken != address(0), "Foreign native token address is not 0x0");
+        address foreignToken = homeToForeignTokenMap[name()];
+        check(foreignToken != name(), "Foreign native token address is not 0x0");
 
-        emit TransferToForeign(foreignToken, recipient, msg.value);
+        // emit TransferToForeign(foreignToken, recipient, msg.value);
     }
 
-    function transferTokenToForeign(address homeToken, address recipient, uint256 value) external {
+    void transferTokenToForeign(std::string homeToken, name recipient, uint64_t value)  {
         require(withinLimit(homeToken, value), "Transfer exceeds limit");
-        totalSpentPerDay[homeToken][getCurrentDay()] = totalSpentPerDay[homeToken][getCurrentDay()].add(value);
+        totalSpentPerDay[homeToken][getCurrentDay()]+=(value);
 
-        address foreignToken = homeToForeignTokenMap[homeToken];
-        require(foreignToHomeTokenMap[foreignToken] == homeToken, "Incorrect token address mapping");
+        std::string foreignToken = homeToForeignTokenMap[homeToken];
+        check(foreignToHomeTokenMap[foreignToken] == homeToken, "Incorrect token address mapping");
 
         IBurnableMintableToken(homeToken).burn(value);
-        emit TransferToForeign(foreignToken, recipient, value);
+        // emit TransferToForeign(foreignToken, recipient, value);
     }
 
-    function transferFromForeign(address foreignToken, address recipient, uint256 value, bytes32 transactionHash) external onlyValidator {
-        address homeToken = foreignToHomeTokenMap[foreignToken];
+    void transferFromForeign(std::string foreignToken, name recipient, uint64_t value, bytes transactionHash)  {
+        std::string homeToken = foreignToHomeTokenMap[foreignToken];
         require(isRegisterd(foreignToken, homeToken), "Token not registered");
 
-        bytes32 hashMsg = keccak256(abi.encodePacked(homeToken, recipient, value, transactionHash));
-        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
+        bytes hashMsg = get_checksum256(homeToken, recipient, value, transactionHash);
+        bytes hashSender = get_checksum256(msg.sender, hashMsg);
         // Duplicated transfers
-        require(!transfersSigned[hashSender], "Transfer already signed by this validator");
+        check(!transfersSigned[hashSender], "Transfer already signed by this validator");
         transfersSigned[hashSender] = true;
 
-        uint256 signed = numTransfersSigned[hashMsg];
-        require(!isAlreadyProcessed(signed), "Transfer already processed");
+        uint64_t signed = numTransfersSigned[hashMsg];
+        check(!isAlreadyProcessed(signed), "Transfer already processed");
         // the check above assumes that the case when the value could be overflew will not happen in the addition operation below
         signed = signed + 1;
 
         numTransfersSigned[hashMsg] = signed;
 
-        emit SignedForTransferFromForeign(msg.sender, transactionHash);
+        // emit SignedForTransferFromForeign(msg.sender, transactionHash);
 
         if (signed >= requiredSignatures()) {
             // If the bridge contract does not own enough tokens to transfer
@@ -122,18 +119,18 @@ contract HomeBridge is Initializable, BasicBridge {
             // Passing the mapped home token address here even when token address is 0x0. This is okay because
             // by default the address mapped to 0x0 will also be 0x0
             performTransfer(homeToken, recipient, value);
-            emit TransferFromForeign(homeToken, recipient, value, transactionHash);
+            // emit TransferFromForeign(homeToken, recipient, value, transactionHash);
         }
     }
 
-    function submitSignature(bytes signature, bytes message) external onlyValidator {
+    void submitSignature(name sender,public_key sender_key,signature sig, bytes message) {
         // ensure that `signature` is really `message` signed by `msg.sender`
-        require(Message.isMessageValid(message), "Invalid message format");
-        require(msg.sender == Message.recoverAddressFromSignedMessage(signature, message), "Sender is not signer of message");
-        bytes32 hashMsg = keccak256(message);
-        bytes32 hashSender = keccak256(abi.encodePacked(msg.sender, hashMsg));
+        check(Message::isMessageValid(message), "Invalid message format");
+        check(sender_key == Message::recoverAddressFromSignedMessage(sig, message), "Sender is not signer of message");
+        eosio::checksum256 hashMsg = get_checksum256(message);
+        eosio::checksum256 hashSender = get_checksum256(sender, hashMsg);
 
-        uint256 signed = numMessagesSigned[hashMsg];
+        uint64_t signed = numMessagesSigned[hashMsg];
         require(!isAlreadyProcessed(signed), "Transfer already processed");
         // the check above assumes that the case when the value could be overflew will not happen in the addition operation below
         signed = signed + 1;
@@ -145,24 +142,24 @@ contract HomeBridge is Initializable, BasicBridge {
         }
         messagesSigned[hashSender] = true;
 
-        bytes32 signIdx = keccak256(abi.encodePacked(hashMsg, (signed-1)));
-        signatures[signIdx] = signature;
+        eosio::checksum256 signIdx = get_checksum256(hashMsg, (signed-1));
+        signatures[signIdx] = sig;
 
         numMessagesSigned[hashMsg] = signed;
 
-        emit SignedForTransferToForeign(msg.sender, hashMsg);
+        // emit SignedForTransferToForeign(msg.sender, hashMsg);
 
-        uint256 reqSigs = requiredSignatures();
+        uint64_t reqSigs = requiredSignatures();
         if (signed >= reqSigs) {
             numMessagesSigned[hashMsg] = markAsProcessed(signed);
-            emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
+            // emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
         }
     }
 
     /* --- INTERNAL / PRIVATE METHODS --- */
 
-    function performTransfer(address token, address recipient, uint256 value) private {
-        if (token == address(0)) {
+    void performTransfer(std::string token, name recipient, uint64_t value)  {
+        if (token.empty()) {
             recipient.transfer(value);
             return;
         }
@@ -170,8 +167,8 @@ contract HomeBridge is Initializable, BasicBridge {
         IBurnableMintableToken(token).mint(recipient, value);
     }
 
-    function isRegisterd(address foreignToken,  address homeToken) private view returns (bool) {
-        if(foreignToken == address(0) && homeToken == address(0)) {
+    bool isRegisterd(std::string foreignToken,  std::string homeToken)  {
+        if(foreignToken.empty() && homeToken.empty()) {
             return false;
         } else {
             return (foreignToHomeTokenMap[foreignToken] == homeToken &&
@@ -179,23 +176,22 @@ contract HomeBridge is Initializable, BasicBridge {
         }
     }
 
-    function signature(bytes32 _hash, uint256 _index) public view returns (bytes) {
-        bytes32 signIdx = keccak256(abi.encodePacked(_hash, _index));
+    bytes signature(bytes _hash, uint64_t _index) {
+        bytes signIdx = keccak256(abi.encodePacked(_hash, _index));
         return signatures[signIdx];
     }
 
-    function message(bytes32 _hash) public view returns (bytes) {
+    bytes message(bytes _hash)  {
         return messages[_hash];
     }
 
-    function markAsProcessed(uint256 _v) private pure returns(uint256) {
-        return _v | 2 ** 255;
+    uint64_t markAsProcessed(uint64_t _v)  {
+        return _v | pow(2,255);
     }
 
-    function isAlreadyProcessed(uint256 _number) public pure returns(bool) {
-        return _number & 2**255 == 2**255;
+    bool isAlreadyProcessed(uint64_t _number)  {
+        return _number & pow(2,255) == pow(2,255);
     }
 
-    function () external payable {
-    }
-}
+    
+};

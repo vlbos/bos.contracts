@@ -1,5 +1,5 @@
 
-#include "bos.bridge/interfaces/IBridgeValidators.hpp";
+#include "bos.bridge/interfaces/IBridgeValidators.hpp"
 
 class BasicBridge {
 
@@ -61,8 +61,9 @@ public:
         // emit DailyLimit(token, _dailyLimit);
     }
 
-    bool withinLimit(symbol token, uint64_t _amount)  {
-        uint64_t nextLimit = totalSpentPerDay[token][getCurrentDay()].add(_amount);
+    bool withinLimit(std::string token, uint64_t _amount)  {
+        totalSpentPerDay[token][getCurrentDay()]+=_amount;
+        uint64_t nextLimit = totalSpentPerDay[token][getCurrentDay()];
         return dailyLimit[token] >= nextLimit && _amount <= maxPerTx[token] && _amount >= minPerTx[token];
     }
 
