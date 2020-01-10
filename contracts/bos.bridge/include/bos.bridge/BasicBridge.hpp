@@ -1,3 +1,5 @@
+#pragma once
+
 #include <eosio/eosio.hpp>
 #include "bos.bridge/bos.config.hpp"
 #include "bos.bridge/interfaces/IBridgeValidators.hpp"

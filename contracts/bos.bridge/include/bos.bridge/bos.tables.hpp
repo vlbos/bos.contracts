@@ -1,6 +1,7 @@
 #pragma once
-#include "bos.bridge/bos.config.hpp"
 #include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include "bos.bridge/bos.config.hpp"
 
 using namespace eosio;
 // using std::string;

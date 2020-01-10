@@ -1,12 +1,11 @@
 #pragma once
 #include <eosio/eosio.hpp>
-#include <eosio/types.h>
-#include <eosio/crypto.h>
+#include <eosio/crypto.hpp>
 #include <eosio/asset.hpp>
 #include <eosio/symbol.hpp>
 #include <cmath>
 
-using bytes = vector<uint8_t>;
+using bytes = std::vector<uint8_t>;
 
 
 static const std::string default_core_symbol =  "BOS";

@@ -1,3 +1,4 @@
+#pragma once
 #include <eosio/eosio.hpp>
 #include "bos.bridge/bos.config.hpp"
 class IBurnableMintableToken {

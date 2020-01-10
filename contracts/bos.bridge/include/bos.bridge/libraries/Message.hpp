@@ -1,4 +1,4 @@
-
+#pragma once
 #include "bos.bridge/interfaces/IBridgeValidators.hpp"
 #include "bos.bridge/bos.config.hpp"
 #include "bos.bridge/bos.types.hpp"

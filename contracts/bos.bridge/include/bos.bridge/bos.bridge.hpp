@@ -1,8 +1,9 @@
 #pragma once
-
-#include "bos.config.hpp"
 #include <cmath>
 #include <eosio/eosio.hpp>
+#include "bos.config.hpp"
+#include "bos.tables.hpp"
+
 using namespace eosio;
 using namespace std;
 
@@ -46,23 +47,6 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
     * @brief  Sets config parameters
     */
    [[eosio::action]] void setparameter(ignore<uint8_t> version, ignore<bridge_parameters> parameters);
-
-   using regservice_action = eosio::action_wrapper<"regservice"_n, &bos_bridge::regservice>;
-   using unstakeasset_action = eosio::action_wrapper<"unstakeasset"_n, &bos_bridge::unstakeasset>;
-   using addfeetypes_action = eosio::action_wrapper<"addfeetypes"_n, &bos_bridge::addfeetypes>;
-   using pushdata_action = eosio::action_wrapper<"pushdata"_n, &bos_bridge::pushdata>;
-
-
-
-   [[eosio::action]] void deposit(name chain,name account,  asset amount);
-
-   /**
-    * @brief  Withdraws core tokens from bridge risk control fund
-    */
-   [[eosio::action]] void withdraw(name chain,name account, asset amount);
-
-   using deposit_action = eosio::action_wrapper<"deposit"_n, &bos_bridge::deposit>;
-   using withdraw_action = eosio::action_wrapper<"withdraw"_n, &bos_bridge::withdraw>;
 
 
  private:
