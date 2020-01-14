@@ -56,7 +56,7 @@ public:
   void transferNativeToForeign(name sender,name recipient, uint64_t value) {
     require_auth(sender);
     check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
-    table.home.totalSpentPerDay[table.core_symbol][this->getCurrentDay()] += value;
+    table.home.totalSpentPerDay[get_checksum256(table.core_symbol,this->getCurrentDay())] += value;
 
     std::string foreignToken = table.homeToForeignTokenMap[table.core_symbol];
     check(!foreignToken.empty(), "Foreign native token address is empty");
@@ -69,7 +69,7 @@ public:
                               uint64_t value) {
                                 require_auth(sender);
     check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
-    table.home.totalSpentPerDay[homeToken][this->getCurrentDay()] += (value);
+    table.home.totalSpentPerDay[get_checksum256(homeToken,this->getCurrentDay())] += value;
 
     std::string foreignToken = table.homeToForeignTokenMap[homeToken];
     check(table.foreignToHomeTokenMap[foreignToken] == homeToken,

@@ -53,8 +53,8 @@ public:
     }
 
     bool withinLimit(const std::string& token, uint64_t _amount)  {
-        para.totalSpentPerDay[token][getCurrentDay()]+=_amount;
-        uint64_t nextLimit = para.totalSpentPerDay[token][getCurrentDay()];
+        para.totalSpentPerDay[get_checksum256(token,getCurrentDay())]+=_amount;
+        uint64_t nextLimit = para.totalSpentPerDay[ get_checksum256(token,getCurrentDay())];
         return para.dailyLimit[token] >= nextLimit && _amount <= para.maxPerTx[token] && _amount >= para.minPerTx[token];
     }
 

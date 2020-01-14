@@ -44,7 +44,7 @@ public:
   void transferNativeToHome(name sender,name _recipient,uint64_t value) {
     require_auth(sender);
     check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
-    table.foreign.totalSpentPerDay[table.core_symbol][this->getCurrentDay()] += value;
+    table.foreign.totalSpentPerDay[get_checksum256(table.core_symbol,this->getCurrentDay())] += value;
     // emit TransferToHome(table.core_symbol, _recipient, msg.value);
 
   }
@@ -53,7 +53,7 @@ public:
      require_auth(sender);
     uint64_t castValue18 = _value;//castTo18Decimal(_token, _value);
     check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");
-    table.foreign.totalSpentPerDay[_token][this->getCurrentDay()] += castValue18;
+    table.foreign.totalSpentPerDay[get_checksum256(_token,this->getCurrentDay())] += castValue18;
 
     // if (_token == USDTAddress) {
     //   // Handle USDT special case since it does not have standard erc20 token

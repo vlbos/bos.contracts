@@ -34,25 +34,25 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
    /**
     * @brief  
     */
-   [[eosio::action]] void impvalidator(uint64_t _requiredSignatures, std::vector<name>& _initialValidators, name _owner);
+   [[eosio::action]] void impvalidator(uint64_t requiredSignatures, std::vector<name>& initialValidators, name owner);
 // BasicBridge end
 
 // ForeignBridge  begin
    /**
     * @brief    void transferNativeToHome(name _recipient)
     */
-   [[eosio::action]] void transfern2h(name sender,name _recipient,uint64_t value);
+   [[eosio::action]] void transfern2h(name sender,name recipient,uint64_t value);
 
    /**
     * @brief    transferTokenToHome(symbol _token, name _recipient, uint64_t _value)
     */
-   [[eosio::action]] void transfert2h(name sender,std::string _token, name _recipient, uint64_t _value);
+   [[eosio::action]] void transfert2h(name sender,std::string token, name recipient, uint64_t value);
 
  
     /**
     * @brief       // Event created on transfer to home.   event TransferToHome(address indexed token, address recipient, uint256 value);
     */
-   [[eosio::action]] void transfer2he(name sender,std::string _token, name _recipient, uint64_t _value);
+   [[eosio::action]] void transfer2he( const std::string& token, name recipient,uint64_t value);//
 
 
    /**
@@ -72,18 +72,18 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
    /**
     * @brief    void transferNativeToHome(name _recipient)
     */
-   [[eosio::action]] void transfern2f(name sender,name _recipient,uint64_t value);
+   [[eosio::action]] void transfern2f(name sender,name recipient,uint64_t value);
 
    /**
     * @brief    transferTokenToHome(symbol _token, name _recipient, uint64_t _value)
     */
-   [[eosio::action]] void transfert2f(name sender,std::string _token, name _recipient, uint64_t _value);
+   [[eosio::action]] void transfert2f(name sender,std::string token, name recipient, uint64_t value);
 
  
     /**
     * @brief       // Event created on transfer to home.   event TransferToHome(address indexed token, address recipient, uint256 value);
     */
-   [[eosio::action]] void transfer2fe(name sender,std::string _token, name _recipient, uint64_t _value);
+   [[eosio::action]] void transfer2fe(std::string token, name recipient, uint64_t value);
 
 
    /**

@@ -10,29 +10,28 @@ using std::string;
 #include "bos.bridge/HomeBridge.hpp"
 
 // BasicBridge  begin
-void bos_bridge::impvalidator(uint64_t _requiredSignatures,
-                              std::vector<name> &_initialValidators,
-                              name _owner) {
+void bos_bridge::impvalidator(uint64_t requiredSignatures,
+                              std::vector<name> &initialValidators,
+                              name owner) {
   BridgeValidators _BridgeValidators(_self, _bridge_meta_parameters);
-  _BridgeValidators.initialize(_requiredSignatures, _initialValidators, _owner);
+  _BridgeValidators.initialize(requiredSignatures, initialValidators, owner);
 }
 // BasicBridge end
 
 // ForeignBridge  begin
-void bos_bridge::transfern2h(name sender, name _recipient, uint64_t value) {
+void bos_bridge::transfern2h(name sender, name recipient, uint64_t value) {
   ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
-  _ForeignBridge.transferNativeToHome(sender, _recipient, value);
+  _ForeignBridge.transferNativeToHome(sender, recipient, value);
 }
 
-void bos_bridge::transfert2h(name sender, std::string _token, name _recipient,
-                             uint64_t _value) {
+void bos_bridge::transfert2h(name sender, std::string token, name recipient,
+                             uint64_t value) {
   ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
-  _ForeignBridge.transferTokenToHome(sender, _token, _recipient, _value);
+  _ForeignBridge.transferTokenToHome(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2he(name sender, std::string _token, name _recipient,
-                             uint64_t _value) {
-  require_auth(sender);
+void bos_bridge::transfer2he(const std::string& token, name recipient, uint64_t value) {
+  require_auth(_self);
 }
 
 void bos_bridge::transferfrom(name sender, std::vector<signature> sig, bytes message) {
@@ -48,20 +47,20 @@ void bos_bridge::regtoken(name sender, std::string foreignAddress, std::string h
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.registerToken(sender, foreignAddress, homeAddress);
 }
-void bos_bridge::transfern2f(name sender, name _recipient, uint64_t value) {
+void bos_bridge::transfern2f(name sender, name recipient, uint64_t value) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
-  _HomeBridge.transferNativeToForeign(sender, _recipient, value);
+  _HomeBridge.transferNativeToForeign(sender, recipient, value);
 }
 
-void bos_bridge::transfert2f(name sender, std::string _token, name _recipient,
-                             uint64_t _value) {
+void bos_bridge::transfert2f(name sender, std::string token, name recipient,
+                             uint64_t value) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
-  _HomeBridge.transferTokenToForeign(sender, _token, _recipient, _value);
+  _HomeBridge.transferTokenToForeign(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2fe(name sender, std::string _token, name _recipient,
-                             uint64_t _value) {
-  require_auth(sender);
+void bos_bridge::transfer2fe( std::string token, name recipient,
+                             uint64_t value) {
+  require_auth(_self);
 }
 
 void bos_bridge::transferfrof(name sender, std::string foreignToken,
