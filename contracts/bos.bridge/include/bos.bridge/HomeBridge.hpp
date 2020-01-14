@@ -5,17 +5,17 @@
 #include "bos.bridge/libraries/Message.hpp"
 #include "bos.bridge/BasicBridge.hpp"
 #include "bos.bridge/interfaces/IBurnableMintableToken.hpp"
+#include "bos.bridge/HomeToken.hpp"
 
-template <class TableType, typename Iterator>
-class HomeBridge : public BasicBridge<TableType,Iterator> {
+template <class TableType>
+class HomeBridge : public BasicBridge<TableType,bridge_parameters_storage> {
 protected:
-  TableType table;
-  Iterator& it;
+  TableType& table;
   name self;
 
 public:
-  HomeBridge(name _self,Iterator& itr)
-      : self(_self), table(_self, _self.value),it(itr)
+  HomeBridge(name _self,TableType& _table)
+      : BasicBridge<TableType,bridge_parameters_storage>(_self,_table,_table.home),self(_self), table(_table){}
 
         /* --- CONSTRUCTOR / INITIALIZATION --- */
 
@@ -23,7 +23,8 @@ public:
                         uint64_t _maxPerTx, uint64_t _minPerTx,
                         uint64_t _homeGasPrice,
                         uint64_t _requiredBlockConfirmations) {
-    check(_validatorContract != name(),
+    require_auth(_validatorContract);
+    check(is_account(_validatorContract),
           "Validator contract address cannot be 0x0");
     check(_homeGasPrice > 0, "HomeGasPrice should be greater than 0");
     check(_requiredBlockConfirmations > 0,
@@ -31,75 +32,81 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
 
-    validatorContractAddress = _validatorContract;
-    deployedAtBlock = block.number;
-    dailyLimit[name()] = _dailyLimit;
-    maxPerTx[name()] = _maxPerTx;
-    minPerTx[name()] = _minPerTx;
-    gasPrice = _homeGasPrice;
-    requiredBlockConfirmations = _requiredBlockConfirmations;
+    table.home.validatorContractAddress = _validatorContract;
+    table.home.deployedAtBlock = current_block_time(); // block.number;
+    table.home.dailyLimit[table.core_symbol] = _dailyLimit;
+    table.home.maxPerTx[table.core_symbol] = _maxPerTx;
+    table.home.minPerTx[table.core_symbol] = _minPerTx;
+    table.home.gasPrice = _homeGasPrice;
+    table.home.requiredBlockConfirmations = _requiredBlockConfirmations;
   }
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void registerToken(name foreignAddress, name homeAddress) {
-    check(foreignToHomeTokenMap[foreignAddress] == name() &&
-              homeToForeignTokenMap[homeAddress] == name(),
+  void registerToken(name sender,std::string foreignAddress, std::string homeAddress) {
+    require_auth(sender);
+    check(table.foreignToHomeTokenMap[foreignAddress].empty() &&
+              table.homeToForeignTokenMap[homeAddress].empty(),
           "Token already registered");
-    foreignToHomeTokenMap[foreignAddress] = homeAddress;
-    homeToForeignTokenMap[homeAddress] = foreignAddress;
+    table.foreignToHomeTokenMap[foreignAddress] = homeAddress;
+    table.homeToForeignTokenMap[homeAddress] = foreignAddress;
+    HomeToken(self,foreignAddress).create();
   }
 
-  void transferNativeToForeign(name recipient, uint64_t value) {
-    check(withinLimit(name(), value), "Transfer exceeds limit");
-    totalSpentPerDay[name()][getCurrentDay()] += value;
+  void transferNativeToForeign(name sender,name recipient, uint64_t value) {
+    require_auth(sender);
+    check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
+    table.home.totalSpentPerDay[table.core_symbol][this->getCurrentDay()] += value;
 
-    address foreignToken = homeToForeignTokenMap[name()];
-    check(foreignToken != name(), "Foreign native token address is not 0x0");
+    std::string foreignToken = table.homeToForeignTokenMap[table.core_symbol];
+    check(!foreignToken.empty(), "Foreign native token address is empty");
 
     // emit TransferToForeign(foreignToken, recipient, msg.value);
+       action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
   }
 
-  void transferTokenToForeign(std::string homeToken, name recipient,
+  void transferTokenToForeign(name sender,std::string homeToken, name recipient,
                               uint64_t value) {
-    check(withinLimit(homeToken, value), "Transfer exceeds limit");
-    totalSpentPerDay[homeToken][getCurrentDay()] += (value);
+                                require_auth(sender);
+    check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
+    table.home.totalSpentPerDay[homeToken][this->getCurrentDay()] += (value);
 
-    std::string foreignToken = homeToForeignTokenMap[homeToken];
-    check(foreignToHomeTokenMap[foreignToken] == homeToken,
+    std::string foreignToken = table.homeToForeignTokenMap[homeToken];
+    check(table.foreignToHomeTokenMap[foreignToken] == homeToken,
           "Incorrect token address mapping");
 
-    IBurnableMintableToken(homeToken).burn(value);
+    HomeToken(self,homeToken).burn(sender,value);
     // emit TransferToForeign(foreignToken, recipient, value);
+     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
   }
 
-  void transferFromForeign(std::string foreignToken, name recipient,
+  void transferFromForeign(name sender,std::string foreignToken, name recipient,
                            uint64_t value, checksum256 transactionHash) {
-    std::string homeToken = foreignToHomeTokenMap[foreignToken];
+                             require_auth(sender);
+    std::string homeToken = table.foreignToHomeTokenMap[foreignToken];
     check(isRegisterd(foreignToken, homeToken), "Token not registered");
 
     checksum256 hashMsg =
         get_checksum256(homeToken, recipient, value, transactionHash);
-    checksum256 hashSender = get_checksum256(msg.sender, hashMsg);
+    checksum256 hashSender = get_checksum256(sender, hashMsg);
     // Duplicated transfers
-    check(!transfersSigned[hashSender],
+    check(!table.transfersSigned[hashSender],
           "Transfer already signed by this validator");
-    transfersSigned[hashSender] = true;
+    table.transfersSigned[hashSender] = true;
 
-    uint64_t signed = numTransfersSigned[hashMsg];
-    check(!isAlreadyProcessed(signed), "Transfer already processed");
+    uint64_t nsigned = table.numTransfersSigned[hashMsg];
+    check(!isAlreadyProcessed(nsigned), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-    signed = signed + 1;
 
-    numTransfersSigned[hashMsg] = signed;
+    table.numTransfersSigned[hashMsg] = ++nsigned;
 
     // emit SignedForTransferFromForeign(msg.sender, transactionHash);
 
-    if (signed >= requiredSignatures()) {
+    if (nsigned >= this->requiredSignatures()) {
       // If the bridge contract does not own enough tokens to transfer
       // it will cause funds lock on the home side of the bridge
-      numTransfersSigned[hashMsg] = markAsProcessed(signed);
+      table.numTransfersSigned[hashMsg] = markAsProcessed(nsigned);
 
       // Passing the mapped home token address here even when token address is
       // 0x0. This is okay because by default the address mapped to 0x0 will
@@ -111,6 +118,7 @@ public:
 
   void submitSignature(name sender, public_key sender_key, signature sig,
                        bytes message) {
+                         require_auth(sender);
     // ensure that `signature` is really `message` signed by `msg.sender`
     check(Message::isMessageValid(message), "Invalid message format");
     check(sender_key == Message::recoverAddressFromSignedMessage(sig, message),
@@ -118,68 +126,72 @@ public:
     eosio::checksum256 hashMsg = get_checksum256(message);
     eosio::checksum256 hashSender = get_checksum256(sender, hashMsg);
 
-    uint64_t signed = numMessagesSigned[hashMsg];
-    require(!isAlreadyProcessed(signed), "Transfer already processed");
+    uint64_t nsigned = table.numMessagesSigned[hashMsg];
+    check(!isAlreadyProcessed(nsigned), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-    signed = signed + 1;
-    if (signed > 1) {
+    nsigned = nsigned + 1;
+    if (nsigned > 1) {
       // Duplicated signatures
-      require(!messagesSigned[hashSender],
+      check(!table.messagesSigned[hashSender],
               "Message already signed by this validator");
     } else {
-      messages[hashMsg] = message;
+      table.messages[hashMsg] = message;
     }
-    messagesSigned[hashSender] = true;
+    table.messagesSigned[hashSender] = true;
 
-    eosio::checksum256 signIdx = get_checksum256(hashMsg, (signed - 1));
-    signatures[signIdx] = sig;
+    eosio::checksum256 signIdx = get_checksum256(hashMsg, (nsigned - 1));
+    table.signatures[signIdx] = sig;
 
-    numMessagesSigned[hashMsg] = signed;
+    table.numMessagesSigned[hashMsg] = nsigned;
 
     // emit SignedForTransferToForeign(msg.sender, hashMsg);
 
-    uint64_t reqSigs = requiredSignatures();
-    if (signed >= reqSigs) {
-      numMessagesSigned[hashMsg] = markAsProcessed(signed);
+    uint64_t reqSigs = this->requiredSignatures();
+    if (nsigned >= reqSigs) {
+      table.numMessagesSigned[hashMsg] = markAsProcessed(nsigned);
       // emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
     }
   }
 
+private:
   /* --- INTERNAL / PRIVATE METHODS --- */
 
   void performTransfer(std::string token, name recipient, uint64_t value) {
-    if (token.empty()) {
-      recipient.transfer(value);
+    if (token==table.core_symbol) {
+      action(
+          permission_level{self, "active"_n}, "eosio.token"_n, "transfer"_n,
+          std::make_tuple(self, recipient, asset(value, symbol(table.core_symbol,4)), ""))
+          .send();
       return;
     }
 
-    IBurnableMintableToken(token).mint(recipient, value);
+    HomeToken(self,token).mint(recipient, value);
   }
 
   bool isRegisterd(std::string foreignToken, std::string homeToken) {
     if (foreignToken.empty() && homeToken.empty()) {
       return false;
     } else {
-      return (foreignToHomeTokenMap[foreignToken] == homeToken &&
-              homeToForeignTokenMap[homeToken] == foreignToken);
+      return (table.foreignToHomeTokenMap[foreignToken] == homeToken &&
+              table.homeToForeignTokenMap[homeToken] == foreignToken);
     }
   }
 
   checksum256 signature(checksum256 _hash, uint64_t _index) {
-        checksum256 signIdx = get_checksum256(_hash, _index));
-        return signatures[signIdx];
+        checksum256 signIdx = get_checksum256(_hash, _index);
+        return table.signatures[signIdx];
     }
 
     bytes message(checksum256 _hash)  {
-        return messages[_hash];
+        return table.messages[_hash];
     }
 
     uint64_t markAsProcessed(uint64_t _v)  {
-        return _v | pow(2,255);
+        return _v|(uint64_t)pow(2,255);
     }
 
     bool isAlreadyProcessed(uint64_t _number)  {
-        return _number & pow(2,255) == pow(2,255);
+        return (_number&(uint64_t)pow(2,255)) == (uint64_t)pow(2,255);
     }
 };

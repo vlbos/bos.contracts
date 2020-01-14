@@ -5,86 +5,94 @@
 #include "bos.bridge/libraries/Message.hpp"
 #include "bos.bridge/BasicBridge.hpp"
 
-template <class TableType, typename Iterator>
-class ForeignBridge : public BasicBridge<TableType, Iterator> {
+template <class TableType>
+class ForeignBridge : public BasicBridge<TableType,bridge_parameters_storage> {
 protected:
-  TableType table;
+  TableType& table;
   name self;
 
 public:
-  ForeignBridge(name _self)
-      : self(_self), table(_self, _self.value)
+  ForeignBridge(name _self,TableType& _table)
+      : BasicBridge<TableType,bridge_parameters_storage>(_self,_table,_table.foreign),self(_self), table(_table)
+      {
+
+      }
         /* --- CONSTRUCTOR / INITIALIZATION --- */
 
-        void initialize(name _validatorContract, uint64_t _dailyLimit,
+    void initialize(name _validatorContract, uint64_t _dailyLimit,
                         uint64_t _maxPerTx, uint64_t _minPerTx,
                         uint64_t _foreignGasPrice,
                         uint64_t _requiredBlockConfirmations) {
-    check(_validatorContract != address(0),
-          "Validator contract address cannot be 0x0");
+                    require_auth(_validatorContract);
+    check(is_account(_validatorContract),
+          "Validator contract address cannot be empty");
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
     check(_foreignGasPrice > 0, "ForeignGasPrice should be greater than 0");
 
-    validatorContractAddress = _validatorContract;
-    deployedAtBlock = block.number;
-    dailyLimit[address(0)] = _dailyLimit;
-    maxPerTx[address(0)] = _maxPerTx;
-    minPerTx[address(0)] = _minPerTx;
-    gasPrice = _foreignGasPrice;
-    requiredBlockConfirmations = _requiredBlockConfirmations;
+    table.foreign.validatorContractAddress = _validatorContract;
+    table.foreign.deployedAtBlock = current_block_time(); ///block.number;
+    table.foreign.dailyLimit[table.core_symbol] = _dailyLimit;
+    table.foreign.maxPerTx[table.core_symbol] = _maxPerTx;
+    table.foreign.minPerTx[table.core_symbol] = _minPerTx;
+    table.foreign.gasPrice = _foreignGasPrice;
+    table.foreign.requiredBlockConfirmations = _requiredBlockConfirmations;
   }
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void transferNativeToHome(name _recipient) {
-    check(withinLimit(name(), msg.value), "Transfer exceeds limit");
-    totalSpentPerDay[name()][getCurrentDay()] += (msg.value);
-    // emit TransferToHome(address(0), _recipient, msg.value);
+  void transferNativeToHome(name sender,name _recipient,uint64_t value) {
+    require_auth(sender);
+    check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
+    table.foreign.totalSpentPerDay[table.core_symbol][this->getCurrentDay()] += value;
+    // emit TransferToHome(table.core_symbol, _recipient, msg.value);
+
   }
 
-  void transferTokenToHome(symbol _token, name _recipient, uint64_t _value) {
-    uint64_t castValue18 = castTo18Decimal(_token, _value);
-    check(withinLimit(_token, castValue18), "Transfer exceeds limit");
-    totalSpentPerDay[_token][getCurrentDay()] += (castValue18);
+  void transferTokenToHome(name sender,std::string _token, name _recipient, uint64_t _value) {
+     require_auth(sender);
+    uint64_t castValue18 = _value;//castTo18Decimal(_token, _value);
+    check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");
+    table.foreign.totalSpentPerDay[_token][this->getCurrentDay()] += castValue18;
 
-    if (_token == USDTAddress) {
-      // Handle USDT special case since it does not have standard erc20 token
-      // interface =.=
-      //   uint64_t balanceBefore = USDT(_token).balanceOf(this);
-      //   USDT(_token).transferFrom(msg.sender, this, _value);
-      // check transfer suceeded
-      //   check(balanceBefore.add(_value) == USDT(_token).balanceOf(this));
-    } else {
-      //   check(ERC20Token(_token).transferFrom(msg.sender, this, _value),
-      //   "TransferFrom failed for ERC20 Token");
-    }
-    // emit TransferToHome(_token, _recipient, castValue18);
+    // if (_token == USDTAddress) {
+    //   // Handle USDT special case since it does not have standard erc20 token
+    //   // interface =.=
+    //   //   uint64_t balanceBefore = USDT(_token).balanceOf(this);
+    //   //   USDT(_token).transferFrom(msg.sender, this, _value);
+    //   // check transfer suceeded
+    //   //   check(balanceBefore.add(_value) == USDT(_token).balanceOf(this));
+    // } else {
+    //   //   check(ERC20Token(_token).transferFrom(msg.sender, this, _value),
+    //   //   "TransferFrom failed for ERC20 Token");
+    // }
+    // // emit TransferToHome(_token, _recipient, castValue18);
   }
 
-  void transferFromHome(signature sig, bytes message) {
-    Message::hasEnoughValidSignatures(message, sig, validatorContract());
-    // symbol token;
-    // name recipient;
-    // uint64_t amount;
-    // bytes txHash;
-    std::tuple<name, name, int64_t, bytes> msg = Message::parseMessage(message);
-    check(!transfers[std::get<2>(msg)], "Transfer already processed");
-    transfers[txHash] = true;
-
-    uint64_t castedAmount = castFrom18Decimal(token, amount);
+  void transferFromHome(name sender,std::vector<signature> sig, bytes message) {
+    require_auth(sender);
+    Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
+  
+    std::tuple<std::string, name, int64_t, checksum256> msg = Message::parseMessage(message);
+   std::string token=std::get<0>(msg);
+    name recipient=std::get<1>(msg);
+    uint64_t amount=std::get<2>(msg);
+    checksum256 txHash=std::get<3>(msg);
+    check(!table.transfers[txHash], "Transfer already processed");
+    table.transfers[txHash] = true;
+    uint64_t castedAmount = amount;//castFrom18Decimal(token, amount);
     performTransfer(token, recipient, castedAmount);
     // emit TransferFromHome(token, recipient, castedAmount, txHash);
   }
+private:
 
-  void setUSDTAddress(name _addr) { USDTAddress = _addr; }
+   /* --- INTERNAL / PRIVATE METHODS --- */
 
-  /* --- INTERNAL / PRIVATE METHODS --- */
-
-  void performTransfer(extended_symbol tokenAddress, address recipient,
+  void performTransfer(std::string tokenAddress, name recipient,
                        uint64_t amount) {
-    if (tokenAddress == address(0)) {
-      recipient.transfer(amount);
+    if (tokenAddress == table.core_symbol) {
+      action(permission_level{self, "active"_n}, bos_bridge::token_account, "transfer"_n,std::make_tuple(self, recipient, asset(amount,symbol(table.core_symbol,4)), "")).send();
+      //recipient.transfer(amount);
       return;
     }
 
@@ -96,12 +104,14 @@ public:
     //     USDT(tokenAddress).balanceOf(recipient)); return;
     // }
 
-    std::string token = (tokenAddress);
-    check(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
+    // std::string token = (tokenAddress);
+    // check(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
+    action(permission_level{self, "active"_n}, bos_bridge::token_account, "transfer"_n,std::make_tuple(self, recipient, asset(amount,symbol(table.core_symbol,4)), "")).send();
+
   }
 
-  void castTo18Decimal(symbol token, uint64_t value) {
-    return value.mul(getCastScale(token, value));
+  void castTo18Decimal(std::string token, uint64_t value) {
+    return value*getCastScale(token, value);
   }
 
   uint64_t castFrom18Decimal(std::string token, uint64_t value) {
@@ -112,14 +122,14 @@ public:
     return value / (getCastScale(token, value));
   }
 
-  uint64_t getCastScale(symbol token, uint64_t value) {
-    check((token).decimals() > 0 && (token).decimals() <= 18);
+  uint64_t getCastScale(std::string token, uint64_t value) {
+    // check((token).decimals() > 0 && (token).decimals() <= 18);
 
-    if ((token).decimals() == 18) {
-      return 1;
-    }
+    // if ((token).decimals() == 18) {
+    //   return 1;
+    // }
 
-    uint64_t decimals = uint64_t((token).decimals()); // cast to uint64_t
-    return pow(10, (18 - decimals));
+    // uint64_t decimals = uint64_t((token).decimals()); // cast to uint64_t
+    // return pow(10, (18 - decimals));
   }
 };

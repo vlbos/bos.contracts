@@ -5,7 +5,7 @@
 
 class Message {
     public:
-    static bool addressArrayContains(std::vector<eosio::public_key> array, name value)  {
+    static bool addressArrayContains(std::vector<eosio::public_key> array, public_key value)  {
         for (size_t i = 0; i < array.size(); i++) {
             if (array[i] == value) {
                 return true;
@@ -31,26 +31,30 @@ class Message {
     // which is padding address to 32 bytes and reading recipient at offset 32.
     // for more details see discussion in:
     // https://github.com/paritytech/parity-bridge/issues/61
-     static std::tuple<name,name,int64_t,bytes> parseMessage(bytes message)
+     static std::tuple<std::string,name,int64_t,checksum256> parseMessage(bytes message)
      {
         check(isMessageValid(message), "Incorrect message format");
         // token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
-        uint64_t token;
+        std::string token;
         uint64_t recipient;
         int64_t amount =0;
         uint8_t length=20;
         uint8_t offset=32;
         
-        std::memcpy(token, &message.data()[offset], length);
-        std::memcpy(recipient, &message.data()[offset+length], length);
-        std::memcpy(amount, &message.data()[offset+length+length], offset);
+        token.resize(length);
+        std::memcpy(&token[0], &message.data()[offset], length);
+        std::memcpy(&recipient, &message.data()[offset+length], length);
+        std::memcpy(&amount, &message.data()[offset+length+length], offset);
         uint8_t hashoffset=offset+length+length+offset;
-        bytes txHash(message.begin()+hashoffset,message.begin()+hashoffset+offset)
+        uint8_t txHash[32];
+        std::memcpy(txHash, &message.data()[hashoffset], offset);
 
-        return std::make_tuple(name(token),name(recipient),amount,txHash);
+        // bytes txHash(message.begin()+hashoffset,message.begin()+hashoffset+offset);
+
+        return std::make_tuple(token,name(recipient),amount,checksum256(txHash));
     }
 
    static  bool isMessageValid(bytes _msg) {
@@ -62,35 +66,33 @@ class Message {
     }
 
     static eosio::public_key recoverAddressFromSignedMessage(signature sig, bytes message)  {
-        check(sig.size() == 65, "Incorrect signature length");
+        // check(sig.variable_size() == 65, "Incorrect signature length");
         return recover_key(hashMessage(message), sig);
     }
 
     static eosio::checksum256 hashMessage(bytes message)  {
-        std::string  prefix = "\x19BOS Signed Message:\n";
+        std::string  prefix = "\x19 BOS Signed Message:\n";
         // message is always 84 length
         std::string  msgLength = "104";
         // return keccak256(abi.encodePacked(prefix, msgLength, message));
-        return get_checksum256((prefix, msgLength, message));
+        return get_checksum256(prefix, msgLength, message);
     }
 
     static void hasEnoughValidSignatures(
         bytes _message,
-        bytes _vs,
-        std::vector<name>& _rs,
-        std::vector<public_key>& _ss,
-        IBridgeValidators _validatorContract) {
+        std::vector<signature>& _ss,
+        IBridgeValidators* _validatorContract) {
         check(isMessageValid(_message), "Invalid message format");
-        uint64_t requiredSignatures = _validatorContract.requiredSignatures();
-        check(_vs.size() >= requiredSignatures, "Num of signatures in message is less than requiredSignatures");
-        bytes hash = hashMessage(_message);
+        uint64_t requiredSignatures = _validatorContract->requiredSignatures();
+        check(_ss.size() >= requiredSignatures, "Num of signatures in message is less than requiredSignatures");
+        checksum256 hash = hashMessage(_message);
         std::vector<eosio::public_key>  encounteredAddresses;// = new address[](requiredSignatures);
 
         for (uint64_t i = 0; i < requiredSignatures; i++) {
             public_key recoveredAddress = recover_key(hash,_ss[i]);
-            check(_validatorContract.isValidator(recoveredAddress), "Signer of message is not a validator");
+            check(_validatorContract->isValidator(recoveredAddress), "Signer of message is not a validator");
             if (addressArrayContains(encounteredAddresses, recoveredAddress)) {
-                check(false);
+                check(false,"addressArrayContains is false");
             }
             encounteredAddresses.push_back(recoveredAddress);
         }
