@@ -38,6 +38,9 @@ class Message {
         // recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
+//            transaction_header trx_header;
+//    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
+//    ds >> trx_header;
         std::string token;
         uint64_t recipient;
         int64_t amount =0;

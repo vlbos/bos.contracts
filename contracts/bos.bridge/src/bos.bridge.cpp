@@ -42,7 +42,6 @@ void bos_bridge::transferfrom(name sender, std::vector<signature> sig, bytes mes
 /// ForeignBridge  end
 
 /// HomeBridge begin
-
 void bos_bridge::regtoken(name sender, std::string foreignAddress, std::string homeAddress) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.registerToken(sender, foreignAddress, homeAddress);
