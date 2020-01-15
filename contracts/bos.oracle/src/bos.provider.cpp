@@ -240,15 +240,21 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
       check(provider_itr->total_stake_amount >= asset(std::abs(amount.amount), core_symbol()), "total stake amount should be greater than unstake asset amount");
       check(provision_itr->amount >= asset(std::abs(amount.amount), core_symbol()), "service stake amount should be greater than unstake asset amount");
    }
+   
 
    providertable.modify(provider_itr, same_payer, [&](auto& p) { p.total_stake_amount += amount; });
 
    provisionstable.modify(provision_itr, same_payer, [&](auto& p) {
       p.amount += amount;
 
+
       if (provision_status::provision_unreg != p.status && p.amount - p.freeze_amount >= service_itr->base_stake_amount) {
-         check(p.amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the service");
          p.status = provision_status::provision_reg;
+      }
+      
+      if (provision_status::provision_reg == p.status)
+      {
+         check(p.amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the service");
       }
    });
 
