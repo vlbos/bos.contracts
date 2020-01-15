@@ -100,7 +100,7 @@ class [[eosio::contract("bos.oracle")]] bos_oracle : public eosio::contract {
    /**
     * @brief  Clears data when oracle data's accessable time is timeout
     */
-   [[eosio::action]] void cleardata(uint64_t service_id, uint32_t time_length);
+   [[eosio::action]] void cleardata(name provider, uint64_t service_id, uint32_t time_length);
 
    /**
     * @brief  Sets config parameters

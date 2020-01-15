@@ -245,9 +245,9 @@ void bos_oracle::update_stake_asset(uint64_t service_id, name account, asset amo
 
    provisionstable.modify(provision_itr, same_payer, [&](auto& p) {
       p.amount += amount;
-      check(p.amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the service");
 
       if (provision_status::provision_unreg != p.status && p.amount - p.freeze_amount >= service_itr->base_stake_amount) {
+         check(p.amount >= service_itr->base_stake_amount, "stake amount could not be less than  the base_stake amount of the service");
          p.status = provision_status::provision_reg;
       }
    });
@@ -724,37 +724,50 @@ void bos_oracle::save_publish_data(uint64_t service_id, uint64_t cycle_number, u
  * @param service_id  oracle service id
  * @param time_length  time length
  */
-void bos_oracle::cleardata(uint64_t service_id, uint32_t time_length) {
-   require_auth(_self);
+void bos_oracle::cleardata(name provider, uint64_t service_id, uint32_t time_length) {
+   require_auth(provider);
+
+   data_services svctable(_self, _self.value);
+   auto service_itr = svctable.find(service_id);
+   check(service_itr != svctable.end(), "no service id in cleardata");
+
+   data_service_provisions provisionstable(_self, service_id);
+
+   auto provision_itr = provisionstable.find(provider.value);
+   check(provision_itr != provisionstable.end(), "the account does not provide services");
+
+   if (provision_status::provision_unreg != provision_itr->status || provision_itr->amount - provision_itr->freeze_amount < service_itr->base_stake_amount) {
+      return;
+   }
+
    clear_data(service_id, time_length);
 }
 
 void bos_oracle::clear_data(uint64_t service_id, uint32_t time_length) {
    auto begin_time = bos_oracle::current_time_point_sec().sec_since_epoch();
    oracle_data oracledatatable(_self, service_id);
-   const uint8_t run_time = 10; // seconds
-
-   for (auto itr = oracledatatable.begin(); itr != oracledatatable.end();) {
+   const uint64_t max_rows = 100; // rows
+   uint64_t row = 0;
+   for (auto itr = oracledatatable.begin(); itr != oracledatatable.end() && row < max_rows;++row) {
       print("\n traverse record_id=", itr->record_id, ",c=", bos_oracle::current_time_point_sec().sec_since_epoch(), ",t=", itr->timestamp);
-      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->timestamp < time_length || bos_oracle::current_time_point_sec().sec_since_epoch() - begin_time > run_time) {
+      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->timestamp < time_length) {
          break;
       }
       print("\n removed record_id=", itr->record_id);
       itr = oracledatatable.erase(itr);
    }
 
-
    data_service_provision_logs logtable(_self, service_id);
 
-   for (auto itr = logtable.begin(); itr != logtable.end();) {
+   row=0;
+   for (auto itr = logtable.begin(); itr != logtable.end() && row < max_rows;++row) {
       print("\n traverse log_id=", itr->log_id, ",c=", bos_oracle::current_time_point_sec().sec_since_epoch(), ",t=", itr->update_time.sec_since_epoch());
-      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->update_time.sec_since_epoch() < time_length || bos_oracle::current_time_point_sec().sec_since_epoch() - begin_time > run_time) {
+      if (bos_oracle::current_time_point_sec().sec_since_epoch() - itr->update_time.sec_since_epoch() < time_length ) {
          break;
       }
       print("\n removed log_id=", itr->log_id);
       itr = logtable.erase(itr);
    }
-
 }
 
 uint64_t bos_oracle::get_provider_count(uint64_t service_id) {

@@ -445,8 +445,10 @@ class bos_oracle_tester : public tester {
       return push_action(N(oracle.bos), N(starttimer), mvo()("service_id", service_id)("cycle_number", cycle_number)("request_id", request_id));
    }
 
-   action_result cleardata(uint64_t service_id, uint32_t time_length) { return push_action(N(oracle.bos), N(cleardata), mvo()("service_id", service_id)("time_length", time_length)); }
-
+   action_result cleardata(name provider,uint64_t service_id, uint32_t time_length) { return push_action(provider, N(cleardata), mvo()("provider", provider)("service_id", service_id)("time_length", time_length)); }
+   action_result unstakeasset(uint64_t service_id, name account,  asset amount, string memo) {
+      return push_action(account, N(unstakeasset), mvo()("service_id", service_id)("account", account)("amount", amount)("memo", memo));
+   }
    action_result addfeetypes(uint64_t service_id, std::vector<uint8_t> fee_types, std::vector<asset> service_prices) {
       return push_action(N(oracle.bos), N(addfeetypes), mvo()("service_id", service_id)("fee_types", fee_types)("service_prices", service_prices));
    }
@@ -976,10 +978,10 @@ try {
    asset amount = core_sym::from_string("1000.0000");
    stake_asset(service_id, account, amount);
 
-   const uint8_t status_cancel = 1;
-   const uint8_t status_pause = 2;
-   auto token = unregservice(service_id, account, status_pause);
-   BOOST_TEST_REQUIRE(status_pause == get_data_service_provision(service_id, account)["status"].as<uint8_t>());
+   const uint8_t status_unreg = 1;
+   const uint8_t status_suspend = 2;
+   auto token = unregservice(service_id, account, status_unreg);
+   BOOST_TEST_REQUIRE(status_unreg == get_data_service_provision(service_id, account)["status"].as<uint8_t>());
 
    //   BOOST_TEST_REQUIRE( status_pause == get_svc_provision_cancel_apply(service_id)["status"].as<uint8_t>() );
 }
@@ -1042,6 +1044,46 @@ try {
 }
 FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(unstakeasset_test, bos_oracle_tester)
+try {
+
+   name account = N(alice);
+
+   uint64_t new_service_id = reg_service(account);
+   uint64_t new_second_service_id = reg_service(account);
+
+   // BOOST_TEST("" == "====reg test true");
+   produce_blocks(1);
+   /// stake asset
+   {
+      uint64_t service_id = new_service_id;
+      name account = N(alice);
+      asset amount = core_sym::from_string("1000.0000");
+      string memo = "";
+      stake_asset(service_id, account, amount);
+      BOOST_TEST_REQUIRE(amount == get_data_provider(account)["total_stake_amount"].as<asset>());
+
+      asset add_amount = core_sym::from_string("10.0001");
+      stake_asset(service_id, account, add_amount);
+      BOOST_TEST_REQUIRE((amount + add_amount) == get_data_provider(account)["total_stake_amount"].as<asset>());
+   }
+
+   {
+      uint64_t service_id = new_service_id;
+      const uint8_t status_unreg = 1;
+      auto token = unregservice(service_id, account, status_unreg);
+      BOOST_TEST_REQUIRE(status_unreg == get_data_service_provision(service_id, account)["status"].as<uint8_t>());
+
+      produce_blocks(10);
+      asset amount = core_sym::from_string("1000.0000");
+      BOOST_TEST(core_sym::from_string("1989.9999") == get_balance(account));
+      unstakeasset(service_id, account, amount, "");
+      BOOST_TEST(core_sym::from_string("2989.9999") == get_balance(account));
+   }
+
+}
+FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(pushdata_test, bos_oracle_tester)
 try {
 
@@ -1089,7 +1131,7 @@ try {
 
       produce_block(fc::days(3));
       produce_blocks(10);
-      auto cdata = cleardata(service_id, 10800);
+      auto cdata = cleardata(provider,service_id, 10800);
    }
 }
 FC_LOG_AND_RETHROW()
