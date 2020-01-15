@@ -23,6 +23,8 @@ namespace eosiosystem {
     _guarantee(_self, _self.value),
     _rammarket(_self, _self.value),
     _rexpool(_self, _self.value),
+    _rexretpool(get_self(), get_self().value),
+    _rexretbuckets(get_self(), get_self().value),
     _rexfunds(_self, _self.value),
     _rexbalance(_self, _self.value),
     _rexorders(_self, _self.value),
