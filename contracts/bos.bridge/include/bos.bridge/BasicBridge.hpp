@@ -25,12 +25,25 @@ protected:
     /* --- EXTERNAL / PUBLIC  METHODS --- */
 public:
     BasicBridge(name _self,TableType& _table,ParaType& _para):self(_self),table(_table),para(_para),_BridgeValidators(_self,_table){}
-    void setMaxPerTx(const eosio::extended_symbol& token, uint64_t _maxPerTx)   {
+
+    void setTokenParameter(name sender,std::string _token, uint64_t _dailyLimit,
+                        uint64_t _maxPerTx, uint64_t _minPerTx) {
+    require_auth(sender);
+    check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
+          "Tx limits initialization error in set token");
+
+    para.dailyLimit[_token] = _dailyLimit;
+    para.maxPerTx[_token] = _maxPerTx;
+    para.minPerTx[_token] = _minPerTx;
+
+  }
+
+    void setMaxPerTx(const std::string& token, uint64_t _maxPerTx)   {
         check(_maxPerTx < para.dailyLimit[token], "Error setting maxPerTx");
         para.maxPerTx[token] = _maxPerTx;
     }
 
-    void setMinPerTx(const eosio::extended_symbol& token, uint64_t _minPerTx){
+    void setMinPerTx(const std::string& token, uint64_t _minPerTx){
         check(_minPerTx < para.dailyLimit[token] && _minPerTx < para.maxPerTx[token], "Error setting minPerTx");
         para.minPerTx[token] = _minPerTx;
     }
@@ -47,12 +60,12 @@ public:
         // emit RequiredBlockConfirmationChanged(_blockConfirmations);
     }
 
-    void setDailyLimit(const eosio::extended_symbol& token, uint64_t _dailyLimit){
+    void setDailyLimit(const std::string& token, uint64_t _dailyLimit){
         para.dailyLimit[token] = _dailyLimit;
         // emit DailyLimit(token, _dailyLimit);
     }
 
-    bool withinLimit(const eosio::extended_symbol& token, uint64_t _amount)  {
+    bool withinLimit(const std::string& token, uint64_t _amount)  {
         para.totalSpentPerDay[get_checksum256(token,getCurrentDay())]+=_amount;
         uint64_t nextLimit = para.totalSpentPerDay[ get_checksum256(token,getCurrentDay())];
         return para.dailyLimit[token] >= nextLimit && _amount <= para.maxPerTx[token] && _amount >= para.minPerTx[token];

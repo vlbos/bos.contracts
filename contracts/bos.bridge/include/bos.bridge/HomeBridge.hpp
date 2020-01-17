@@ -32,7 +32,7 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
 
-    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
     table.home.validatorContractAddress = _validatorContract;
     table.home.deployedAtBlock = current_block_time(); // block.number;
     table.home.dailyLimit[core_token] = _dailyLimit;
@@ -44,19 +44,19 @@ public:
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void registerToken(name sender,std::string foreignAddress, eosio::extended_symbol homeAddress) {
+  void registerToken(name sender,std::string foreignAddress, std::string homeAddress) {
     require_auth(sender);
     check(table.foreignToHomeTokenMap.find(foreignAddress) == table.foreignToHomeTokenMap.end() &&
               table.homeToForeignTokenMap.find(homeAddress)==table.homeToForeignTokenMap.end(),
           "Token already registered");
     table.foreignToHomeTokenMap[foreignAddress] = homeAddress;
     table.homeToForeignTokenMap[homeAddress] = foreignAddress;
-    HomeToken(self,foreignAddress).create();
+    HomeToken(self,homeAddress).create();
   }
 
   void transferNativeToForeign(name sender,name recipient, uint64_t value) {
     require_auth(sender);
-    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, value), "Transfer exceeds limit");
     table.home.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += value;
 
@@ -67,7 +67,7 @@ public:
     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
   }
 
-  void transferTokenToForeign(name sender,eosio::extended_symbol homeToken, name recipient,
+  void transferTokenToForeign(name sender,std::string homeToken, name recipient,
                               uint64_t value) {
     require_auth(sender);
     check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
@@ -80,7 +80,7 @@ public:
 
     HomeToken(self,homeToken).burn(sender,value);
     // emit TransferToForeign(foreignToken, recipient, value);
-    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
+    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
   }
 
   void transferFromForeign(name sender,std::string foreignToken, name recipient,
@@ -89,19 +89,18 @@ public:
     auto  homeToken = table.foreignToHomeTokenMap.find(foreignToken);
     check(homeToken != table.foreignToHomeTokenMap.end() && isRegisterd(foreignToken, homeToken->second), "Token not registered");
 
-    checksum256 hashMsg =
-        get_checksum256(homeToken, recipient, value, transactionHash);
+    checksum256 hashMsg = get_checksum256(homeToken->second, recipient, value, transactionHash);
     checksum256 hashSender = get_checksum256(sender, hashMsg);
     // Duplicated transfers
     check(table.transfersSigned.find(hashSender)!=table.transfersSigned.end(),
           "Transfer already signed by this validator");
     table.transfersSigned[hashSender] = true;
 
-    auto nsigned = table.numTransfersSigned.find(hashMsg);
-    check(nsigned != table.numTransfersSigned && !isAlreadyProcessed(nsigned->second), "Transfer already processed");
+    auto it = table.numTransfersSigned.find(hashMsg);
+    check(it != table.numTransfersSigned.end() && !isAlreadyProcessed(it->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-
+    uint64_t nsigned = it->second;
     table.numTransfersSigned[hashMsg] = ++nsigned;
 
     // emit SignedForTransferFromForeign(msg.sender, transactionHash);
@@ -114,7 +113,7 @@ public:
       // Passing the mapped home token address here even when token address is
       // 0x0. This is okay because by default the address mapped to 0x0 will
       // also be 0x0
-      performTransfer(homeToken, recipient, value);
+      performTransfer(homeToken->second, recipient, value);
       // emit TransferFromForeign(homeToken, recipient, value, transactionHash);
     }
   }
@@ -130,7 +129,7 @@ public:
     eosio::checksum256 hashSender = get_checksum256(sender, hashMsg);
 
     auto it = table.numTransfersSigned.find(hashMsg);
-    check(it != table.numTransfersSigned && !isAlreadyProcessed(it->second), "Transfer already processed");
+    check(it != table.numTransfersSigned.end() && !isAlreadyProcessed(it->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
     uint64_t nsigned = it->second + 1;
@@ -160,19 +159,20 @@ public:
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
 
-  void performTransfer(eosio::extended_symbol token, name recipient, uint64_t value) {
-    if (token.sym==symbol(table.core_symbol,table.precision)) {
-      action(
-          permission_level{self, "active"_n}, token.contract, "transfer"_n,
-          std::make_tuple(self, recipient, asset(value, token.sym), ""))
-          .send();
+  void performTransfer(std::string token, name recipient, uint64_t value) {
+    if (bos_bridge::str2sym(token)==symbol(table.core_symbol,table.precision)) {
+      std::string memo = "";
+      symbol sym=bos_bridge::str2sym(token);
+      name contract=bos_bridge::str2contract(token);
+      action(permission_level{self, "active"_n}, contract, "transfer"_n,
+          std::make_tuple(self, recipient, asset(value,sym), memo)).send();
       return;
     }
 
     HomeToken(self,token).mint(recipient, value);
   }
 
-  bool isRegisterd(eosio::extended_symbol foreignToken, eosio::extended_symbol homeToken) {
+  bool isRegisterd(std::string foreignToken, std::string homeToken) {
     if (table.foreignToHomeTokenMap.find(foreignToken)== table.foreignToHomeTokenMap.end() || table.homeToForeignTokenMap.find(homeToken)==table.homeToForeignTokenMap.end()) {
       return false;
     } else {

@@ -24,13 +24,13 @@ void bos_bridge::transfern2h(name sender, name recipient, uint64_t value) {
   _ForeignBridge.transferNativeToHome(sender, recipient, value);
 }
 
-void bos_bridge::transfert2h(name sender, eosio::extended_symbol token, name recipient,
+void bos_bridge::transfert2h(name sender, std::string token, name recipient,
                              uint64_t value) {
   ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
   _ForeignBridge.transferTokenToHome(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2he(const eosio::extended_symbol& token, name recipient, uint64_t value) {
+void bos_bridge::transfer2he(const std::string& token, name recipient, uint64_t value) {
   require_auth(_self);
 }
 
@@ -42,7 +42,7 @@ void bos_bridge::transferfrom(name sender, std::vector<signature> sig, bytes mes
 /// ForeignBridge  end
 
 /// HomeBridge begin
-void bos_bridge::regtoken(name sender, eosio::extended_symbol foreignAddress, eosio::extended_symbol homeAddress) {
+void bos_bridge::regtoken(name sender, std::string foreignAddress, std::string homeAddress) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.registerToken(sender, foreignAddress, homeAddress);
 }
@@ -52,13 +52,13 @@ void bos_bridge::transfern2f(name sender, name recipient, uint64_t value) {
   _HomeBridge.transferNativeToForeign(sender, recipient, value);
 }
 
-void bos_bridge::transfert2f(name sender, eosio::extended_symbol token, name recipient,
+void bos_bridge::transfert2f(name sender, std::string token, name recipient,
                              uint64_t value) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.transferTokenToForeign(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2fe( eosio::extended_symbol token, name recipient,
+void bos_bridge::transfer2fe( std::string token, name recipient,
                              uint64_t value) {
   require_auth(_self);
 }
@@ -204,6 +204,21 @@ void bos_bridge::submitsig(name sender, public_key sender_key, signature sig,
 // }
 
 // } // namespace bosbridge
+
+  void bos_bridge::settokenpara(name sender,bool is_home ,std::string token, uint64_t dailyLimit,
+                        uint64_t maxPerTx, uint64_t minPerTx) {
+    if (is_home) {
+      HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
+      _HomeBridge.setTokenParameter(sender, token, dailyLimit, maxPerTx,
+                                    minPerTx);
+      return;
+    }
+
+    ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
+
+    _ForeignBridge.setTokenParameter(sender, token, dailyLimit, maxPerTx,
+                                     minPerTx);
+  }
 
 /**
  * @brief  Sets config parameters

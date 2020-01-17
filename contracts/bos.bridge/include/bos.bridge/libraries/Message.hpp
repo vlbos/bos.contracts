@@ -38,7 +38,8 @@ class Message {
         // recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
-//            transaction_header trx_header;
+
+//    transaction_header trx_header;
 //    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
 //    ds >> trx_header;
         std::string token;
@@ -56,7 +57,6 @@ class Message {
         std::memcpy(txHash, &message.data()[hashoffset], offset);
 
         // bytes txHash(message.begin()+hashoffset,message.begin()+hashoffset+offset);
-
         return std::make_tuple(token,name(recipient),amount,checksum256(txHash));
     }
 

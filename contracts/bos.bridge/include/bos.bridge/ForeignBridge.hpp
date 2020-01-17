@@ -29,7 +29,7 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
     check(_foreignGasPrice > 0, "ForeignGasPrice should be greater than 0");
-    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
     table.foreign.validatorContractAddress = _validatorContract;
     table.foreign.deployedAtBlock = current_block_time(); ///block.number;
     table.foreign.dailyLimit[core_token] = _dailyLimit;
@@ -43,24 +43,24 @@ public:
 
   void transferNativeToHome(name sender,name _recipient,uint64_t _value) {
     require_auth(sender);
-    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, _value), "Transfer exceeds limit");
     table.foreign.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += _value;
-    asset quantity= asset(_value,core_token.sym);
+    asset quantity= asset(_value, bos_bridge::str2sym(core_token));
     std::string memo = "";
     action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,std::make_tuple(sender, self, quantity, memo)).send();
     // emit TransferToHome(table.core_symbol, _recipient, msg.value);
   }
 
-  void transferTokenToHome(name sender,eosio::extended_symbol _token, name _recipient, uint64_t _value) {
+  void transferTokenToHome(name sender,std::string _token, name _recipient, uint64_t _value) {
      require_auth(sender);
     uint64_t castValue18 = _value;//castTo18Decimal(_token, _value);
     check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");
     table.foreign.totalSpentPerDay[get_checksum256(_token,this->getCurrentDay())] += castValue18;
-    asset quantity= asset(_value,_token.sym);
+    asset quantity= asset(_value,bos_bridge::str2sym(_token));
     std::string memo = "";
     action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,
-   std::make_tuple(sender, self, quantity, memo)).send();
+    std::make_tuple(sender, self, quantity, memo)).send();
     // if (_token == USDTAddress) {
     //   // Handle USDT special case since it does not have standard erc20 token
     //   // interface =.=
@@ -80,7 +80,7 @@ public:
     Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
   
     std::tuple<std::string, name, int64_t, checksum256> msg = Message::parseMessage(message);
-    eosio::extended_symbol token=std::get<0>(msg);
+    std::string token=std::get<0>(msg);
     name recipient=std::get<1>(msg);
     uint64_t amount=std::get<2>(msg);
     checksum256 txHash=std::get<3>(msg);
@@ -94,11 +94,11 @@ private:
 
    /* --- INTERNAL / PRIVATE METHODS --- */
 
-  void performTransfer(eosio::extended_symbol tokenAddress, name recipient,
+  void performTransfer(std::string tokenAddress, name recipient,
                        uint64_t amount) {
-    // if (tokenAddress.contract==self && tokenAddress.sym == symbol(table.core_symbol,table.precision)) {
+    // if (tokenAddress.contract==self && tokenAddresstoken == symbol(table.core_symbol,table.precision)) {
     //   std::string memo = "";
-    //   action(permission_level{self, "active"_n}, tokenAddress.contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,tokenAddress.sym), memo)).send();
+    //   action(permission_level{self, "active"_n}, tokenAddress.contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,tokenAddresstoken), memo)).send();
     //   //recipient.transfer(amount);
     //   return;
     // }
@@ -114,7 +114,9 @@ private:
     // std::string token = (tokenAddress);
     // check(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
     std::string memo = "";
-    action(permission_level{self, "active"_n},tokenAddress.contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,tokenAddress.sym), memo)).send();
+    symbol sym = bos_bridge::str2sym(tokenAddress);
+    name contract = bos_bridge::str2contract(tokenAddress);
+    action(permission_level{self, "active"_n},contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,sym), memo)).send();
 
   }
 
