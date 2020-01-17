@@ -48,6 +48,7 @@ struct [[eosio::table("metaparams"), eosio::contract("bos.bridge")]] bridge_meta
 
    name owner;
    std::map<name,bool>  validators;
+   std::map<std::string,bool>  validatorkeys;
    uint64_t validatorCount;
    uint64_t requiredSignatures;
    

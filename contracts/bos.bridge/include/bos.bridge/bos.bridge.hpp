@@ -34,7 +34,7 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
    /**
     * @brief  
     */
-   [[eosio::action]] void impvalidator(uint64_t requiredSignatures, std::vector<name>& initialValidators, name owner);
+   [[eosio::action]] void impvalidator(uint64_t requiredSignatures, std::vector<std::pair<name,public_key>>& initialValidators, name owner);
 // BasicBridge end
 
 // ForeignBridge  begin

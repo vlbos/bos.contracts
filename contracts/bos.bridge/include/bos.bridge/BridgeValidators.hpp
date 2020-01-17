@@ -14,7 +14,7 @@ public:
       : self(_self), table(_table){}
 
 void initialize(uint64_t _requiredSignatures,
-                                         std::vector<name> & _initialValidators,
+                                         std::vector<std::pair<name,public_key>> & _initialValidators, 
                                          name _owner) {
     require_auth(_owner);
     setOwner(_owner);
@@ -23,12 +23,14 @@ void initialize(uint64_t _requiredSignatures,
     check(_initialValidators.size() >= _requiredSignatures,
           "Number of proposed validators should be greater than "
           "requiredSignatures");
+
     for (uint64_t i = 0; i < _initialValidators.size(); i++) {
-      check(is_account(_initialValidators[i]),
+      check(is_account(_initialValidators[i].first),
             "Validator address should not be name()");
-      check(!isValidator(_initialValidators[i]),"is validator false");
+      check(!isValidator(_initialValidators[i].first),"is validator false");
       table.validatorCount++;
-      table.validators[_initialValidators[i]] = true;
+      table.validators[_initialValidators[i].first] = true;
+      table.validatorkeys[key2str(_initialValidators[i].second)] = true;
       // emit ValidatorAdded(_initialValidators[i]);
     }
     check(table.validatorCount >= _requiredSignatures,
@@ -68,13 +70,14 @@ void initialize(uint64_t _requiredSignatures,
   }
 
   bool isValidator(name _validator) {
-    return table.validators.find(_validator)!= table.validators.end() && table.validators[_validator];
+    auto it = table.validators.find(_validator);
+    return it != table.validators.end() && it->second;
   }
 
- bool isValidator(public_key _validator) {
-    return true;//table.validators.find(_validator) && table.validators[_validator];
+  bool isValidator(public_key _validator) {
+    auto it = table.validatorkeys.find(key2str(_validator));
+    return it != table.validatorkeys.end() && it->second;
   }
-
 
   /* --- INTERNAL / PRIVATE METHODS --- */
 

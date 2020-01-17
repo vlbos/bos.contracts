@@ -11,7 +11,7 @@ using std::string;
 
 // BasicBridge  begin
 void bos_bridge::impvalidator(uint64_t requiredSignatures,
-                              std::vector<name> &initialValidators,
+                              std::vector<std::pair<name,public_key>> &initialValidators,
                               name owner) {
   BridgeValidators _BridgeValidators(_self, _bridge_meta_parameters);
   _BridgeValidators.initialize(requiredSignatures, initialValidators, owner);

@@ -94,9 +94,9 @@ class Message {
         for (uint64_t i = 0; i < requiredSignatures; i++) {
             public_key recoveredAddress = recover_key(hash,_ss[i]);
             check(_validatorContract->isValidator(recoveredAddress), "Signer of message is not a validator");
-            if (addressArrayContains(encounteredAddresses, recoveredAddress)) {
-                check(false,"addressArrayContains is false");
-            }
+            bool b = addressArrayContains(encounteredAddresses, recoveredAddress);
+            check(!b,"The address is contained in array");
+            
             encounteredAddresses.push_back(recoveredAddress);
         }
     }
