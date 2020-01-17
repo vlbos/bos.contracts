@@ -131,22 +131,22 @@ class ec{
 
 std::string key2str(public_key pk)
       {
-        std::string tmp;
+        std::string tmp(pk.data.data());
        
-        char pub[34]; // public key without checksum
-        memcpy(pub, pk.data.data(),pk.data.size());
-        std::string pubhex = to_hex(pub, sizeof(pub)).substr(2); // remove leading '00'
-        tmp = hex_to_string(pubhex.c_str());
-        strcpy(pub, tmp.c_str());
+        // char pub[33]; // public key without checksum
+        // memcpy(pub, pk.data.data(),pk.data.size());
+        // std::string pubhex = to_hex(pub, sizeof(pub)).substr(2); // remove leading '00'
+        // tmp = hex_to_string(pubhex.c_str());
+        // strcpy(pub, tmp.c_str());
 
-        checksum160 chksm=ripemd160(pub, 33);
+        // checksum160 chksm=ripemd160(pub, 33);
 
-        tmp = hex_to_string(pubhex + to_hex(&chksm, 20).substr(0,8)); // append checksum
+        // tmp = hex_to_string(pubhex + to_hex(&chksm, 20).substr(0,8)); // append checksum
 
-        unsigned char encoded[37  * 137 / 100];
-        base58encode(tmp, 37, encoded);
-        tmp = "EOS" + std::string(reinterpret_cast<char*>(encoded));
-        assert(tmp.length() == 53);
+        // unsigned char encoded[37  * 137 / 100];
+        // base58encode(tmp, 37, encoded);
+        // tmp = "EOS" + std::string(reinterpret_cast<char*>(encoded));
+        // assert(tmp.length() == 53);
         return tmp;
       }
       
