@@ -79,15 +79,16 @@ public:
     require_auth(sender);
     Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
   
-    std::tuple<std::string, name, int64_t, checksum256> msg = Message::parseMessage(message);
-    std::string token=std::get<0>(msg);
-    name recipient=std::get<1>(msg);
-    uint64_t amount=std::get<2>(msg);
-    checksum256 txHash=std::get<3>(msg);
-    check(!table.transfers[txHash], "Transfer already processed");
-    table.transfers[txHash] = true;
-    uint64_t castedAmount = amount;//castFrom18Decimal(token, amount);
-    performTransfer(token, recipient, castedAmount);
+    // std::tuple<std::string, name, int64_t, checksum256> 
+    message_data msg = Message::parseMessage(message);
+    // std::string token=std::get<0>(msg);
+    // name recipient=std::get<1>(msg);
+    // uint64_t amount=std::get<2>(msg);
+    // checksum256 txHash=std::get<3>(msg);
+    check(!table.transfers[msg.txHash], "Transfer already processed");
+    table.transfers[msg.txHash] = true;
+    uint64_t castedAmount = msg.amount;//castFrom18Decimal(token, amount);
+    performTransfer(msg.token, msg.recipient, castedAmount);
     // emit TransferFromHome(token, recipient, castedAmount, txHash);
   }
 private:

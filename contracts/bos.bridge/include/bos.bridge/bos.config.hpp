@@ -7,7 +7,7 @@
 #include <cmath>
 using namespace eosio;
 
-using bytes = std::vector<uint8_t>;
+using bytes = std::vector<char>;
 
 
 static const std::string default_core_symbol =  "BOS";

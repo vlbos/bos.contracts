@@ -7,6 +7,13 @@ using namespace eosio;
 // using std::string;
 
 
+struct message_data {
+ std::string token;
+ name recipient;
+ uint64_t amount;
+ checksum256 txHash;
+  EOSLIB_SERIALIZE(message_data, (token)(recipient)(amount)(txHash))
+};
 
 struct bridge_parameters {
 

@@ -31,7 +31,7 @@ class Message {
     // which is padding address to 32 bytes and reading recipient at offset 32.
     // for more details see discussion in:
     // https://github.com/paritytech/parity-bridge/issues/61
-     static std::tuple<std::string,name,int64_t,checksum256> parseMessage(bytes message)
+     static message_data parseMessage(bytes message)
      {
         check(isMessageValid(message), "Incorrect message format");
         // token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
@@ -39,25 +39,26 @@ class Message {
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
 
-//    transaction_header trx_header;
-//    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
-//    ds >> trx_header;
-        std::string token;
-        uint64_t recipient;
-        int64_t amount =0;
-        uint8_t length=20;
-        uint8_t offset=32;
+   message_data msg;
+   datastream<const char*> ds( message.data(), message.size() );
+   ds >> msg;
+        // std::string token;
+        // uint64_t recipient;
+        // int64_t amount =0;
+        // uint8_t length=20;
+        // uint8_t offset=32;
         
-        token.resize(length);
-        std::memcpy(&token[0], &message.data()[offset], length);
-        std::memcpy(&recipient, &message.data()[offset+length], length);
-        std::memcpy(&amount, &message.data()[offset+length+length], offset);
-        uint8_t hashoffset=offset+length+length+offset;
-        uint8_t txHash[32];
-        std::memcpy(txHash, &message.data()[hashoffset], offset);
+        // token.resize(length);
+        // std::memcpy(&token[0], &message.data()[offset], length);
+        // std::memcpy(&recipient, &message.data()[offset+length], length);
+        // std::memcpy(&amount, &message.data()[offset+length+length], offset);
+        // uint8_t hashoffset=offset+length+length+offset;
+        // uint8_t txHash[32];
+        // std::memcpy(txHash, &message.data()[hashoffset], offset);
 
-        // bytes txHash(message.begin()+hashoffset,message.begin()+hashoffset+offset);
-        return std::make_tuple(token,name(recipient),amount,checksum256(txHash));
+        // // bytes txHash(message.begin()+hashoffset,message.begin()+hashoffset+offset);
+        // return std::make_tuple(token,name(recipient),amount,checksum256(txHash));
+        return msg;
     }
 
    static  bool isMessageValid(bytes _msg) {
