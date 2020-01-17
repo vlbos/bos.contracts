@@ -30,9 +30,9 @@ struct bridge_parameters_storage {
    uint64_t  requiredBlockConfirmations; // Used by bridge client to determine proper number of blocks to wait before validating transfer
    block_timestamp  deployedAtBlock; // Used by bridge client to determine initial block number to start listening for transfers
 
-    std::map<std::string,uint64_t>   minPerTx;
-    std::map<std::string,uint64_t>   maxPerTx; // Set to 0 to disable
-    std::map<std::string,uint64_t>   dailyLimit; // Set to 0 to disable
+    std::map<eosio::extended_symbol,uint64_t>   minPerTx;
+    std::map<eosio::extended_symbol,uint64_t>   maxPerTx; // Set to 0 to disable
+    std::map<eosio::extended_symbol,uint64_t>   dailyLimit; // Set to 0 to disable
     std::map<eosio::checksum256,uint64_t>  totalSpentPerDay;
 
    // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -56,9 +56,9 @@ struct [[eosio::table("metaparams"), eosio::contract("bos.bridge")]] bridge_meta
 
     std::map<checksum256,bool>  transfers;
     // mapping between foreign token addresses to home token addresses
-    std::map<std::string,std::string>  foreignToHomeTokenMap;
+    std::map<std::string,eosio::extended_symbol>  foreignToHomeTokenMap;
     // mapping between home token addresses to foreign token addresses
-    std::map<std::string,std::string> homeToForeignTokenMap;
+    std::map<eosio::extended_symbol,std::string> homeToForeignTokenMap;
     // mapping between message hash and transfer message. Message is the hash of (recipientAccount, transferValue, transactionHash)
     std::map<eosio::checksum256,bytes>  messages;
     // mapping between hash of (transfer message hash, validator index) to the validator signature

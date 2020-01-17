@@ -24,13 +24,13 @@ void bos_bridge::transfern2h(name sender, name recipient, uint64_t value) {
   _ForeignBridge.transferNativeToHome(sender, recipient, value);
 }
 
-void bos_bridge::transfert2h(name sender, std::string token, name recipient,
+void bos_bridge::transfert2h(name sender, eosio::extended_symbol token, name recipient,
                              uint64_t value) {
   ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
   _ForeignBridge.transferTokenToHome(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2he(const std::string& token, name recipient, uint64_t value) {
+void bos_bridge::transfer2he(const eosio::extended_symbol& token, name recipient, uint64_t value) {
   require_auth(_self);
 }
 
@@ -42,22 +42,23 @@ void bos_bridge::transferfrom(name sender, std::vector<signature> sig, bytes mes
 /// ForeignBridge  end
 
 /// HomeBridge begin
-void bos_bridge::regtoken(name sender, std::string foreignAddress, std::string homeAddress) {
+void bos_bridge::regtoken(name sender, eosio::extended_symbol foreignAddress, eosio::extended_symbol homeAddress) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.registerToken(sender, foreignAddress, homeAddress);
 }
+
 void bos_bridge::transfern2f(name sender, name recipient, uint64_t value) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.transferNativeToForeign(sender, recipient, value);
 }
 
-void bos_bridge::transfert2f(name sender, std::string token, name recipient,
+void bos_bridge::transfert2f(name sender, eosio::extended_symbol token, name recipient,
                              uint64_t value) {
   HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
   _HomeBridge.transferTokenToForeign(sender, token, recipient, value);
 }
 
-void bos_bridge::transfer2fe( std::string token, name recipient,
+void bos_bridge::transfer2fe( eosio::extended_symbol token, name recipient,
                              uint64_t value) {
   require_auth(_self);
 }
@@ -81,14 +82,14 @@ void bos_bridge::submitsig(name sender, public_key sender_key, signature sig,
 // void bos_bridge::deposit(name from, name to, asset quantity) {
 //    require_auth(from);
 //    action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n,
-//    std::make_tuple(from, _self, quantity, "")).send();
+//    std::make_tuple(from, _self, quantity, std::string(""))).send();
 
 //    if(quantity.symbol != core_symbol())
 //    {
 //    action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n,
-//    std::make_tuple(from, _self, quantity, "")).send();
+//    std::make_tuple(from, _self, quantity, std::string(""))).send();
 //    action(permission_level{_self, "active"_n}, "eosio.token"_n, "retire"_n,
-//    std::make_tuple(quantity, "")).send();
+//    std::make_tuple(quantity, std::string(""))).send();
 //    }
 
 //    action(permission_level{_self, "active"_n}, _self, "transfertofe"_n,
@@ -129,11 +130,11 @@ void bos_bridge::submitsig(name sender, public_key sender_key, signature sig,
 //    "create"_n, std::make_tuple(_self, maximum_supply)).send();
 
 //       action(permission_level{_self, "active"_n}, "eosio.token"_n, "issue"_n,
-//       std::make_tuple(_self, recipient, amount, "")).send();
+//       std::make_tuple(_self, recipient, amount, std::string(""))).send();
 //    }
 //    else   {
 //       action(permission_level{_self, "active"_n}, "eosio.token"_n,
-//       "transfer"_n, std::make_tuple( _self,recipient, amount, "")).send();
+//       "transfer"_n, std::make_tuple( _self,recipient, amount, std::string(""))).send();
 //    }
 
 // }
@@ -227,6 +228,7 @@ void bos_bridge::setparameter(ignore<uint8_t> version,
       "unsupported version for setparameter action,current_bridge_version =" +
       std::to_string(current_bridge_version);
   check(_version == current_bridge_version, checkmsg.c_str());
+  _bridge_meta_parameters.version=_version;
   _bridge_meta_parameters.core_symbol = _core_symbol;
   _bridge_meta_parameters.precision = _precision;
   ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);

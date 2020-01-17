@@ -32,21 +32,22 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
 
+    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
     table.home.validatorContractAddress = _validatorContract;
     table.home.deployedAtBlock = current_block_time(); // block.number;
-    table.home.dailyLimit[table.core_symbol] = _dailyLimit;
-    table.home.maxPerTx[table.core_symbol] = _maxPerTx;
-    table.home.minPerTx[table.core_symbol] = _minPerTx;
+    table.home.dailyLimit[core_token] = _dailyLimit;
+    table.home.maxPerTx[core_token] = _maxPerTx;
+    table.home.minPerTx[core_token] = _minPerTx;
     table.home.gasPrice = _homeGasPrice;
     table.home.requiredBlockConfirmations = _requiredBlockConfirmations;
   }
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void registerToken(name sender,std::string foreignAddress, std::string homeAddress) {
+  void registerToken(name sender,std::string foreignAddress, eosio::extended_symbol homeAddress) {
     require_auth(sender);
-    check(table.foreignToHomeTokenMap[foreignAddress].empty() &&
-              table.homeToForeignTokenMap[homeAddress].empty(),
+    check(table.foreignToHomeTokenMap.find(foreignAddress) == table.foreignToHomeTokenMap.end() &&
+              table.homeToForeignTokenMap.find(homeAddress)==table.homeToForeignTokenMap.end(),
           "Token already registered");
     table.foreignToHomeTokenMap[foreignAddress] = homeAddress;
     table.homeToForeignTokenMap[homeAddress] = foreignAddress;
@@ -55,47 +56,49 @@ public:
 
   void transferNativeToForeign(name sender,name recipient, uint64_t value) {
     require_auth(sender);
-    check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
-    table.home.totalSpentPerDay[get_checksum256(table.core_symbol,this->getCurrentDay())] += value;
+    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    check(this->withinLimit(core_token, value), "Transfer exceeds limit");
+    table.home.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += value;
 
-    std::string foreignToken = table.homeToForeignTokenMap[table.core_symbol];
-    check(!foreignToken.empty(), "Foreign native token address is empty");
+    auto foreignToken = table.homeToForeignTokenMap.find(core_token);
+    check(foreignToken != table.homeToForeignTokenMap.end(), "Foreign native token address is empty");
 
     // emit TransferToForeign(foreignToken, recipient, msg.value);
-       action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
+    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
   }
 
-  void transferTokenToForeign(name sender,std::string homeToken, name recipient,
+  void transferTokenToForeign(name sender,eosio::extended_symbol homeToken, name recipient,
                               uint64_t value) {
-                                require_auth(sender);
+    require_auth(sender);
     check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
     table.home.totalSpentPerDay[get_checksum256(homeToken,this->getCurrentDay())] += value;
 
-    std::string foreignToken = table.homeToForeignTokenMap[homeToken];
-    check(table.foreignToHomeTokenMap[foreignToken] == homeToken,
-          "Incorrect token address mapping");
+    auto foreignToken = table.homeToForeignTokenMap.find(homeToken);
+    check(foreignToken != table.homeToForeignTokenMap.end(), "Incorrect token address mapping no foreign token");
+    auto ht = table.foreignToHomeTokenMap.find(foreignToken->second);
+    check(ht != table.foreignToHomeTokenMap.end() &&  ht->second == homeToken, "Incorrect token address mapping not equal");
 
     HomeToken(self,homeToken).burn(sender,value);
     // emit TransferToForeign(foreignToken, recipient, value);
-     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
+    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken,recipient,value)).send();
   }
 
   void transferFromForeign(name sender,std::string foreignToken, name recipient,
                            uint64_t value, checksum256 transactionHash) {
-                             require_auth(sender);
-    std::string homeToken = table.foreignToHomeTokenMap[foreignToken];
-    check(isRegisterd(foreignToken, homeToken), "Token not registered");
+    require_auth(sender);
+    auto  homeToken = table.foreignToHomeTokenMap.find(foreignToken);
+    check(homeToken != table.foreignToHomeTokenMap.end() && isRegisterd(foreignToken, homeToken->second), "Token not registered");
 
     checksum256 hashMsg =
         get_checksum256(homeToken, recipient, value, transactionHash);
     checksum256 hashSender = get_checksum256(sender, hashMsg);
     // Duplicated transfers
-    check(!table.transfersSigned[hashSender],
+    check(table.transfersSigned.find(hashSender)!=table.transfersSigned.end(),
           "Transfer already signed by this validator");
     table.transfersSigned[hashSender] = true;
 
-    uint64_t nsigned = table.numTransfersSigned[hashMsg];
-    check(!isAlreadyProcessed(nsigned), "Transfer already processed");
+    auto nsigned = table.numTransfersSigned.find(hashMsg);
+    check(nsigned != table.numTransfersSigned && !isAlreadyProcessed(nsigned->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
 
@@ -118,7 +121,7 @@ public:
 
   void submitSignature(name sender, public_key sender_key, signature sig,
                        bytes message) {
-                         require_auth(sender);
+    require_auth(sender);
     // ensure that `signature` is really `message` signed by `msg.sender`
     check(Message::isMessageValid(message), "Invalid message format");
     check(sender_key == Message::recoverAddressFromSignedMessage(sig, message),
@@ -126,14 +129,14 @@ public:
     eosio::checksum256 hashMsg = get_checksum256(message);
     eosio::checksum256 hashSender = get_checksum256(sender, hashMsg);
 
-    uint64_t nsigned = table.numMessagesSigned[hashMsg];
-    check(!isAlreadyProcessed(nsigned), "Transfer already processed");
+    auto it = table.numTransfersSigned.find(hashMsg);
+    check(it != table.numTransfersSigned && !isAlreadyProcessed(it->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-    nsigned = nsigned + 1;
+    uint64_t nsigned = it->second + 1;
     if (nsigned > 1) {
       // Duplicated signatures
-      check(!table.messagesSigned[hashSender],
+      check(table.messagesSigned.find(hashSender) != table.messagesSigned.end(),
               "Message already signed by this validator");
     } else {
       table.messages[hashMsg] = message;
@@ -157,11 +160,11 @@ public:
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
 
-  void performTransfer(std::string token, name recipient, uint64_t value) {
-    if (token==table.core_symbol) {
+  void performTransfer(eosio::extended_symbol token, name recipient, uint64_t value) {
+    if (token.sym==symbol(table.core_symbol,table.precision)) {
       action(
-          permission_level{self, "active"_n}, "eosio.token"_n, "transfer"_n,
-          std::make_tuple(self, recipient, asset(value, symbol(table.core_symbol,4)), ""))
+          permission_level{self, "active"_n}, token.contract, "transfer"_n,
+          std::make_tuple(self, recipient, asset(value, token.sym), ""))
           .send();
       return;
     }
@@ -169,8 +172,8 @@ private:
     HomeToken(self,token).mint(recipient, value);
   }
 
-  bool isRegisterd(std::string foreignToken, std::string homeToken) {
-    if (foreignToken.empty() && homeToken.empty()) {
+  bool isRegisterd(eosio::extended_symbol foreignToken, eosio::extended_symbol homeToken) {
+    if (table.foreignToHomeTokenMap.find(foreignToken)== table.foreignToHomeTokenMap.end() || table.homeToForeignTokenMap.find(homeToken)==table.homeToForeignTokenMap.end()) {
       return false;
     } else {
       return (table.foreignToHomeTokenMap[foreignToken] == homeToken &&
@@ -180,11 +183,15 @@ private:
 
   checksum256 signature(checksum256 _hash, uint64_t _index) {
         checksum256 signIdx = get_checksum256(_hash, _index);
-        return table.signatures[signIdx];
+        auto it = table.signatures.find(signIdx);
+        check(it != table.signatures.end(),"no found signindex");
+        return it->second;
     }
 
     bytes message(checksum256 _hash)  {
-        return table.messages[_hash];
+       auto it  = table.messages[_hash];
+       check(it != table.messages.end(),"no found hash");
+        return it->second;
     }
 
     uint64_t markAsProcessed(uint64_t _v)  {

@@ -32,6 +32,12 @@ bool operator<(const eosio::checksum256& lhs, const eosio::checksum256& rhs)
     return to_hex(&lhs, sizeof(lhs)) < to_hex(&rhs, sizeof(rhs));
 }
 
+bool operator<(const eosio::extended_symbol& lhs, const eosio::extended_symbol& rhs)
+{
+    return lhs.contract < rhs.contract || (lhs.contract == rhs.contract &&  lhs.symbol < rhs.symbol) );
+}
+
+
 // std::string data = "hello";
 // checksum256 digest;
 // sha256(&data[0], data.size(), &digest);

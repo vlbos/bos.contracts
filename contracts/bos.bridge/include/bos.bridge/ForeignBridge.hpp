@@ -29,32 +29,38 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
     check(_foreignGasPrice > 0, "ForeignGasPrice should be greater than 0");
-
+    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
     table.foreign.validatorContractAddress = _validatorContract;
     table.foreign.deployedAtBlock = current_block_time(); ///block.number;
-    table.foreign.dailyLimit[table.core_symbol] = _dailyLimit;
-    table.foreign.maxPerTx[table.core_symbol] = _maxPerTx;
-    table.foreign.minPerTx[table.core_symbol] = _minPerTx;
+    table.foreign.dailyLimit[core_token] = _dailyLimit;
+    table.foreign.maxPerTx[core_token] = _maxPerTx;
+    table.foreign.minPerTx[core_token] = _minPerTx;
     table.foreign.gasPrice = _foreignGasPrice;
     table.foreign.requiredBlockConfirmations = _requiredBlockConfirmations;
   }
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void transferNativeToHome(name sender,name _recipient,uint64_t value) {
+  void transferNativeToHome(name sender,name _recipient,uint64_t _value) {
     require_auth(sender);
-    check(this->withinLimit(table.core_symbol, value), "Transfer exceeds limit");
-    table.foreign.totalSpentPerDay[get_checksum256(table.core_symbol,this->getCurrentDay())] += value;
+    eosio::extended_symbol core_token{symbol(table.core_symbol,table.precision),self};
+    check(this->withinLimit(core_token, _value), "Transfer exceeds limit");
+    table.foreign.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += _value;
+    asset quantity= asset(_value,core_token.sym);
+    std::string memo = "";
+    action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,std::make_tuple(sender, self, quantity, memo)).send();
     // emit TransferToHome(table.core_symbol, _recipient, msg.value);
-
   }
 
-  void transferTokenToHome(name sender,std::string _token, name _recipient, uint64_t _value) {
+  void transferTokenToHome(name sender,eosio::extended_symbol _token, name _recipient, uint64_t _value) {
      require_auth(sender);
     uint64_t castValue18 = _value;//castTo18Decimal(_token, _value);
     check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");
     table.foreign.totalSpentPerDay[get_checksum256(_token,this->getCurrentDay())] += castValue18;
-
+    asset quantity= asset(_value,_token.sym);
+    std::string memo = "";
+    action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,
+   std::make_tuple(sender, self, quantity, memo)).send();
     // if (_token == USDTAddress) {
     //   // Handle USDT special case since it does not have standard erc20 token
     //   // interface =.=
@@ -74,7 +80,7 @@ public:
     Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
   
     std::tuple<std::string, name, int64_t, checksum256> msg = Message::parseMessage(message);
-   std::string token=std::get<0>(msg);
+    eosio::extended_symbol token=std::get<0>(msg);
     name recipient=std::get<1>(msg);
     uint64_t amount=std::get<2>(msg);
     checksum256 txHash=std::get<3>(msg);
@@ -88,13 +94,14 @@ private:
 
    /* --- INTERNAL / PRIVATE METHODS --- */
 
-  void performTransfer(std::string tokenAddress, name recipient,
+  void performTransfer(eosio::extended_symbol tokenAddress, name recipient,
                        uint64_t amount) {
-    if (tokenAddress == table.core_symbol) {
-      action(permission_level{self, "active"_n}, bos_bridge::token_account, "transfer"_n,std::make_tuple(self, recipient, asset(amount,symbol(table.core_symbol,4)), "")).send();
-      //recipient.transfer(amount);
-      return;
-    }
+    // if (tokenAddress.contract==self && tokenAddress.sym == symbol(table.core_symbol,table.precision)) {
+    //   std::string memo = "";
+    //   action(permission_level{self, "active"_n}, tokenAddress.contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,tokenAddress.sym), memo)).send();
+    //   //recipient.transfer(amount);
+    //   return;
+    // }
 
     // if (tokenAddress == USDTAddress) {
     //     uint64_t balanceBefore = USDT(tokenAddress).balanceOf(recipient);
@@ -106,7 +113,8 @@ private:
 
     // std::string token = (tokenAddress);
     // check(token.transfer(recipient, amount), "Transfer failed for ERC20 token");
-    action(permission_level{self, "active"_n}, bos_bridge::token_account, "transfer"_n,std::make_tuple(self, recipient, asset(amount,symbol(table.core_symbol,4)), "")).send();
+    std::string memo = "";
+    action(permission_level{self, "active"_n},tokenAddress.contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,tokenAddress.sym), memo)).send();
 
   }
 
