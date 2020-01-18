@@ -7,12 +7,20 @@ using namespace eosio;
 // using std::string;
 
 
-struct message_data {
- std::string token;
- name recipient;
+struct msgdata {
+ uint64_t token;
+ uint64_t rec;
  uint64_t amount;
- checksum256 txHash;
-  EOSLIB_SERIALIZE(message_data, (token)(recipient)(amount)(txHash))
+ std::string txhash;
+ EOSLIB_SERIALIZE(msgdata, (token)(rec)(amount)(txhash))
+};
+
+struct [[eosio::table("msgdatas"), eosio::contract("bos.bridge")]]  msgdatas {
+ uint64_t token;
+ uint64_t rec;
+ uint64_t amount;
+ std::string txhash;
+ EOSLIB_SERIALIZE(msgdatas, (token)(rec)(amount)(txhash))
 };
 
 struct bridge_parameters {
@@ -55,7 +63,7 @@ struct [[eosio::table("metaparams"), eosio::contract("bos.bridge")]] bridge_meta
 
    name owner;
    std::map<name,bool>  validators;
-   std::map<std::string,bool>  validatorkeys;
+   std::map<checksum256,public_key>  validatorkeys;
    uint64_t validatorCount;
    uint64_t requiredSignatures;
    
@@ -82,7 +90,7 @@ struct [[eosio::table("metaparams"), eosio::contract("bos.bridge")]] bridge_meta
 
     EOSLIB_SERIALIZE(
         bridge_meta_parameters,
-        (version)(validators)(validatorCount)(requiredSignatures)
+        (version)(validators)(validatorkeys)(validatorCount)(requiredSignatures)
         (foreign)(home)(transfers)(foreignToHomeTokenMap)(homeToForeignTokenMap)(
             messages)(signatures)(transfersSigned)(numTransfersSigned)(
             messagesSigned)(numMessagesSigned))

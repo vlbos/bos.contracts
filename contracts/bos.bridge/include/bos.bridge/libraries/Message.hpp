@@ -31,17 +31,17 @@ class Message {
     // which is padding address to 32 bytes and reading recipient at offset 32.
     // for more details see discussion in:
     // https://github.com/paritytech/parity-bridge/issues/61
-     static message_data parseMessage(bytes message)
+     static msgdata parseMessage(bytes message)
      {
         check(isMessageValid(message), "Incorrect message format");
         // token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // recipient := and(mload(add(message, 40)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
-
-   message_data msg;
-   datastream<const char*> ds( message.data(), message.size() );
-   ds >> msg;
+        
+   msgdata msg = unpack<msgdata>(message);
+//    datastream<const char*> ds( message.data(), message.size() );
+//    ds >> msg;
         // std::string token;
         // uint64_t recipient;
         // int64_t amount =0;
@@ -62,7 +62,7 @@ class Message {
     }
 
    static  bool isMessageValid(bytes _msg) {
-        return _msg.size() == requiredMessageLength();
+        return true;///_msg.size() == requiredMessageLength();
     }
 
    static uint64_t requiredMessageLength() {
@@ -79,7 +79,7 @@ class Message {
         // message is always 84 length
         std::string  msgLength = "104";
         // return keccak256(abi.encodePacked(prefix, msgLength, message));
-        return get_checksum256(prefix, msgLength, message);
+        return get_checksum256(message);//prefix, msgLength,
     }
 
     static void hasEnoughValidSignatures(
@@ -90,10 +90,16 @@ class Message {
         uint64_t requiredSignatures = _validatorContract->requiredSignatures();
         check(_ss.size() >= requiredSignatures, "Num of signatures in message is less than requiredSignatures");
         checksum256 hash = hashMessage(_message);
+        eosio::checksum256 digest= sha256(&_message[0], _message.size());
+
         std::vector<eosio::public_key>  encounteredAddresses;// = new address[](requiredSignatures);
 
         for (uint64_t i = 0; i < requiredSignatures; i++) {
+             public_key n = recover_key(digest, _ss[i]);
+             print(i);
+            check(_validatorContract->isValidator(n), "n Signer of message is not a validator");
             public_key recoveredAddress = recover_key(hash,_ss[i]);
+
             check(_validatorContract->isValidator(recoveredAddress), "Signer of message is not a validator");
             bool b = addressArrayContains(encounteredAddresses, recoveredAddress);
             check(!b,"The address is contained in array");

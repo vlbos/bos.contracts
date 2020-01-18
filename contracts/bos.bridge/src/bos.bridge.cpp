@@ -32,6 +32,7 @@ void bos_bridge::transfert2h(name sender, std::string token, name recipient,
 
 void bos_bridge::transfer2he(const std::string& token, name recipient, uint64_t value) {
   require_auth(_self);
+     
 }
 
 void bos_bridge::transferfrom(name sender, std::vector<signature> sig, bytes message) {
@@ -257,6 +258,69 @@ void bos_bridge::setparameter(ignore<uint8_t> version,
                          _home.requiredBlockConfirmations);
 }
 
+void bos_bridge::test(name sender, public_key sender_key, signature sig, bytes message)
+{
+   eosio::checksum256 digest= sha256(&message[0], message.size());
+
+      public_key n = recover_key(digest, sig);
+
+  print("begin",_bridge_meta_parameters.validatorkeys.size());
+  for(auto v:_bridge_meta_parameters.validatorkeys)
+    {
+      print("\n",hash2str(v.first),"\n");
+    }
+    print("end",_bridge_meta_parameters.validators.size());
+
+      bool b = (n==sender_key);
+      print(b);
+
+      auto it = _bridge_meta_parameters.validatorkeys.find(get_checksum256(n));
+    bool bb = ( it != _bridge_meta_parameters.validatorkeys.end() && (it->second==n));
+    print(bb);
+    std::string s = hash2str(get_checksum256(n));
+    print("==",s,"==");
+    {
+      auto it = _bridge_meta_parameters.validatorkeys.find(get_checksum256(sender_key));
+      bool b = ( it != _bridge_meta_parameters.validatorkeys.end());
+      print("sender_key==",b);
+      bool bb = ( it != _bridge_meta_parameters.validatorkeys.end() && (it->second==sender_key));
+    print(bb);
+    std::string s = hash2str(get_checksum256(sender_key));
+    print("==",s,"==");
+
+    if (it == _bridge_meta_parameters.validatorkeys.end()) {
+      print("==it end==");
+      _bridge_meta_parameters.validatorkeys[get_checksum256(sender_key)] =
+          sender_key;
+           
+          auto itr = _bridge_meta_parameters.validatorkeys.find(get_checksum256(sender_key));
+
+      bool bbb = (itr == _bridge_meta_parameters.validatorkeys.end());
+      print(bbb);
+    }
+   
+    
+
+    }
+    {
+      _bridge_meta_parameters.messages[get_checksum256(sender_key)] =
+          message;
+          auto itr = _bridge_meta_parameters.messages.find(get_checksum256(sender_key));
+
+      bool bbb = (itr == _bridge_meta_parameters.messages.end());
+      print("msg:",bbb);
+    }
+
+      {
+      _bridge_meta_parameters.transfers[get_checksum256(sender_key)] =
+          true;
+          auto itr = _bridge_meta_parameters.transfers.find(get_checksum256(sender_key));
+
+      bool bbb = (itr == _bridge_meta_parameters.transfers.end());
+      print("transfer:",bbb);
+    }
+
+}
 
 eosio::time_point_sec bos_bridge::current_time_point_sec() {
   const static eosio::time_point_sec cts{current_time_point()};
@@ -296,7 +360,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       EOSIO_DISPATCH_HELPER(
           bos_bridge, (impvalidator)(transfern2h)(transfert2h)(transfer2he)(
                           transferfrom)(regtoken)(transfern2f)(transfert2f)(
-                          transfer2fe)(transferfrof)(submitsig)(setparameter))
+                          transfer2fe)(transferfrof)(submitsig)(setparameter)(settokenpara)(test))
     }
   }
   if (code == "eosio.token"_n.value && action == "transfer"_n.value) {

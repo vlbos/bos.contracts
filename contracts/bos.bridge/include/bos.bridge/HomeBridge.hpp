@@ -135,7 +135,7 @@ public:
     uint64_t nsigned = it->second + 1;
     if (nsigned > 1) {
       // Duplicated signatures
-      check(table.messagesSigned.find(hashSender) != table.messagesSigned.end(),
+      check(table.messagesSigned.find(hashSender) == table.messagesSigned.end(),
               "Message already signed by this validator");
     } else {
       table.messages[hashMsg] = message;

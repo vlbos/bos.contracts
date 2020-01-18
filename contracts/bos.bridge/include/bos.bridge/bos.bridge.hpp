@@ -93,7 +93,7 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
 
 
     /**
-    * @brief  submitSignature(name sender, public_key sender_key, signature sig,bytes message) 
+    * @brief  submitSignature(name sender, std::string sender_key, signature sig,bytes message) 
     */
    [[eosio::action]] void submitsig(name sender, public_key sender_key, signature sig, bytes message) ;
 
@@ -106,6 +106,9 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
                               ignore<uint8_t> precision,
                               ignore<bridge_parameters> foreign,
                               ignore<bridge_parameters> home);
+
+
+[[eosio::action]] void test(name sender, public_key sender_key, signature sig, bytes message);
 
  static  symbol str2sym(std::string token){ 
     const uint64_t size = 3;

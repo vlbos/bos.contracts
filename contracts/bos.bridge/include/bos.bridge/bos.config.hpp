@@ -5,6 +5,8 @@
 #include <eosio/symbol.hpp>
 #include <eosio/system.hpp>
 #include <cmath>
+#include "bos.bridge/bos.types.hpp"
+
 using namespace eosio;
 
 using bytes = std::vector<char>;
@@ -26,6 +28,11 @@ static std::string to_hex(const CharT* d, uint32_t s) {
     (r += to_hex[(c[i] >> 4)]) += to_hex[(c[i] & 0x0f)];
   }
   return r;
+}
+
+std::string hash2str(const eosio::checksum256& lhs)
+{
+    return to_hex(&lhs, sizeof(lhs));
 }
 
 bool operator<(const eosio::checksum256& lhs, const eosio::checksum256& rhs)
@@ -100,10 +107,11 @@ class ec{
 
         char pub[34]; // public key without checksum
         public_key n = recover_key(digest, sig);
-
+        
         std::string pubhex = to_hex(pub, sizeof(pub)).substr(2); // remove leading '00'
         tmp = hex_to_string(pubhex.c_str());
         strcpy(pub, tmp.c_str());
+
 
         checksum160 chksm=ripemd160(pub, 33);
 
@@ -116,7 +124,6 @@ class ec{
         print(tmp);
       }
 
-      ///@abi action
       static void ecverify(std::string data, const signature &sig, const public_key &pk)
       {
         checksum256 digest= sha256(&data[0], data.size());
@@ -126,32 +133,6 @@ class ec{
       }
 
 };
-
-
-
-std::string key2str(public_key pk)
-      {
-        std::string tmp(pk.data.data());
-       
-        // char pub[33]; // public key without checksum
-        // memcpy(pub, pk.data.data(),pk.data.size());
-        // std::string pubhex = to_hex(pub, sizeof(pub)).substr(2); // remove leading '00'
-        // tmp = hex_to_string(pubhex.c_str());
-        // strcpy(pub, tmp.c_str());
-
-        // checksum160 chksm=ripemd160(pub, 33);
-
-        // tmp = hex_to_string(pubhex + to_hex(&chksm, 20).substr(0,8)); // append checksum
-
-        // unsigned char encoded[37  * 137 / 100];
-        // base58encode(tmp, 37, encoded);
-        // tmp = "EOS" + std::string(reinterpret_cast<char*>(encoded));
-        // assert(tmp.length() == 53);
-        return tmp;
-      }
-      
-
-
 
 std::vector<std::string>
 split(const std::string& str, const std::string& delims = ":")

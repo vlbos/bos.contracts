@@ -3,6 +3,7 @@
 #include "bos.bridge/bos.config.hpp"
 #include "bos.bridge/interfaces/IBridgeValidators.hpp"
 
+
 template <class TableType> 
 class BridgeValidators : public IBridgeValidators {
 protected:
@@ -27,10 +28,12 @@ void initialize(uint64_t _requiredSignatures,
     for (uint64_t i = 0; i < _initialValidators.size(); i++) {
       check(is_account(_initialValidators[i].first),
             "Validator address should not be name()");
-      check(!isValidator(_initialValidators[i].first),"is validator false");
+      check(!isValidator(_initialValidators[i].first),"validator is replicated");
       table.validatorCount++;
       table.validators[_initialValidators[i].first] = true;
-      table.validatorkeys[key2str(_initialValidators[i].second)] = true;
+      table.validatorkeys[get_checksum256(_initialValidators[i].second)] = _initialValidators[i].second;
+       std::string s = hash2str(get_checksum256(_initialValidators[i].second));
+    print("==",s,"==",table.validatorkeys.size());
       // emit ValidatorAdded(_initialValidators[i]);
     }
     check(table.validatorCount >= _requiredSignatures,
@@ -75,8 +78,8 @@ void initialize(uint64_t _requiredSignatures,
   }
 
   bool isValidator(public_key _validator) {
-    auto it = table.validatorkeys.find(key2str(_validator));
-    return it != table.validatorkeys.end() && it->second;
+    auto it = table.validatorkeys.find(get_checksum256(_validator));
+    return it != table.validatorkeys.end() && (it->second==_validator);
   }
 
   /* --- INTERNAL / PRIVATE METHODS --- */
