@@ -8,6 +8,7 @@ using std::string;
 #include "bos.bridge/BridgeValidators.hpp"
 #include "bos.bridge/ForeignBridge.hpp"
 #include "bos.bridge/HomeBridge.hpp"
+#include "bridge.token.cpp"
 
 // BasicBridge  begin
 void bos_bridge::impvalidator(uint64_t requiredSignatures,
@@ -305,7 +306,7 @@ extern "C" void apply(uint64_t receiver, uint64_t code, uint64_t action) {
       EOSIO_DISPATCH_HELPER(
           bos_bridge, (impvalidator)(transfern2h)(transfert2h)(transfer2he)(
                           transferfrom)(regtoken)(transfern2f)(transfert2f)(
-                          transfer2fe)(transferfrof)(submitsig)(setparameter)(settokenpara)(test))
+                          transfer2fe)(transferfrof)(submitsig)(setparameter)(settokenpara)(test)(create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist) )
     }
   }
   if (code == "eosio.token"_n.value && action == "transfer"_n.value) {

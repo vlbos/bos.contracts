@@ -5,12 +5,11 @@
 #include "bos.tables.hpp"
 
 
-
 using namespace eosio;
 using namespace std;
 
 
-class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
+class [[eosio::contract("bos.bridge")]] bos_bridge : public contract {
  private:
    bridge_meta_parameters_singleton _bridge_meta_parameters_singleton;
    bridge_meta_parameters _bridge_meta_parameters;
@@ -20,10 +19,8 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
    static constexpr eosio::name active_permission{"active"_n};
    static eosio::time_point_sec current_time_point_sec();
 
-
-
-   using contract::contract;
-   bos_bridge(name receiver, name code, datastream<const char*> ds) : contract(receiver, code, ds), _bridge_meta_parameters_singleton(_self, _self.value)
+   using eosio::contract::contract;
+   bos_bridge(name receiver, name code, datastream<const char*> ds) : eosio::contract(receiver, code, ds), _bridge_meta_parameters_singleton(_self, _self.value)
    
     {
       _bridge_meta_parameters = _bridge_meta_parameters_singleton.exists() ? _bridge_meta_parameters_singleton.get() : bridge_meta_parameters{};
@@ -127,8 +124,87 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public eosio::contract {
    return name(vec[0]);
     
  }
+ [[eosio::action]]
+         void create( name   issuer,
+                      asset  maximum_supply);
+
+         [[eosio::action]]
+         void issue( name to, asset quantity, string memo );
+
+         [[eosio::action]]
+         void retire( asset quantity, string memo );
+
+         [[eosio::action]]
+         void transfer( name    from,
+                        name    to,
+                        asset   quantity,
+                        string  memo );
+
+         [[eosio::action]]
+         void open( name owner, const symbol& symbol, name ram_payer );
+
+         [[eosio::action]]
+         void close( name owner, const symbol& symbol );
+
+         [[eosio::action]] 
+         void addblacklist(const std::vector<name>& accounts);
+
+         [[eosio::action]] 
+         void rmblacklist(const std::vector<name>& accounts);
+
+         static asset get_supply( name token_contract_account, symbol_code sym_code )
+         {
+            stats statstable( token_contract_account, sym_code.raw() );
+            const auto& st = statstable.get( sym_code.raw() );
+            return st.supply;
+         }
+
+         static asset get_balance( name token_contract_account, name owner, symbol_code sym_code )
+         {
+            accounts accountstable( token_contract_account, owner.value );
+            const auto& ac = accountstable.get( sym_code.raw() );
+            return ac.balance;
+         }
+
+         using create_action = eosio::action_wrapper<"create"_n, &bos_bridge::create>;
+         using issue_action = eosio::action_wrapper<"issue"_n, &bos_bridge::issue>;
+         using retire_action = eosio::action_wrapper<"retire"_n, &bos_bridge::retire>;
+         using transfer_action = eosio::action_wrapper<"transfer"_n, &bos_bridge::transfer>;
+         using open_action = eosio::action_wrapper<"open"_n, &bos_bridge::open>;
+         using close_action = eosio::action_wrapper<"close"_n, &bos_bridge::close>;
+      private:
+         struct [[eosio::table]] account {
+            asset    balance;
+
+            uint64_t primary_key()const { return balance.symbol.code().raw(); }
+         };
+
+         struct [[eosio::table]] currency_stats {
+            asset    supply;
+            asset    max_supply;
+            name     issuer;
+
+            uint64_t primary_key()const { return supply.symbol.code().raw(); }
+         };
+
+         ///bos begin
+         struct [[eosio::table]] account_blacklist
+         {
+            name account;
+            uint64_t primary_key() const { return account.value; }
+         };
+
+         typedef eosio::multi_index<"blacklist"_n, account_blacklist> blacklist;
+         static const uint8_t blacklist_limit_size = 100 ;
+         ///bos end
+         typedef eosio::multi_index< "accounts"_n, account > accounts;
+         typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+
+         void sub_balance( name owner, asset value );
+         void add_balance( name owner, asset value, name ram_payer );
 
  private:
+   
    /// common
    symbol core_symbol() const {
       check(_bridge_meta_parameters.version == current_bridge_version, "config parameters must first be initialized ");

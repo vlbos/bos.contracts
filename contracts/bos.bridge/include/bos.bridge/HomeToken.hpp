@@ -12,7 +12,7 @@ public:
   HomeToken(name _self,const std::string& _token):self(_self),token(bos_bridge::str2sym(_token),bos_bridge::str2contract(_token)){}
   void create()
   {
-    check(self==token.get_contract(),"token  contract is not home account");
+    // check(self==token.get_contract(),"token  contract is not home account");
     asset maximum_supply=asset(10000000000000,token.get_symbol());
     action(permission_level{self, "active"_n}, token.get_contract(),"create"_n, std::make_tuple(self, maximum_supply)).send();
   }
