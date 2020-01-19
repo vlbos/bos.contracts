@@ -80,16 +80,16 @@ public:
     Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
   
     // std::tuple<std::string, name, int64_t, checksum256> 
-    msgdata msg = Message::parseMessage(message);
+    message_data msg = Message::parseMessage(message);
     // std::string token=std::get<0>(msg);
     // name recipient=std::get<1>(msg);
     // uint64_t amount=std::get<2>(msg);
     // checksum256 txHash=std::get<3>(msg);
 
-    // check(!table.transfers[msg.txHash], "Transfer already processed");
-    // table.transfers[msg.txHash] = true;
-    // uint64_t castedAmount = msg.amount;//castFrom18Decimal(token, amount);
-    // performTransfer(msg.token, msg.recipient, castedAmount);
+    check(!table.transfers[msg.txhash], "Transfer already processed");
+    table.transfers[msg.txhash] = true;
+    uint64_t castedAmount = msg.amount;//castFrom18Decimal(token, amount);
+    performTransfer(msg.token, msg.recipient, castedAmount);
 
     // emit TransferFromHome(token, recipient, castedAmount, txHash);
   }

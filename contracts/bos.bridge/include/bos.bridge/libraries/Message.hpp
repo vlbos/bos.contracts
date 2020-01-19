@@ -31,7 +31,7 @@ class Message {
     // which is padding address to 32 bytes and reading recipient at offset 32.
     // for more details see discussion in:
     // https://github.com/paritytech/parity-bridge/issues/61
-     static msgdata parseMessage(bytes message)
+     static message_data parseMessage(bytes message)
      {
         check(isMessageValid(message), "Incorrect message format");
         // token := and(mload(add(message, 20)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
@@ -39,7 +39,7 @@ class Message {
         // amount := mload(add(message, 72))
         // txHash := mload(add(message, 104))
         
-   msgdata msg = unpack<msgdata>(message);
+   message_data msg = unpack<message_data>(message);
 //    datastream<const char*> ds( message.data(), message.size() );
 //    ds >> msg;
         // std::string token;
@@ -79,7 +79,7 @@ class Message {
         // message is always 84 length
         std::string  msgLength = "104";
         // return keccak256(abi.encodePacked(prefix, msgLength, message));
-        return get_checksum256(message);//prefix, msgLength,
+        return sha256(&message[0], message.size());//prefix, msgLength,
     }
 
     static void hasEnoughValidSignatures(

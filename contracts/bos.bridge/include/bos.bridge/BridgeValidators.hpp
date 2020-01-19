@@ -78,6 +78,7 @@ void initialize(uint64_t _requiredSignatures,
   }
 
   bool isValidator(public_key _validator) {
+    print(table.validatorkeys.size(),"========",hash2str(get_checksum256(_validator)));
     auto it = table.validatorkeys.find(get_checksum256(_validator));
     return it != table.validatorkeys.end() && (it->second==_validator);
   }
