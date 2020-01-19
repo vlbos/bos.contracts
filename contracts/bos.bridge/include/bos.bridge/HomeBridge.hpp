@@ -32,7 +32,7 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
 
-    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
+    std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
     table.home.validatorContractAddress = _validatorContract;
     table.home.deployedAtBlock = current_block_time(); // block.number;
     table.home.dailyLimit[core_token] = _dailyLimit;
@@ -51,17 +51,29 @@ public:
           "Token already registered");
     table.foreignToHomeTokenMap[foreignAddress] = homeAddress;
     table.homeToForeignTokenMap[homeAddress] = foreignAddress;
+    symbol sym=bos_bridge::str2sym(homeAddress);
+    name contract=bos_bridge::str2contract(homeAddress);
+    
+    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
+      return;
+    }
+
     HomeToken(self,homeAddress).create();
   }
 
   void transferNativeToForeign(name sender,name recipient, uint64_t value) {
     require_auth(sender);
-    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
+    std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, value), "Transfer exceeds limit");
     table.home.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += value;
 
     auto foreignToken = table.homeToForeignTokenMap.find(core_token);
     check(foreignToken != table.homeToForeignTokenMap.end(), "Foreign native token address is empty");
+
+   asset quantity= asset(value,symbol(table.core_symbol,table.precision));
+   std::string memo = "";
+   action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,
+   std::make_tuple(sender, self, quantity, memo)).send();
 
     // emit TransferToForeign(foreignToken, recipient, msg.value);
     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
@@ -77,8 +89,20 @@ public:
     check(foreignToken != table.homeToForeignTokenMap.end(), "Incorrect token address mapping no foreign token");
     auto ht = table.foreignToHomeTokenMap.find(foreignToken->second);
     check(ht != table.foreignToHomeTokenMap.end() &&  ht->second == homeToken, "Incorrect token address mapping not equal");
+    
+    symbol sym=bos_bridge::str2sym(homeToken);
+    name contract=bos_bridge::str2contract(homeToken);
+    asset quantity= asset(value, sym);
+    std::string memo = "";
+    action(permission_level{sender, "active"_n}, contract, "transfer"_n,
+    std::make_tuple(sender, self, quantity, memo)).send();
+
+    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
+      return;
+    }
 
     HomeToken(self,homeToken).burn(sender,value);
+
     // emit TransferToForeign(foreignToken, recipient, value);
     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
   }
@@ -86,21 +110,28 @@ public:
   void transferFromForeign(name sender,std::string foreignToken, name recipient,
                            uint64_t value, checksum256 transactionHash) {
     require_auth(sender);
+    check(this->validatorContract()->isValidator(sender), "Signer of message is not a validator transferFromForeign");
+
     auto  homeToken = table.foreignToHomeTokenMap.find(foreignToken);
     check(homeToken != table.foreignToHomeTokenMap.end() && isRegisterd(foreignToken, homeToken->second), "Token not registered");
 
     checksum256 hashMsg = get_checksum256(homeToken->second, recipient, value, transactionHash);
     checksum256 hashSender = get_checksum256(sender, hashMsg);
     // Duplicated transfers
-    check(table.transfersSigned.find(hashSender)!=table.transfersSigned.end(),
+    check(table.transfersSigned.find(hashSender)==table.transfersSigned.end(),
           "Transfer already signed by this validator");
     table.transfersSigned[hashSender] = true;
+    uint64_t nsigned = 0;
 
     auto it = table.numTransfersSigned.find(hashMsg);
-    check(it != table.numTransfersSigned.end() && !isAlreadyProcessed(it->second), "Transfer already processed");
+    // check(it == table.numTransfersSigned.end() || !isAlreadyProcessed(it->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-    uint64_t nsigned = it->second;
+    if(it != table.numTransfersSigned.end())
+    {
+       nsigned = it->second;
+       check(!isAlreadyProcessed(it->second), "Transfer already processed");
+    }
     table.numTransfersSigned[hashMsg] = ++nsigned;
 
     // emit SignedForTransferFromForeign(msg.sender, transactionHash);
@@ -116,23 +147,35 @@ public:
       performTransfer(homeToken->second, recipient, value);
       // emit TransferFromForeign(homeToken, recipient, value, transactionHash);
     }
+    else
+    {
+      print(nsigned, "============else if (nsigned >= this->requiredSignatures())==",this->requiredSignatures());
+    }
+    
   }
 
   void submitSignature(name sender, public_key sender_key, signature sig,
                        bytes message) {
     require_auth(sender);
+    check(this->validatorContract()->isValidator(sender), "Signer of message is not a validator submitSignature");
     // ensure that `signature` is really `message` signed by `msg.sender`
     check(Message::isMessageValid(message), "Invalid message format");
     check(sender_key == Message::recoverAddressFromSignedMessage(sig, message),
           "Sender is not signer of message");
     eosio::checksum256 hashMsg = get_checksum256(message);
     eosio::checksum256 hashSender = get_checksum256(sender, hashMsg);
-
-    auto it = table.numTransfersSigned.find(hashMsg);
-    check(it != table.numTransfersSigned.end() && !isAlreadyProcessed(it->second), "Transfer already processed");
+    uint64_t nsigned = 0;
+    auto it = table.numMessagesSigned.find(hashMsg);
+    // check(it == table.numTransfersSigned.end() || !isAlreadyProcessed(it->second), "Transfer already processed");
     // the check above assumes that the case when the value could be overflew
     // will not happen in the addition operation below
-    uint64_t nsigned = it->second + 1;
+    if(it != table.numMessagesSigned.end())
+    {
+       nsigned = it->second;
+       check(!isAlreadyProcessed(it->second), "Transfer already processed");
+    }
+
+    nsigned++;
     if (nsigned > 1) {
       // Duplicated signatures
       check(table.messagesSigned.find(hashSender) == table.messagesSigned.end(),
@@ -142,7 +185,8 @@ public:
     }
     table.messagesSigned[hashSender] = true;
 
-    eosio::checksum256 signIdx = get_checksum256(hashMsg, (nsigned - 1));
+    uint64_t nn = (nsigned - 1);
+    eosio::checksum256 signIdx = get_checksum256(hashMsg, nn);
     table.signatures[signIdx] = sig;
 
     table.numMessagesSigned[hashMsg] = nsigned;
@@ -153,18 +197,26 @@ public:
     if (nsigned >= reqSigs) {
       table.numMessagesSigned[hashMsg] = markAsProcessed(nsigned);
       // emit CollectedSignatures(msg.sender, hashMsg, reqSigs);
+       action(permission_level{self, "active"_n}, self, "collectedsig"_n,std::make_tuple(sender,hashMsg,reqSigs)).send();
     }
+    else
+    {
+     print(nsigned, "============else if (nsigned >= reqSigs())==",reqSigs);
+    }
+    
   }
 
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
 
   void performTransfer(std::string token, name recipient, uint64_t value) {
-    if (bos_bridge::str2sym(token)==symbol(table.core_symbol,table.precision)) {
+    symbol sym=bos_bridge::str2sym(token);
+    name contract=bos_bridge::str2contract(token);
+  print("============ performTransfer ff");
+    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
+       print("============  == contract && sym==symbol(table.core_symbol,table.precision)) ");
       std::string memo = "";
-      symbol sym=bos_bridge::str2sym(token);
-      name contract=bos_bridge::str2contract(token);
-      action(permission_level{self, "active"_n}, contract, "transfer"_n,
+           action(permission_level{self, "active"_n}, contract, "transfer"_n,
           std::make_tuple(self, recipient, asset(value,sym), memo)).send();
       return;
     }
@@ -195,10 +247,10 @@ private:
     }
 
     uint64_t markAsProcessed(uint64_t _v)  {
-        return _v|(uint64_t)pow(2,255);
+        return _v|(uint64_t)pow(2,62);
     }
 
     bool isAlreadyProcessed(uint64_t _number)  {
-        return (_number&(uint64_t)pow(2,255)) == (uint64_t)pow(2,255);
+        return (_number&(uint64_t)pow(2,62)) == (uint64_t)pow(2,62);
     }
 };

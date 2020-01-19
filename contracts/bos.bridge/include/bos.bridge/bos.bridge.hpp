@@ -94,6 +94,13 @@ class [[eosio::contract("bos.bridge")]] bos_bridge : public contract {
     */
    [[eosio::action]] void submitsig(name sender, public_key sender_key, signature sig, bytes message) ;
 
+   
+
+   /**
+    * @brief   event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash, uint256 NumberOfCollectedSignatures);
+    */
+   [[eosio::action]] void collectedsig(name sender, checksum256 messageHash, uint64_t NumberOfCollectedSignatures) ;
+
 /// HomeBridge end
  [[eosio::action]] void settokenpara(name sender,bool is_home ,std::string token, uint64_t dailyLimit,
                         uint64_t maxPerTx, uint64_t minPerTx);

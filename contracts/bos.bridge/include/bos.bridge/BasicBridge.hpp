@@ -66,9 +66,39 @@ public:
     }
 
     bool withinLimit(const std::string& token, uint64_t _amount)  {
-        para.totalSpentPerDay[get_checksum256(token,getCurrentDay())]+=_amount;
-        uint64_t nextLimit = para.totalSpentPerDay[ get_checksum256(token,getCurrentDay())];
-        return para.dailyLimit[token] >= nextLimit && _amount <= para.maxPerTx[token] && _amount >= para.minPerTx[token];
+        std::string checkmsg = "no token:"+ token;
+        auto itlimit = para.dailyLimit.find(token);
+        if( itlimit== para.dailyLimit.end())
+        {
+            print(checkmsg,"in dailyLimit");
+            return false;
+        } 
+        
+        auto itmax = para.maxPerTx.find(token);
+        if(para.maxPerTx.end() == itmax){
+             print(checkmsg,"in maxPerTx");
+            return false;
+        }
+         
+         auto itmin = para.minPerTx.find(token);
+         if(para.minPerTx.end() == itmin){
+             print(checkmsg,"in minPerTx");
+            return false;
+         }
+        
+        checksum256 next = get_checksum256(token,getCurrentDay());
+        uint64_t nextLimit = 0;
+
+        auto itTotal =  para.totalSpentPerDay.find(next);
+        if(para.totalSpentPerDay.end()!=itTotal)
+        {
+            nextLimit = itTotal->second;
+        }
+
+        nextLimit+=_amount;
+        para.totalSpentPerDay[next]=nextLimit;
+        
+        return itlimit->second >= nextLimit && _amount <= itmax->second && _amount >= itmin->second;
     }
 
     uint64_t requiredSignatures()  {

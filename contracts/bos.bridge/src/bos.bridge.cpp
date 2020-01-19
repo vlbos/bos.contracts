@@ -79,6 +79,10 @@ void bos_bridge::submitsig(name sender, public_key sender_key, signature sig,
   _HomeBridge.submitSignature(sender, sender_key, sig, message);
 }
 
+void bos_bridge::collectedsig(name sender, checksum256 messageHash, uint64_t NumberOfCollectedSignatures)
+{
+
+}
 /// HomeBridge end
 
 // void bos_bridge::deposit(name from, name to, asset quantity) {

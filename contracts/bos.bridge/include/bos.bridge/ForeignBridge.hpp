@@ -29,7 +29,7 @@ public:
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error");
     check(_foreignGasPrice > 0, "ForeignGasPrice should be greater than 0");
-    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
+    std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
     table.foreign.validatorContractAddress = _validatorContract;
     table.foreign.deployedAtBlock = current_block_time(); ///block.number;
     table.foreign.dailyLimit[core_token] = _dailyLimit;
@@ -77,6 +77,7 @@ public:
 
   void transferFromHome(name sender,std::vector<signature> sig, bytes message) {
     require_auth(sender);
+    check(this->validatorContract()->isValidator(sender), "Signer of message is not a validator transferFromHome");
     Message::hasEnoughValidSignatures(message, sig, this->validatorContract());
   
     // std::tuple<std::string, name, int64_t, checksum256> 

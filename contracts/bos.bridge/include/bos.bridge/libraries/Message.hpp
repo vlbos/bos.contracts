@@ -95,11 +95,7 @@ class Message {
         std::vector<eosio::public_key>  encounteredAddresses;// = new address[](requiredSignatures);
 
         for (uint64_t i = 0; i < requiredSignatures; i++) {
-             public_key n = recover_key(digest, _ss[i]);
-             print(i);
-            check(_validatorContract->isValidator(n), "n Signer of message is not a validator");
             public_key recoveredAddress = recover_key(hash,_ss[i]);
-
             check(_validatorContract->isValidator(recoveredAddress), "Signer of message is not a validator");
             bool b = addressArrayContains(encounteredAddresses, recoveredAddress);
             check(!b,"The address is contained in array");
