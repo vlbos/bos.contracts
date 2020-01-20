@@ -81,149 +81,22 @@ void bos_bridge::submitsig(name sender, public_key sender_key, signature sig,
 
 void bos_bridge::collectedsig(name sender, checksum256 messageHash, uint64_t NumberOfCollectedSignatures)
 {
-
+ require_auth(_self);
 }
 /// HomeBridge end
 
-// void bos_bridge::deposit(name from, name to, asset quantity) {
-//    require_auth(from);
-//    action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n,
-//    std::make_tuple(from, _self, quantity, std::string(""))).send();
 
-//    if(quantity.symbol != core_symbol())
-//    {
-//    action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n,
-//    std::make_tuple(from, _self, quantity, std::string(""))).send();
-//    action(permission_level{_self, "active"_n}, "eosio.token"_n, "retire"_n,
-//    std::make_tuple(quantity, std::string(""))).send();
-//    }
-
-//    action(permission_level{_self, "active"_n}, _self, "transfertofe"_n,
-//    std::make_tuple(to.to_string(),quantity.to_string())).send();
-// }
-
-// void bos_bridge::regvalidator(const std::vector<name>& validators) {
-//    require_auth(_self);
-
-//    auto validators_table = validators(get_self(), get_self().value);
-//       auto itr = validators_table.find(account.value);
-//       checkmsg = account.to_string() + " account already added";
-//       check(itr == validators_table.end(), checkmsg.c_str());
-
-//    std::string checkmsg = "";
-//    for (auto& account : validators) {
-//       checkmsg = account.to_string() + " account does not exist";
-//       if(!is_account(account))
-//       {
-//          print("\n",checkmsg);
-//          continue;
-//       }
-
-//       validators_table.emplace(get_self(), [&](auto& a) {
-//          a.validators.push_back(account);
-//       });
-//    }
-
-// }
-
-// void bos_bridge::transfertof(name recipient, asset amount) {
-//     require_auth(_self);1qazxsw2
-
-//   if(amount.symbol != core_symbol())   {
-
-//    //   asset maximum_supply=asset::from_string("1000000000.0000 ETHT");
-//    //   action(permission_level{_self, "active"_n}, "eosio.token"_n,
-//    "create"_n, std::make_tuple(_self, maximum_supply)).send();
-
-//       action(permission_level{_self, "active"_n}, "eosio.token"_n, "issue"_n,
-//       std::make_tuple(_self, recipient, amount, std::string(""))).send();
-//    }
-//    else   {
-//       action(permission_level{_self, "active"_n}, "eosio.token"_n,
-//       "transfer"_n, std::make_tuple( _self,recipient, amount, std::string(""))).send();
-//    }
-
-// }
-
-// void bos_bridge::transfertofe(string recipient, string amount) {
-//    require_auth(_self);
-// }
-
-
-// /**
-//  * @brief
-//  *
-//  * @param from
-//  * @param to
-//  * @param quantity
-//  * @param memo
-//  */
-// void bos_bridge::transfer(name to, asset quantity, string memo) {
-
-//    // bridge_transfer(from, to, quantity, memo, true);
-
-//    }
-
-// void bos_bridge::bridge_transfer(name from, name to, asset quantity, string
-// memo, bool is_deferred) {
-//    check_data(memo, "memo");
-
-//    check(from != to, "cannot transfer to self");
-//    //  require_auth( from );
-//    check(is_account(to), "to account does not exist");
-//    //  auto sym = quantity.symbol.code();
-//    //  stats statstable( _self, sym.raw() );
-//    //  const auto& st = statstable.get( sym.raw() );
-
-//    //  require_recipient( from );
-//    //  require_recipient( to );
-
-//    check(quantity.is_valid(), "invalid quantity");
-//    check(quantity.amount > 0, "must transfer positive quantity");
-//    // check(quantity.symbol == st.supply.symbol, "symbol precision
-//    mismatch"); check(memo.size() <= 256, "memo has more than 256 bytes");
-
-//    //   token::transfer_action transfer_act{ token_account, { account,
-//    //   active_permission } };
-//    //          transfer_act.send( account, consumer_account, amount, memo );
-
-//    //  auto payer = has_auth( to ) ? to : from;
-//    // print("===quantity");
-//    quantity.print();
-
-//    if (!is_deferred) {
-//       action(permission_level{from, "active"_n}, token_account, "transfer"_n,
-//       std::make_tuple(from, to, quantity, memo)).send();
-//    } else {
-//       transaction t;
-//       t.actions.emplace_back(permission_level{from, active_permission},
-//       token_account, "transfer"_n, std::make_tuple(from, to, quantity,
-//       memo)); t.delay_sec = 0; uint128_t deferred_id = (uint128_t(to.value)
-//       << 64) | bos_bridge::current_time_point_sec().sec_since_epoch();
-//       cancel_deferred(deferred_id);
-//       t.send(deferred_id, _self, true);
-//    }
-
-//    // INLINE_ACTION_SENDER(eosio::token, transfer)(token_account, {{from,
-//    // active_permission}, {to, active_permission}},{from, to, quantity,
-//    memo});
-// }
-
-// } // namespace bosbridge
-
-  void bos_bridge::settokenpara(name sender,bool is_home ,std::string token, uint64_t dailyLimit,
-                        uint64_t maxPerTx, uint64_t minPerTx) {
-    if (is_home) {
+  void bos_bridge::settokenpara(name sender,bool ishome ,std::string token,uint64_t minPerTx,
+                        uint64_t maxPerTx,uint64_t dailyLimit) {
+    if (ishome) {
       HomeBridge _HomeBridge(_self, _bridge_meta_parameters);
-      _HomeBridge.setTokenParameter(sender, token, dailyLimit, maxPerTx,
-                                    minPerTx);
+      _HomeBridge.setTokenParameter(sender, token,minPerTx, maxPerTx, dailyLimit);
       return;
     }
 
     ForeignBridge _ForeignBridge(_self, _bridge_meta_parameters);
 
-    _ForeignBridge.setTokenParameter(sender, token, dailyLimit, maxPerTx,
-                                     minPerTx);
+    _ForeignBridge.setTokenParameter(sender, token, minPerTx, maxPerTx, dailyLimit);
   }
 
 /**

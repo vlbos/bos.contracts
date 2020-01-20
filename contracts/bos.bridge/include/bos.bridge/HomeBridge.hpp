@@ -46,6 +46,7 @@ public:
 
   void registerToken(name sender,std::string foreignAddress, std::string homeAddress) {
     require_auth(sender);
+    check(this->validatorContract()->isValidator(sender), "Signer of registerToken is not a validator ");
     check(table.foreignToHomeTokenMap.find(foreignAddress) == table.foreignToHomeTokenMap.end() &&
               table.homeToForeignTokenMap.find(homeAddress)==table.homeToForeignTokenMap.end(),
           "Token already registered");
@@ -54,7 +55,7 @@ public:
     symbol sym=bos_bridge::str2sym(homeAddress);
     name contract=bos_bridge::str2contract(homeAddress);
     
-    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
+    if (self != contract ) {
       return;
     }
 
@@ -82,26 +83,36 @@ public:
   void transferTokenToForeign(name sender,std::string homeToken, name recipient,
                               uint64_t value) {
     require_auth(sender);
+    symbol sym=bos_bridge::str2sym(homeToken);
+    name contract=bos_bridge::str2contract(homeToken);
+    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
+      return;
+    }
+
     check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
     table.home.totalSpentPerDay[get_checksum256(homeToken,this->getCurrentDay())] += value;
+
+    print(table.homeToForeignTokenMap.size(),"===",table.foreignToHomeTokenMap.size());
+    for(auto t:table.homeToForeignTokenMap)
+    {
+      print(t.first,"==",t.second);
+    }
 
     auto foreignToken = table.homeToForeignTokenMap.find(homeToken);
     check(foreignToken != table.homeToForeignTokenMap.end(), "Incorrect token address mapping no foreign token");
     auto ht = table.foreignToHomeTokenMap.find(foreignToken->second);
     check(ht != table.foreignToHomeTokenMap.end() &&  ht->second == homeToken, "Incorrect token address mapping not equal");
     
-    symbol sym=bos_bridge::str2sym(homeToken);
-    name contract=bos_bridge::str2contract(homeToken);
+ 
     asset quantity= asset(value, sym);
     std::string memo = "";
     action(permission_level{sender, "active"_n}, contract, "transfer"_n,
     std::make_tuple(sender, self, quantity, memo)).send();
 
-    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
-      return;
-    }
-
+    if(self == contract)
+    {
     HomeToken(self,homeToken).burn(sender,value);
+    }
 
     // emit TransferToForeign(foreignToken, recipient, value);
     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
@@ -208,7 +219,6 @@ public:
 
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
-
   void performTransfer(std::string token, name recipient, uint64_t value) {
     symbol sym=bos_bridge::str2sym(token);
     name contract=bos_bridge::str2contract(token);
@@ -221,7 +231,10 @@ private:
       return;
     }
 
+    if(self==contract)
+    {
     HomeToken(self,token).mint(recipient, value);
+    }
   }
 
   bool isRegisterd(std::string foreignToken, std::string homeToken) {

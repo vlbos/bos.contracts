@@ -58,8 +58,10 @@ public:
     check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");
     table.foreign.totalSpentPerDay[get_checksum256(_token,this->getCurrentDay())] += castValue18;
     asset quantity= asset(_value,bos_bridge::str2sym(_token));
+    name contract = bos_bridge::str2contract(_token);
     std::string memo = "";
-    action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,
+    
+    action(permission_level{sender, "active"_n}, contract, "transfer"_n,
     std::make_tuple(sender, self, quantity, memo)).send();
     // if (_token == USDTAddress) {
     //   // Handle USDT special case since it does not have standard erc20 token

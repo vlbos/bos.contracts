@@ -14,7 +14,7 @@ protected:
     name self;
     BridgeValidators<TableType> _BridgeValidators;
     void onlyValidator(name sender) {
-        check(validatorContract().isValidator(sender), "Sender is not a validator");
+        check(validatorContract()->isValidator(sender), "Sender is not a validator");
     }
 
     void onlyOwner(name sender) {
@@ -26,9 +26,10 @@ protected:
 public:
     BasicBridge(name _self,TableType& _table,ParaType& _para):self(_self),table(_table),para(_para),_BridgeValidators(_self,_table){}
 
-    void setTokenParameter(name sender,std::string _token, uint64_t _dailyLimit,
-                        uint64_t _maxPerTx, uint64_t _minPerTx) {
+    void setTokenParameter(name sender,std::string _token, uint64_t _minPerTx,
+                        uint64_t _maxPerTx,uint64_t _dailyLimit) {
     require_auth(sender);
+    this->onlyValidator(sender);
     check(_minPerTx > 0 && _maxPerTx > _minPerTx && _dailyLimit > _maxPerTx,
           "Tx limits initialization error in set token");
 
