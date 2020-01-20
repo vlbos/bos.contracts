@@ -41,7 +41,7 @@ public:
 
   /* --- EXTERNAL / PUBLIC  METHODS --- */
 
-  void transferNativeToHome(name sender,name _recipient,uint64_t _value) {
+  void transferNativeToHome(name sender,std::string _recipient,uint64_t _value) {
     require_auth(sender);
     std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, _value), "Transfer exceeds limit");
@@ -52,7 +52,7 @@ public:
     // emit TransferToHome(table.core_symbol, _recipient, msg.value);
   }
 
-  void transferTokenToHome(name sender,std::string _token, name _recipient, uint64_t _value) {
+  void transferTokenToHome(name sender,std::string _token, std::string _recipient, uint64_t _value) {
      require_auth(sender);
     uint64_t castValue18 = _value;//castTo18Decimal(_token, _value);
     check(this->withinLimit(_token, castValue18), "Transfer exceeds limit");

@@ -62,7 +62,7 @@ public:
     HomeToken(self,homeAddress).create();
   }
 
-  void transferNativeToForeign(name sender,name recipient, uint64_t value) {
+  void transferNativeToForeign(name sender,std::string recipient, uint64_t value) {
     require_auth(sender);
     std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, value), "Transfer exceeds limit");
@@ -80,7 +80,7 @@ public:
     action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
   }
 
-  void transferTokenToForeign(name sender,std::string homeToken, name recipient,
+  void transferTokenToForeign(name sender,std::string homeToken, std::string recipient,
                               uint64_t value) {
     require_auth(sender);
     symbol sym=bos_bridge::str2sym(homeToken);
@@ -220,20 +220,19 @@ public:
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
   void performTransfer(std::string token, name recipient, uint64_t value) {
-    symbol sym=bos_bridge::str2sym(token);
-    name contract=bos_bridge::str2contract(token);
-  print("============ performTransfer ff");
-    if ("eosio.token"_n == contract && sym==symbol(table.core_symbol,table.precision)) {
-       print("============  == contract && sym==symbol(table.core_symbol,table.precision)) ");
-      std::string memo = "";
-           action(permission_level{self, "active"_n}, contract, "transfer"_n,
-          std::make_tuple(self, recipient, asset(value,sym), memo)).send();
+    symbol sym = bos_bridge::str2sym(token);
+    name contract = bos_bridge::str2contract(token);
+    if ("eosio.token"_n == contract &&
+        sym == symbol(table.core_symbol, table.precision)) {
+       std::string memo = "";
+      action(permission_level{self, "active"_n}, contract, "transfer"_n,
+             std::make_tuple(self, recipient, asset(value, sym), memo))
+          .send();
       return;
     }
 
-    if(self==contract)
-    {
-    HomeToken(self,token).mint(recipient, value);
+    if (self == contract) {
+      HomeToken(self, token).mint(recipient, value);
     }
   }
 
