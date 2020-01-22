@@ -43,12 +43,13 @@ public:
 
   void transferNativeToHome(name sender,std::string _recipient,uint64_t _value) {
     require_auth(sender);
-    std::string core_token=self.to_string()+":"+table.core_symbol+":"+std::to_string(table.precision);
+    std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
     check(this->withinLimit(core_token, _value), "Transfer exceeds limit");
     table.foreign.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += _value;
     asset quantity= asset(_value, bos_bridge::str2sym(core_token));
     std::string memo = "";
     action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,std::make_tuple(sender, self, quantity, memo)).send();
+    action(permission_level{self, "active"_n}, self, "transfer2he"_n,std::make_tuple(core_token,_recipient,_value)).send();
     // emit TransferToHome(table.core_symbol, _recipient, msg.value);
   }
 
@@ -63,6 +64,7 @@ public:
     
     action(permission_level{sender, "active"_n}, contract, "transfer"_n,
     std::make_tuple(sender, self, quantity, memo)).send();
+    action(permission_level{self, "active"_n}, self, "transfer2he"_n,std::make_tuple(_token,_recipient,_value)).send();
     // if (_token == USDTAddress) {
     //   // Handle USDT special case since it does not have standard erc20 token
     //   // interface =.=
@@ -123,7 +125,6 @@ private:
     symbol sym = bos_bridge::str2sym(tokenAddress);
     name contract = bos_bridge::str2contract(tokenAddress);
     action(permission_level{self, "active"_n},contract, "transfer"_n,std::make_tuple(self, recipient, asset(amount,sym), memo)).send();
-
   }
 
   void castTo18Decimal(std::string token, uint64_t value) {

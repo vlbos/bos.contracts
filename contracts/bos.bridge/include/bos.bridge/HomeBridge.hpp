@@ -62,26 +62,26 @@ public:
     HomeToken(self,homeAddress).create();
   }
 
-  void transferNativeToForeign(name sender,std::string recipient, uint64_t value) {
+  void transferNativeToForeign(name sender,std::string _recipient, uint64_t _value) {
     require_auth(sender);
     std::string core_token="eosio.token:"+table.core_symbol+":"+std::to_string(table.precision);
-    check(this->withinLimit(core_token, value), "Transfer exceeds limit");
-    table.home.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += value;
+    check(this->withinLimit(core_token, _value), "Transfer exceeds limit");
+    table.home.totalSpentPerDay[get_checksum256(core_token,this->getCurrentDay())] += _value;
 
     auto foreignToken = table.homeToForeignTokenMap.find(core_token);
     check(foreignToken != table.homeToForeignTokenMap.end(), "Foreign native token address is empty");
 
-   asset quantity= asset(value,symbol(table.core_symbol,table.precision));
+   asset quantity= asset(_value,symbol(table.core_symbol,table.precision));
    std::string memo = "";
    action(permission_level{sender, "active"_n}, "eosio.token"_n, "transfer"_n,
    std::make_tuple(sender, self, quantity, memo)).send();
 
-    // emit TransferToForeign(foreignToken, recipient, msg.value);
-    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
+    // emit TransferToForeign(foreignToken, _recipient, msg._value);
+    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,_recipient,_value)).send();
   }
 
-  void transferTokenToForeign(name sender,std::string homeToken, std::string recipient,
-                              uint64_t value) {
+  void transferTokenToForeign(name sender,std::string homeToken, std::string _recipient,
+                              uint64_t _value) {
     require_auth(sender);
     symbol sym=bos_bridge::str2sym(homeToken);
     name contract=bos_bridge::str2contract(homeToken);
@@ -89,8 +89,8 @@ public:
       return;
     }
 
-    check(this->withinLimit(homeToken, value), "Transfer exceeds limit");
-    table.home.totalSpentPerDay[get_checksum256(homeToken,this->getCurrentDay())] += value;
+    check(this->withinLimit(homeToken, _value), "Transfer exceeds limit");
+    table.home.totalSpentPerDay[get_checksum256(homeToken,this->getCurrentDay())] += _value;
 
     print(table.homeToForeignTokenMap.size(),"===",table.foreignToHomeTokenMap.size());
     for(auto t:table.homeToForeignTokenMap)
@@ -104,29 +104,29 @@ public:
     check(ht != table.foreignToHomeTokenMap.end() &&  ht->second == homeToken, "Incorrect token address mapping not equal");
     
  
-    asset quantity= asset(value, sym);
+    asset quantity= asset(_value, sym);
     std::string memo = "";
     action(permission_level{sender, "active"_n}, contract, "transfer"_n,
     std::make_tuple(sender, self, quantity, memo)).send();
 
     if(self == contract)
     {
-    HomeToken(self,homeToken).burn(sender,value);
+    HomeToken(self,homeToken).burn(sender,_value);
     }
 
-    // emit TransferToForeign(foreignToken, recipient, value);
-    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,recipient,value)).send();
+    // emit TransferToForeign(foreignToken, _recipient, _value);
+    action(permission_level{self, "active"_n}, self, "transfer2fe"_n,std::make_tuple(foreignToken->second,_recipient,_value)).send();
   }
 
-  void transferFromForeign(name sender,std::string foreignToken, name recipient,
-                           uint64_t value, checksum256 transactionHash) {
+  void transferFromForeign(name sender,std::string foreignToken, name _recipient,
+                           uint64_t _value, checksum256 transactionHash) {
     require_auth(sender);
     check(this->validatorContract()->isValidator(sender), "Signer of message is not a validator transferFromForeign");
 
     auto  homeToken = table.foreignToHomeTokenMap.find(foreignToken);
     check(homeToken != table.foreignToHomeTokenMap.end() && isRegisterd(foreignToken, homeToken->second), "Token not registered");
 
-    checksum256 hashMsg = get_checksum256(homeToken->second, recipient, value, transactionHash);
+    checksum256 hashMsg = get_checksum256(homeToken->second, _recipient, _value, transactionHash);
     checksum256 hashSender = get_checksum256(sender, hashMsg);
     // Duplicated transfers
     check(table.transfersSigned.find(hashSender)==table.transfersSigned.end(),
@@ -155,8 +155,8 @@ public:
       // Passing the mapped home token address here even when token address is
       // 0x0. This is okay because by default the address mapped to 0x0 will
       // also be 0x0
-      performTransfer(homeToken->second, recipient, value);
-      // emit TransferFromForeign(homeToken, recipient, value, transactionHash);
+      performTransfer(homeToken->second, _recipient, _value);
+      // emit TransferFromForeign(homeToken, _recipient, _value, transactionHash);
     }
     else
     {
@@ -219,20 +219,20 @@ public:
 
 private:
   /* --- INTERNAL / PRIVATE METHODS --- */
-  void performTransfer(std::string token, name recipient, uint64_t value) {
+  void performTransfer(std::string token, name _recipient, uint64_t _value) {
     symbol sym = bos_bridge::str2sym(token);
     name contract = bos_bridge::str2contract(token);
     if ("eosio.token"_n == contract &&
         sym == symbol(table.core_symbol, table.precision)) {
        std::string memo = "";
       action(permission_level{self, "active"_n}, contract, "transfer"_n,
-             std::make_tuple(self, recipient, asset(value, sym), memo))
+             std::make_tuple(self, _recipient, asset(_value, sym), memo))
           .send();
       return;
     }
 
     if (self == contract) {
-      HomeToken(self, token).mint(recipient, value);
+      HomeToken(self, token).mint(_recipient, _value);
     }
   }
 
